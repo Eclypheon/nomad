@@ -1,0 +1,351 @@
+{
+  "currency": "SGD",
+  "basis": {
+    "who_pays": "All amounts are PER PERSON, SGD, planned. 1 SGD = 20,285 VND (open.er-api.com, rate dated 6 Oct 2026); USD converted at 1 USD = 25,965 VND. Room rates are halved because the two of you share a twin/double.",
+    "scope": "On-the-ground only. The international SIN-HAN return is in this file as category 'flights' but its amount is written as a text range, not a number, so it is shown in the list without inflating the total - that is deliberate, so the tracked figure stays comparable to the S$1,500/person cap. Scoot cabin-baggage and the 20 kg checked-bag add-on are not costed here (buy at booking); assume S$40-80 per person each way if you check a bag.",
+    "peak_season_sensitivity": "Every hotel figure is a 2026 guide 'typical' rate, not a quote. If the Old Quarter and Tam Coc price 30-50% above those figures over Christmas/NYE, accommodation goes from S$213 to roughly S$277-320 per person and the trip total moves to about S$1,042-1,085 - still S$415+ inside the cap. The S$522 of headroom exists for exactly this.",
+    "verification": "Every non-obvious line is sourced and dated in data/sources.md. Lines marked 'unverified' in their description are the researcher's or my own gaps, not estimates with a source behind them."
+  },
+  "planned": [
+    {
+      "id": "exp-a1",
+      "date": "plan",
+      "category": "accommodation",
+      "description": "Hanoi Old Quarter, 1 night 24-25 Dec (acc-003 Peridot Grand; 2,400,000 VND per room ÷ 2)",
+      "amount": 59,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Christmas Eve - the tightest hotel window of the Vietnamese year. BOOK WITHIN 2-4 WEEKS. Rate is a guide 'typical', not a quote."
+    },
+    {
+      "id": "exp-a2",
+      "date": "plan",
+      "category": "accommodation",
+      "description": "Ha Giang city, 1 night 28-29 Dec (acc-015 Yen Bien Luxury Hotel; 1,065,000 VND per room ÷ 2)",
+      "amount": 26,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Post-loop reset night. Sources disagree on this hotel's rate (1,065,000 VND vs US$25) - verify. BOOK 4-8 WEEKS out."
+    },
+    {
+      "id": "exp-a3",
+      "date": "plan",
+      "category": "accommodation",
+      "description": "Tam Coc / Ninh Binh, 2 nights 29-31 Dec (acc-010 Tam Coc Garden Resort; 1,170,000 VND per room per night ÷ 2)",
+      "amount": 58,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "BOOK 4-6 WEEKS out. Cheaper alternative: acc-014 Tam Coc Sunshine Homestay, from 375,000 VND (~S$18/person/night)."
+    },
+    {
+      "id": "exp-a4",
+      "date": "plan",
+      "category": "accommodation",
+      "description": "Hanoi Old Quarter, 1 night 31 Dec (acc-009 La Siesta Premium Hang Be; 2,860,000 VND per room ÷ 2)",
+      "amount": 70,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "NYE - the scarcest inventory of the window. BOOK FIRST, within 2-4 weeks. Fallbacks: acc-004 O'Gallery Premier (2,600,000), acc-006 Hanoi Pearl (2,080,000), acc-005 Tirant (1,820,000)."
+    },
+    {
+      "id": "exp-t1",
+      "date": "plan",
+      "category": "activities",
+      "description": "Ha Giang 3-day / 2-night EASY RIDER loop tour, all-inclusive, per person (US$210 ≈ 5,452,000 VND)",
+      "amount": 269,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "The trip's centrepiece and its biggest single cost. Interpolated price: a 3D/2N easy-rider product from Hanoi is listed 'from US$206'; 4D/3N versions run US$200-250. Should include bike, licensed driver, fuel, border permit, homestay nights, all meals, Nho Que boat, entrance fees and gear. BOOK 4-8 WEEKS out. No self-riding - see packing.json (IDP)."
+    },
+    {
+      "id": "exp-t2",
+      "date": "plan",
+      "category": "activities",
+      "description": "Easy-rider tip, 3 days at 250,000 VND per day, per person",
+      "amount": 37,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Sourced from the operator's own guidance band of 200,000-300,000 VND/day."
+    },
+    {
+      "id": "exp-t3",
+      "date": "plan",
+      "category": "activities",
+      "description": "Old Quarter guided street-food walking tour, Christmas Day, per person",
+      "amount": 20,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "PRICE UNVERIFIED - no Hanoi food-tour operator or price could be sourced. This figure is an assumption; replace it when you book."
+    },
+    {
+      "id": "exp-t4",
+      "date": "plan",
+      "category": "activities",
+      "description": "Trang An boat trip, per person (250,000 VND)",
+      "amount": 12,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned"
+    },
+    {
+      "id": "exp-t5",
+      "date": "plan",
+      "category": "activities",
+      "description": "Hang Mua ('Mua Cave') climb, per person (budgeted 150,000 VND)",
+      "amount": 7,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Sources conflict: 100,000 / 140,000-150,000 / 200,000 VND. Budget 150,000 and expect it to have risen."
+    },
+    {
+      "id": "exp-t6",
+      "date": "plan",
+      "category": "activities",
+      "description": "Tam Coc boat trip + tip to the rower, per person (225,000 VND all in)",
+      "amount": 11,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Ticket is 150,000-200,000 VND and the rower expects a tip on top."
+    },
+    {
+      "id": "exp-t7",
+      "date": "plan",
+      "category": "activities",
+      "description": "Bicycle rental in Tam Coc, 1 day, per person (50,000 VND)",
+      "amount": 2,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned"
+    },
+    {
+      "id": "exp-t8",
+      "date": "plan",
+      "category": "activities",
+      "description": "Hoa Lo Prison ('the Hanoi Hilton'), per person (50,000 VND budgeted)",
+      "amount": 2,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Sources conflict: 30,000 vs 50,000 VND. Budget the higher figure."
+    },
+    {
+      "id": "exp-t9",
+      "date": "plan",
+      "category": "activities",
+      "description": "Temple of Literature (Van Mieu), per person (50,000 VND assumed)",
+      "amount": 2,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Entrance fee was NEVER SOURCED - this is an assumption, flagged as a research gap."
+    },
+    {
+      "id": "exp-t10",
+      "date": "plan",
+      "category": "activities",
+      "description": "60-minute massage in Hanoi, per person",
+      "amount": 30,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "PRICE UNVERIFIED - no massage operator or price could be sourced. Assumption; ask the hotel."
+    },
+    {
+      "id": "exp-t11",
+      "date": "plan",
+      "category": "activities",
+      "description": "Dong Van Sunday market / cash spending on the loop, per person",
+      "amount": 5,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Small notes only: there are no ATMs between Ha Giang city and Dong Van."
+    },
+    {
+      "id": "exp-f1",
+      "date": "plan",
+      "category": "food",
+      "description": "Food & drink - Hanoi, 24-25 Dec, per person (arrival half-day ~400,000 VND + one full comfortable day ~750,000 VND)",
+      "amount": 43,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Comfortable tier = 750,000 VND/day: 3 proper meals incl. one sit-down dinner, 2 coffees, beers, water, Grab share, entrance fees amortised, incidentals. Lunch on the 25th is inside the food tour (costed under activities)."
+    },
+    {
+      "id": "exp-f2",
+      "date": "plan",
+      "category": "food",
+      "description": "Food & drink - Ha Giang loop, 26-28 Dec, per person (snacks, water and roadside coffee only, ~60,000 VND/day)",
+      "amount": 25,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "All loop meals are inside the tour price, which is why three days cost so little here. Extra market food is cheap: local meals 40,000-80,000 VND."
+    },
+    {
+      "id": "exp-f3",
+      "date": "plan",
+      "category": "food",
+      "description": "Food & drink - transit day 29 Dec + Tam Coc 30 Dec, per person",
+      "amount": 59,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "One transit day (~600,000 VND: breakfast in Ha Giang, lunch in Hanoi, goat-meat dinner in Tam Coc) plus one full comfortable day (750,000 VND)."
+    },
+    {
+      "id": "exp-f4",
+      "date": "plan",
+      "category": "food",
+      "description": "Food & drink - NYE 31 Dec + departure day 1 Jan, per person",
+      "amount": 42,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned"
+    },
+    {
+      "id": "exp-x1",
+      "date": "plan",
+      "category": "transport",
+      "description": "Airport transfers both ways - shared Grab/Xanh SM car 200,000-380,000 VND per car, halved, per person",
+      "amount": 14,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Cheaper option: Bus 86 at 45,000-50,000 VND per person (~S$2.20-2.50) each way. Since 3 Aug 2026 app cars cannot pick up at the terminal kerb - T2 passengers walk to car park P1."
+    },
+    {
+      "id": "exp-x2",
+      "date": "plan",
+      "category": "transport",
+      "description": "Hanoi -> Ha Giang overnight sleeper bus, per person (budgeted at the pessimistic 350,000 VND)",
+      "amount": 17,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Sourced band 250,000-400,000 VND. Departs 21:00-22:30, arrives 04:30-06:00. There is NO train to Ha Giang - the brief's 'overnight train' does not exist on this route; the sleeper bus is the equivalent. BOOK 1-2 WEEKS out for the holiday week (normally 2-4 days)."
+    },
+    {
+      "id": "exp-x3",
+      "date": "plan",
+      "category": "transport",
+      "description": "Ha Giang -> Hanoi limousine van, per person (budgeted at the pessimistic 450,000 VND)",
+      "amount": 22,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Sourced band 350,000-450,000 VND. A private car is 3,800,000-5,500,000 VND per vehicle (~+S$75-100 per person) and is not worth it for two."
+    },
+    {
+      "id": "exp-x4",
+      "date": "plan",
+      "category": "transport",
+      "description": "Hanoi -> Tam Coc limousine van, per person (budgeted at the pessimistic 350,000 VND)",
+      "amount": 17,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Sourced band 200,000-350,000 VND. Confirm the departure point - Hanoi is moving the southbound terminal from Giap Bat to Yen So."
+    },
+    {
+      "id": "exp-x5",
+      "date": "plan",
+      "category": "transport",
+      "description": "Tam Coc -> Hanoi train, soft seat, per person (budgeted at the pessimistic 150,000 VND)",
+      "amount": 7,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Sourced band 95,000-150,000 VND, 2h20m. Last useful departure from Ninh Binh on 31 Dec is ~15:50. Ninh Binh station is 8 km from Tam Coc (~90,000-130,000 VND taxi). Book at dsvn.vn or 12Go."
+    },
+    {
+      "id": "exp-x6",
+      "date": "plan",
+      "category": "transport",
+      "description": "Local Grab / GrabBike / taxis in Hanoi and Tam Coc across 5 days, per person",
+      "amount": 20,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Short Hanoi rides 30,000-60,000 VND; a 20-minute ride 80,000-120,000 VND; GrabBike 30,000-50,000 VND. Grab is patchy around Tam Coc and should be treated as unreliable in Ha Giang province."
+    },
+    {
+      "id": "exp-m1",
+      "date": "plan",
+      "category": "misc",
+      "description": "Travel insurance, 10 days mid-range, per person - QUOTE NEVER OBTAINED",
+      "amount": 50,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Assumption, not a quote. MFA strongly encourages comprehensive insurance. Get the policy to state in writing what it does and does not cover for a pillion passenger on a motorbike - most policies exclude an unlicensed foreign rider, but you are not the rider on this plan."
+    },
+    {
+      "id": "exp-m2",
+      "date": "plan",
+      "category": "misc",
+      "description": "eSIM / local SIM data, per person",
+      "amount": 15,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Not sourced. Get it set up before departure, and install Grab at the same time - it may want a local number or payment method."
+    },
+    {
+      "id": "exp-m3",
+      "date": "plan",
+      "category": "misc",
+      "description": "Buffer: tips, incidentals, ATM withdrawal fees, per person (500,000 VND)",
+      "amount": 25,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "Vietnamese ATMs typically charge ~50,000-70,000 VND per withdrawal (unsourced estimate)."
+    },
+    {
+      "id": "exp-m4",
+      "date": "plan",
+      "category": "misc",
+      "description": "Laundry, toiletries, travel wash, per person",
+      "amount": 5,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned"
+    },
+    {
+      "id": "exp-m5",
+      "date": "plan",
+      "category": "misc",
+      "description": "NYE night extras (fireworks-night transport, celebratory drinks), per person",
+      "amount": 7,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned"
+    },
+    {
+      "id": "exp-fl1",
+      "date": "plan",
+      "category": "flights",
+      "description": "SIN (Changi) <-> Hanoi (HAN) return, per person, non-stop - PLANNING RANGE S$450-700, NOT VERIFIED",
+      "amount": "SGD 450-700 (excluded from the S$1,500/person cap)",
+      "amount_estimate_sgd_low": 450,
+      "amount_estimate_sgd_high": 700,
+      "amount_estimate_sgd_point": 580,
+      "currency": "SGD",
+      "paid_by": "shared",
+      "status": "planned",
+      "notes": "The amount is deliberately text, not a number: airline prices are a range, and putting a number here would silently inflate the on-the-ground budget the app tracks against S$1,500. NO LIVE FARE WAS EVER QUOTED for 24 Dec 2026 - 2 Jan 2027 - no booking engine was opened, and the brief forbids booking. 24 Dec-2 Jan is the single most expensive week of the year on this route. Verify before locking the dates; shifting departure to 26/27 Dec and the return to 3/4 Jan is usually materially cheaper but eats trip days. Multiply by 2 travellers. Scoot checked baggage is NOT included in Basic (20 kg on Value/Flex, up to 40 kg purchasable, max 32 kg per bag)."
+    }
+  ],
+  "actuals": []
+}

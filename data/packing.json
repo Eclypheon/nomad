@@ -1,0 +1,184 @@
+{
+  "basis": {
+    "weather_window": "24 Dec 2026 - 1 Jan 2027. NO FORECAST EXISTS for this window as of 2026-10-07 - it is 2.5 months out and the longest operational outlooks run ~14 days. Everything below packs to CLIMATOLOGICAL NORMALS from the research file, not a forecast. Re-check ~7 days out (Vietnam National Centre for Hydro-Meteorological Forecasting, kttv.gov.vn).",
+    "weather_normals_used": "Hanoi: 15-23C days, 12-16C nights, damp cold, misty, one of the driest months. Ninh Binh: 16-22C, low rain, misty mornings over the karst (the best weather of the three bases). Ha Giang town: cool and often misty. Loop high passes (Dong Van, Ma Pi Leng, 1,000-1,400 m): properly cold, wind on a moving bike, morning fog and (rarely) ice - operators advise starting mid-morning to let fog and ice clear.",
+    "activities_packed_for": "HA GIANG LOOP: YES - 3 days / 2 nights as a PILLION on a local easy rider's bike (not self-ride), which is what makes the riding kit and the cold-weather kit necessary. TREK: NO multi-day trek. Sapa/Fansipan is excluded on weather, and the loop is ridden rather than walked. Walking is limited to ~500 steps up Hang Mua, Tam Coc back-lane cycling, a river-cave boat, market and Old Quarter pavement - so pack for walking, not for an expedition. Homestay nights on the loop: 2 (traditional stilt-house style).",
+    "baggage_allowance_used": "Scoot economy, verified 2026-10-07: cabin 2 pieces, max 10 kg TOTAL (carry-on <=54x38x23 cm, personal item <=40x30x10 cm); checked baggage is NOT included in the Basic fare (Value/Flex bundles include 20 kg, ScootPlus 30 kg, up to 40 kg purchasable; max 32 kg per bag and <=158 cm linear). Consequence: one ~40 L carry-on each + a camera bag inside 10 kg, and buy ONE 20 kg checked bag between the two of you. Spare lithium batteries / power banks must be in the cabin, max 2 power banks per passenger, and may NOT be stowed in the overhead locker. Liquids in the cabin are capped at 100 ml - buy repellent and sunscreen after landing if in doubt."
+  },
+  "categories": [
+    {
+      "name": "documents",
+      "items": [
+        {
+          "item": "Passports (both) - validity check",
+          "buy": true,
+          "notes": "DO THIS NOW, not in December. Singapore passports enter Vietnam visa-free for up to 30 days per entry, but the entry condition is a passport valid at least 6 months - i.e. not expiring before ~July 2027. Renewal takes weeks."
+        },
+        {
+          "item": "No visa, no e-visa, no approval letter",
+          "notes": "A Singapore passport does not need one for an 8-9 day trip. Anyone selling you a visa or an 'approval letter' for this trip is selling you nothing. Only if a traveller is NOT on a Singapore passport: Vietnam e-visa, US$25 single / US$50 multiple, 90 days, applied for only at evisa.gov.vn or thithucdientu.gov.vn (the commercial lookalike sites are not the government)."
+        },
+        "Onward/return flight booking on both phones - a stated condition of the visa-free entry, and airlines check it at SIN check-in more often than Vietnamese immigration does",
+        {
+          "item": "Travel insurance policy + certificate",
+          "buy": true,
+          "notes": "Get it in writing what the policy does and does NOT cover for a passenger on the back of a motorbike. Most policies will not pay for a foreigner riding in Vietnam without a Vietnamese-recognised licence - see the IDP item. Also confirm medical evacuation cover; the loop is 6-7 h from Hanoi on mountain roads."
+        },
+        {
+          "item": "International Driving Permit (IDP) - DO NOT BUY ONE",
+          "notes": "This is the trap the brief asked about. AA Singapore issues 1949-Convention IDPs and states on its own site that Vietnam does not recognise them; Vietnam recognises only 1968-Convention IDPs. So a Singapore licence + Singapore IDP does not legally qualify anyone to ride a >50 cc bike here, and no insurer will pay an unlicensed rider's claim. The plan removes the problem by riding pillion with a licensed local easy rider."
+        },
+        {
+          "item": "Copies: passport photo page, insurance, tour voucher, hotel bookings",
+          "notes": "One paper set per person kept separately from the originals, plus a photo in the phone. Carry the passport itself on the loop - the border-area checkpoints may ask."
+        },
+        {
+          "item": "eRegister with Singapore MFA",
+          "buy": true,
+          "notes": "Free, two minutes, before departure: https://eregister.mfa.gov.sg"
+        },
+        "Cash: Vietnamese dong for the loop (ATMs exist in Ha Giang city and Dong Van and essentially nowhere between) - carry small notes for market stalls, tips and the short bus-station-to-hotel hops"
+      ]
+    },
+    {
+      "name": "clothing",
+      "items": [
+        {
+          "item": "Layers, not bulk - the whole trip sits in a damp 12-23C band, but the loop passes do not",
+          "notes": "Hanoi/Ninh Binh days 15-23C, nights 12-16C, misty; Dong Van (1,000-1,400 m) is a Hanoi January night with wind. On the back of a bike you generate no heat, so the outer shell matters more than the mid-layer."
+        },
+        "1 x windproof / water-resistant shell (the single most important garment - this is what you will live in on the bike)",
+        "1 x warm mid-layer (down or fleece) that squashes small - Dong Van and the Ma Pi Leng pass are cold",
+        "3-4 x quick-dry t-shirts / base layers",
+        "1 x thermal top + thermal leggings, specifically for the two loop riding days",
+        "2 x quick-dry trousers (NOT jeans - Tam Coc cycling is muddy and jeans never dry)",
+        "1 x long-sleeve shirt for the homestay and market evenings",
+        "5-6 x underwear, 5-6 x socks including 2 warm pairs (the loop is cold and you may not do laundry)",
+        "Sleepwear that is fine in a shared/communal homestay room - modest and warm",
+        {
+          "item": "Rain cover: compact umbrella or packable shell",
+          "notes": "Expect drizzle, not downpour, in Hanoi and Ninh Binh. The Trang An and Tam Coc boats are covered but the rower is not; rain does not stop the boats."
+        },
+        "Footwear: 1 pair closed walking shoes with grip (Hang Mua steps, Tam Coc lanes, boat wharves) + 1 pair sandals/flip-flops for the guesthouse",
+        "1 x swimwear - only if you want the unheated hotel pool or a cold Du Gia waterfall; December pools in Tam Coc are mostly unheated",
+        "Packing cubes + 1 small collapsible daypack (the 25 Dec day is a city day with a night bus at the end - you will want a small bag on the bus)"
+      ]
+    },
+    {
+      "name": "riding/safety",
+      "items": [
+        {
+          "item": "Helmet: ask the operator - expect one to be provided",
+          "buy": true,
+          "notes": "Confirm IN WRITING before paying that the tour price includes a helmet, protective gear and rain gear for both the rider and you as pillion. If you want your own thin helmet liner/balaclava, buy it before departure - you will be wearing a shared helmet for 3 days."
+        },
+        {
+          "item": "Windproof gloves",
+          "buy": true,
+          "notes": "The hands are the coldest thing on a bike at 40-60 km/h in ~10-13C. Bring your own; do not assume they are provided. A spare pair is worth it - they get wet."
+        },
+        "Buff / neck gaiter and a thin beanie that fits under a helmet",
+        "Sunglasses (and ski goggles if you have them) - dust, glare and low winter sun on the passes",
+        "Sunscreen SPF50 + lip balm - winter sun at 1,000-1,400 m is strong and the wind burns",
+        {
+          "item": "Riding rain trousers / knee cover",
+          "notes": "Operators normally hand out plastic rain gear on the loop. Check it fits before you set off - it is not a fashion question, it is a hypothermia question."
+        },
+        "Light-coloured or reflective outer layer if you own one - the passes carry local traffic and no guardrails",
+        {
+          "item": "Border-area permit: ask the operator in writing who holds it and who pays",
+          "buy": true,
+          "notes": "The loop's core districts (Quan Ba, Yen Minh, Dong Van, Meo Vac) are inside a long-standing border-entry zone, and from 1 June 2026 operators began advising a new ~US$10 permit checked at checkpoints. Time Out could not find an official government notice behind the June date, so treat it as operator practice, not confirmed law. Most operators include it - get it confirmed before you pay, and carry your passport and cash on the bike."
+        }
+      ]
+    },
+    {
+      "name": "trekking",
+      "items": [
+        {
+          "item": "No multi-day trek is planned - so no trekking boots, no poles, no expedition kit",
+          "notes": "The Ha Giang loop is ridden, not walked, and Sapa/Fansipan is excluded on weather (7C days, fog, frost, mud). What you actually need is walking comfort on ~500 steps at Hang Mua, flat cycling lanes in Tam Coc, boat wharves and markets."
+        },
+        "15-20 L daypack for the loop days (water, layer, camera, passport, cash)",
+        "Reusable water bottle - tap water is not drinkable anywhere in Vietnam; stick to sealed/bottled water and avoid ice from unknown sources",
+        {
+          "item": "Sleeping bag liner, small quick-dry towel, earplugs, head torch",
+          "notes": "Homestay kit. Village homestays are traditional stilt houses; some do not provide a towel, lights are dim, and earplugs matter in a communal room. The head torch is for the middle-of-the-night walk to the bathroom."
+        },
+        "Blister plasters and 2 electrolyte/ORS sachets",
+        "Optional: water purification tablets if you want to refill from taps in the homestays (not required - bottled water is everywhere and cheap)"
+      ]
+    },
+    {
+      "name": "photo",
+      "items": [
+        {
+          "item": "Camera body + a wide zoom (16-35 mm equiv.)",
+          "notes": "The frames this trip exists for are the Ma Pi Leng pass overlook above the Nho Que gorge and the Hang Mua sunrise over Tam Coc. Both are wide."
+        },
+        "A short tele (70-200 mm equiv.) for the layered ridges of the pass, the karst from the Trang An boat, and market portraits in Dong Van",
+        "Polariser + a couple of ND filters - mist, glare and flat winter light are what you get, so control them",
+        "2-3 spare camera batteries and 2 power banks",
+        {
+          "item": "Battery reality check",
+          "notes": "Cold halves battery life at 1,000-1,400 m and homestays are not full of sockets. Scoot cabin rule (verified 2026-10-07): spare lithium batteries and power banks travel in the CABIN only, max 2 power banks per passenger, and power banks may not be stowed in the overhead locker."
+        },
+        "Microfibre cloths + lens wipes + a small rain cover or dry bag - misty mornings fog a lens and the Trang An boats splash",
+        "Travel tripod, only if it earns its ~1 kg - the sunrise shots at Hang Mua and Tam Coc are the ones that want one",
+        "Light timing, written down: in this window the sun sets about 17:15-17:30 in the north, so a golden-hour landscape means being in position by ~16:15, and the good mist at Ninh Binh and on the loop is at sunrise, before the tour buses arrive (Hanoi buses reach Hang Mua around 09:00-10:00)"
+      ]
+    },
+    {
+      "name": "health",
+      "items": [
+        {
+          "item": "Vaccinations - book the appointment NOW",
+          "buy": true,
+          "notes": "6+ weeks before departure. Hep A, Hep B and typhoid are routine recommendations for Vietnam; Japanese encephalitis and rabies are CDC 'consider' for travellers doing exactly what this trip does - rural riding, village homestays and dogs in Ha Giang. Both are multi-dose / short-notice series."
+        },
+        {
+          "item": "Regular prescription medicines + doctor's letter",
+          "buy": true,
+          "notes": "Vietnam controls some everyday medicines: common limits quoted are 30 days for ordinary prescriptions, 7 days for narcotic-class and 10 days for psychotropic/precursor medicines, and codeine-based products are the usual trap for Singapore travellers. Those limits come from commercial sites, not an official Vietnamese customs page (unverified). Get the letter, check with the Vietnamese embassy in Singapore (https://vnembassy-singapore.mofa.gov.vn), and walk the red channel to declare."
+        },
+        "Paracetamol / ibuprofen, loperamide, ORS sachets, activated charcoal (MFA specifically advises charcoal and diarrhoea medication)",
+        {
+          "item": "Motion-sickness tablets",
+          "notes": "Not optional on this trip. The Ma Pi Leng pass is switchbacks and 20 km of cliff road, and a pillion on a bike feels every one of them."
+        },
+        "Antiseptic cream + plasters + blister care - grazes and straps do happen on a bike",
+        "Insect repellent (DEET) - dengue is present year-round in Vietnam even in the cool dry season",
+        "Sunscreen and lip balm (share the tube with the riding kit)",
+        "Hand sanitiser and tissues - public toilets frequently have no paper",
+        {
+          "item": "Malaria tablets",
+          "notes": "The research found no blanket CDC antimalarial recommendation for Hanoi, Ninh Binh or the northern highlands in this season, but it was not verified for Ha Giang specifically. This is a doctor's call, not a packing-list call."
+        }
+      ]
+    },
+    {
+      "name": "misc",
+      "items": [
+        {
+          "item": "eSIM or local SIM",
+          "buy": true,
+          "notes": "Also: install and set up Grab BEFORE you fly - the app can demand a local number or payment method. Grab/Xanh SM work well in Hanoi, are patchy around Tam Coc, and should be treated as unreliable in Ha Giang province (cash for the short hops)."
+        },
+        {
+          "item": "Universal travel adaptor x2",
+          "notes": "Vietnam uses 220 V European-style two-pin round sockets, not Singapore's Type G."
+        },
+        "Small padlock for bags, zip-lock bags / dry bag for the camera on boats",
+        "Earplugs + eye mask (the 21:00 sleeper bus and communal homestays)",
+        "Travel wash or dry-bag laundry sachets - the loop will dirty everything, and hotel laundry in Hanoi/Tam Coc is cheap",
+        "Small-denomination dong for markets, tips and bus-station taxis (the first ATM fee of the trip is typically 50,000-70,000 VND per withdrawal - unsourced estimate)",
+        "Fold-away tote for a purchased checked bag if you buy one at Changi",
+        {
+          "item": "A printed one-page version of this plan",
+          "buy": true,
+          "notes": "Routing, booking references, hotel phone numbers and the emergency numbers (police 113, fire 114, ambulance 115) on paper. Phones die and mountain signal is patchy."
+        }
+      ]
+    }
+  ]
+}

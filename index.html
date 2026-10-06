@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<title>Trip</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="appbar">
+  <div class="wrap">
+    <div id="hd-top">
+      <h1 id="hd-title">Trip</h1>
+      <div id="hd-dates" class="muted"></div>
+    </div>
+    <div id="hd-facts" class="facts"></div>
+    <div id="hd-budget" class="budget" hidden></div>
+    <div id="hd-alert" class="alert" hidden></div>
+  </div>
+</header>
+
+<nav id="tabs" class="tabs" role="tablist" aria-label="Sections">
+  <div class="wrap tabrow">
+    <button class="tabbtn" id="tabbtn-itinerary" role="tab" aria-controls="tab-itinerary" aria-selected="true" data-tab="itinerary">Itinerary</button>
+    <button class="tabbtn" id="tabbtn-accommodation" role="tab" aria-controls="tab-accommodation" aria-selected="false" data-tab="accommodation">Stay</button>
+    <button class="tabbtn" id="tabbtn-expenses" role="tab" aria-controls="tab-expenses" aria-selected="false" data-tab="expenses">Expenses</button>
+    <button class="tabbtn" id="tabbtn-packing" role="tab" aria-controls="tab-packing" aria-selected="false" data-tab="packing">Packing</button>
+    <button class="tabbtn" id="tabbtn-recommendations" role="tab" aria-controls="tab-recommendations" aria-selected="false" data-tab="recommendations">Ideas</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <div id="loadbar" class="loadbar">
+    <span class="spinner" aria-hidden="true"></span> Loading trip data&hellip;
+  </div>
+
+  <div id="localfiles" class="card note" hidden>
+    <h3>This browser blocks reading local data files</h3>
+    <p class="muted" id="localfiles-why">You opened the page directly from disk (<code>file://</code>). Pick the JSON files in <code>data/</code> once and the app will render them &mdash; and remember them in this browser afterwards.</p>
+    <div class="actions">
+      <label class="btn" for="dirinput">Choose the <code>data</code> folder</label>
+      <input id="dirinput" type="file" accept=".json,application/json" multiple webkitdirectory directory hidden>
+      <label class="btn ghost" for="fileinput">Choose files&hellip;</label>
+      <input id="fileinput" type="file" accept=".json,application/json" multiple hidden>
+    </div>
+    <p class="muted small" id="localfiles-msg" role="status"></p>
+  </div>
+
+  <noscript><div class="card alert">This app needs JavaScript. Enable it and reload.</div></noscript>
+
+  <section class="tab" id="tab-itinerary" role="tabpanel" aria-labelledby="tabbtn-itinerary">
+    <div data-content></div>
+  </section>
+
+  <section class="tab" id="tab-accommodation" role="tabpanel" aria-labelledby="tabbtn-accommodation" hidden>
+    <div data-content></div>
+  </section>
+
+  <section class="tab" id="tab-expenses" role="tabpanel" aria-labelledby="tabbtn-expenses" hidden>
+    <div data-content></div>
+  </section>
+
+  <section class="tab" id="tab-packing" role="tabpanel" aria-labelledby="tabbtn-packing" hidden>
+    <div data-content></div>
+  </section>
+
+  <section class="tab" id="tab-recommendations" role="tabpanel" aria-labelledby="tabbtn-recommendations" hidden>
+    <div data-content></div>
+  </section>
+
+</main>
+
+<footer class="wrap foot muted small">
+  Data lives in <code>data/*.json</code>. Nothing leaves this device &mdash; no analytics, no third-party calls.
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
