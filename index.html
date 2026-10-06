@@ -1,98 +1,263 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
-<meta name="referrer" content="no-referrer">
-<title>Trip</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0b0f17">
+  <meta name="description" content="Nomad — Collaborative Trip & Travel Companion">
+  <title>Nomad — Travel Planner</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<header class="appbar">
-  <div class="wrap">
-    <div id="hd-top">
-      <h1 id="hd-title">Trip</h1>
-      <div id="hd-auth" class="hd-auth"></div>
-      <div id="hd-dates" class="muted"></div>
+  <!-- ==================== TOP NAVIGATION BAR ==================== -->
+  <header class="app-header">
+    <div class="wrap header-inner">
+      <div class="brand-area" id="brand-area">
+        <div class="brand-logo">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+          </svg>
+          <span class="brand-name">Nomad</span>
+        </div>
+        
+        <!-- Trip Switcher Pill (shown when logged in) -->
+        <button id="trip-switcher-btn" class="trip-pill-btn" aria-haspopup="dialog" aria-expanded="false" hidden>
+          <span class="trip-icon">✈️</span>
+          <span id="current-trip-name" class="trip-title-truncate">Select Trip</span>
+          <svg class="chevron-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Auth / Profile Area -->
+      <div class="user-area" id="header-user-area">
+        <!-- Rendered dynamically by app.js: Sign In button OR Profile Chip -->
+      </div>
     </div>
-    <div id="hd-facts" class="facts"></div>
-    <div id="hd-budget" class="budget" hidden></div>
-    <div id="hd-decisions" class="decwrap" hidden></div>
-    <div id="hd-alert" class="alert" hidden></div>
-  </div>
-</header>
+  </header>
 
-<nav id="tabs" class="tabs" role="tablist" aria-label="Sections">
-  <div class="wrap tabrow">
-    <button class="tabbtn" id="tabbtn-itinerary" role="tab" aria-controls="tab-itinerary" aria-selected="true" data-tab="itinerary">Itinerary</button>
-    <button class="tabbtn" id="tabbtn-accommodation" role="tab" aria-controls="tab-accommodation" aria-selected="false" data-tab="accommodation">Stay</button>
-    <button class="tabbtn" id="tabbtn-expenses" role="tab" aria-controls="tab-expenses" aria-selected="false" data-tab="expenses">Expenses</button>
-    <button class="tabbtn" id="tabbtn-packing" role="tab" aria-controls="tab-packing" aria-selected="false" data-tab="packing">Packing</button>
-    <button class="tabbtn" id="tabbtn-recommendations" role="tab" aria-controls="tab-recommendations" aria-selected="false" data-tab="recommendations">Ideas</button>
-    <button class="tabbtn" id="tabbtn-decisions" role="tab" aria-controls="tab-decisions" aria-selected="false" data-tab="decisions">Decisions</button>
-    <button class="tabbtn" id="tabbtn-share" role="tab" aria-controls="tab-share" aria-selected="false" data-tab="share">Share</button>
-  </div>
-</nav>
+  <!-- ==================== MAIN CONTENT CONTAINER ==================== -->
+  <main id="app-main">
 
-<main class="wrap">
-
-  <div id="loadbar" class="loadbar">
-    <span class="spinner" aria-hidden="true"></span> Loading trip data&hellip;
-  </div>
-
-  <div id="localfiles" class="card note" hidden>
-    <h3>This browser blocks reading local data files</h3>
-    <p class="muted" id="localfiles-why">You opened the page directly from disk (<code>file://</code>). Pick the JSON files in <code>data/</code> once and the app will render them &mdash; and remember them in this browser afterwards.</p>
-    <div class="actions">
-      <label class="btn" for="dirinput">Choose the <code>data</code> folder</label>
-      <input id="dirinput" type="file" accept=".json,application/json" multiple webkitdirectory directory hidden>
-      <label class="btn ghost" for="fileinput">Choose files&hellip;</label>
-      <input id="fileinput" type="file" accept=".json,application/json" multiple hidden>
+    <!-- Loading Screen -->
+    <div id="loading-state" class="center-state">
+      <div class="spinner"></div>
+      <p class="muted small">Connecting to Nomad...</p>
     </div>
-    <p class="muted small" id="localfiles-msg" role="status"></p>
+
+    <!-- ==================== 1. LANDING VIEW (LOGGED OUT) ==================== -->
+    <section id="landing-view" class="view-panel" hidden>
+      <div class="wrap landing-wrap">
+        <div class="hero-card">
+          <div class="hero-badge">
+            <span class="pulse-dot"></span> Collaborative Travel Hub
+          </div>
+          <h1 class="hero-title">Your adventures, planned together.</h1>
+          <p class="hero-subtitle">
+            Shared itineraries, accommodations, expense splits, packing lists, and group decisions &mdash; kept safe and private in your home cloud.
+          </p>
+
+          <div class="hero-actions">
+            <button id="landing-signin-btn" class="btn btn-google">
+              <svg class="google-icon" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.97 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+          </div>
+
+          <div id="landing-status-badge" class="status-pill muted small">
+            <span class="status-dot"></span> Checking backend connection&hellip;
+          </div>
+        </div>
+
+        <!-- Features Showcase -->
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🗓</div>
+            <h3>Live Itinerary</h3>
+            <p class="muted">Day-by-day schedules with transport links, timing, and activities.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🏨</div>
+            <h3>Stays & Lodging</h3>
+            <p class="muted">Track check-ins, addresses, night counts, and booking statuses.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">💰</div>
+            <h3>Shared Expenses</h3>
+            <p class="muted">Budget ceilings, planned vs actual spend, and multi-currency tracking.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🗳</div>
+            <h3>Group Decisions</h3>
+            <p class="muted">Vote on options with clear cost deltas, tradeoffs, and consensus picks.</p>
+          </div>
+        </div>
+
+        <div class="privacy-note muted small text-center">
+          🔒 Private &amp; Access-Controlled: All itineraries and financial records are restricted to authenticated trip members.
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2. TRIP VIEW (LOGGED IN) ==================== -->
+    <section id="trip-view" class="view-panel" hidden>
+      
+      <!-- Trip Banner & Highlights -->
+      <div class="trip-banner">
+        <div class="wrap banner-inner">
+          <div class="banner-main">
+            <div class="banner-top-line">
+              <span id="banner-role-badge" class="badge">Member</span>
+              <span id="banner-dates" class="banner-dates muted">Dates</span>
+            </div>
+            <h1 id="banner-title" class="banner-title">Trip Title</h1>
+            <div id="banner-bases" class="banner-bases"></div>
+          </div>
+          
+          <div class="banner-budget-card" id="banner-budget-card">
+            <div class="budget-card-header">
+              <span class="muted small">Budget Headroom</span>
+              <span id="budget-headroom-val" class="budget-stat-val">—</span>
+            </div>
+            <div class="progress-bar">
+              <div id="budget-progress-fill" class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="budget-card-footer small muted">
+              <span id="budget-spent-lbl">Planned: —</span>
+              <span id="budget-total-lbl">Cap: —</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Desktop / Tablet Top Bar) -->
+      <nav id="desktop-tabs" class="desktop-tabs-nav" aria-label="Trip Sections">
+        <div class="wrap tab-pills-row">
+          <button class="tab-pill active" data-tab="itinerary"><span>🗓</span> Itinerary</button>
+          <button class="tab-pill" data-tab="accommodation"><span>🏨</span> Stay</button>
+          <button class="tab-pill" data-tab="expenses"><span>💰</span> Expenses</button>
+          <button class="tab-pill" data-tab="decisions"><span>🗳</span> Decisions <span id="decisions-pill-badge" class="count-badge" hidden>0</span></button>
+          <button class="tab-pill" data-tab="packing"><span>🎒</span> Packing</button>
+          <button class="tab-pill" data-tab="recommendations"><span>💡</span> Ideas</button>
+          <button class="tab-pill" data-tab="share"><span>👥</span> Trip &amp; Share</button>
+        </div>
+      </nav>
+
+      <!-- Active Tab Content Area -->
+      <div class="wrap content-wrap">
+        <section class="tab-content-panel active" id="tab-itinerary" role="tabpanel"></section>
+        <section class="tab-content-panel" id="tab-accommodation" role="tabpanel" hidden></section>
+        <section class="tab-content-panel" id="tab-expenses" role="tabpanel" hidden></section>
+        <section class="tab-content-panel" id="tab-decisions" role="tabpanel" hidden></section>
+        <section class="tab-content-panel" id="tab-packing" role="tabpanel" hidden></section>
+        <section class="tab-content-panel" id="tab-recommendations" role="tabpanel" hidden></section>
+        <section class="tab-content-panel" id="tab-share" role="tabpanel" hidden></section>
+      </div>
+
+      <!-- Mobile Bottom Navigation Bar -->
+      <nav id="mobile-nav" class="mobile-nav-bar" aria-label="Mobile Navigation">
+        <button class="mobile-nav-item active" data-tab="itinerary">
+          <span class="nav-icon">🗓</span>
+          <span class="nav-label">Itinerary</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="accommodation">
+          <span class="nav-icon">🏨</span>
+          <span class="nav-label">Stay</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="expenses">
+          <span class="nav-icon">💰</span>
+          <span class="nav-label">Expenses</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="decisions">
+          <span class="nav-icon">🗳</span>
+          <span class="nav-label">Decisions</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="more" id="mobile-more-btn">
+          <span class="nav-icon">⋯</span>
+          <span class="nav-label">More</span>
+        </button>
+      </nav>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== MODALS & ACTION SHEETS ==================== -->
+
+  <!-- 1. Trip Switcher Modal -->
+  <div id="trip-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-trip-title">
+      <div class="modal-header">
+        <h2 id="modal-trip-title" class="modal-title">Switch Trip</h2>
+        <button class="modal-close-btn" id="modal-trip-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="muted small">Select an adventure to view its full schedule and details.</p>
+        <div id="trips-list-container" class="trips-card-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary w-full" id="open-trip-id-btn">Open by Share Key or Link&hellip;</button>
+      </div>
+    </div>
   </div>
 
-  <noscript><div class="card alert">This app needs JavaScript. Enable it and reload.</div></noscript>
+  <!-- 2. Mobile More Menu Sheet -->
+  <div id="mobile-more-sheet" class="modal-backdrop" hidden>
+    <div class="modal-sheet bottom-sheet" role="dialog" aria-modal="true">
+      <div class="sheet-handle"></div>
+      <div class="modal-header">
+        <h2 class="modal-title">More Trip Tools</h2>
+        <button class="modal-close-btn" id="more-sheet-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="sheet-menu-grid">
+        <button class="sheet-menu-item" data-tab="packing">
+          <span class="sheet-menu-icon">🎒</span>
+          <span class="sheet-menu-text">Packing List</span>
+        </button>
+        <button class="sheet-menu-item" data-tab="recommendations">
+          <span class="sheet-menu-icon">💡</span>
+          <span class="sheet-menu-text">Ideas &amp; Spots</span>
+        </button>
+        <button class="sheet-menu-item" data-tab="share">
+          <span class="sheet-menu-icon">👥</span>
+          <span class="sheet-menu-text">Trip &amp; Members</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
-  <section class="tab" id="tab-itinerary" role="tabpanel" aria-labelledby="tabbtn-itinerary">
-    <div data-content></div>
-  </section>
+  <!-- 3. User Profile Modal -->
+  <div id="user-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 class="modal-title">Account</h2>
+        <button class="modal-close-btn" id="user-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="user-modal-avatar-box" class="avatar-box"></div>
+        <h3 id="user-modal-name" class="user-display-name">—</h3>
+        <p id="user-modal-email" class="muted small">—</p>
+        <div class="account-actions">
+          <button id="user-modal-signout-btn" class="btn btn-danger w-full">Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <section class="tab" id="tab-accommodation" role="tabpanel" aria-labelledby="tabbtn-accommodation" hidden>
-    <div data-content></div>
-  </section>
-
-  <section class="tab" id="tab-expenses" role="tabpanel" aria-labelledby="tabbtn-expenses" hidden>
-    <div data-content></div>
-  </section>
-
-  <section class="tab" id="tab-packing" role="tabpanel" aria-labelledby="tabbtn-packing" hidden>
-    <div data-content></div>
-  </section>
-
-  <section class="tab" id="tab-recommendations" role="tabpanel" aria-labelledby="tabbtn-recommendations" hidden>
-    <div data-content></div>
-  </section>
-
-  <section class="tab" id="tab-decisions" role="tabpanel" aria-labelledby="tabbtn-decisions" hidden>
-    <div data-content></div>
-  </section>
-
-  <section class="tab" id="tab-share" role="tabpanel" aria-labelledby="tabbtn-share" hidden>
-    <div data-content></div>
-  </section>
-
-</main>
-
-<footer class="wrap foot muted small">
-  <span id="foot-text">Data lives in <code>data/*.json</code>. Nothing leaves this device until you sign in to the configured backend &mdash; no analytics, no third-party calls.</span>
-</footer>
-
-<script src="pocketbase-config.js"></script>
-<script src="backends/pocketbase-adapter.js"></script>
-<script src="auth.js"></script>
-<script src="app.js"></script>
+  <!-- Scripts -->
+  <script src="pocketbase-config.js"></script>
+  <script src="backends/vendor/pocketbase.umd.js"></script>
+  <script src="backends/pocketbase-adapter.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

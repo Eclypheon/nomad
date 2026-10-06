@@ -84,7 +84,8 @@ assumes the client can be trusted to enforce membership.
   without any autodate fields (PocketBase only injects `created`/`updated`
   automatically for *auth* collections), so records carried neither and any
   `?sort=-created` answered `HTTP 400`. Sorting by an autodate field works
-  again; `listTrips` can go back to `?sort=-created`. **Rows written before the
+  again, and `listTrips` asks for `?sort=-created` (newest first) — the same
+  list order DESIGN.md 6.2 documents. **Rows written before the
   fix carry the time the migration ran, not the time they were really created**
   — nothing had ever recorded that — so on an old row `created` means "at least
   this old". Everything written from 2026-10-07 04:25 (+08) onward is stamped by

@@ -252,32 +252,45 @@ function restoreSession() {
 
 function signIn() {
   if (!isConfigured()) return Promise.reject(notConfigured());
-  var before = { blockedPopup: false };
-  return probeAuthMethods().then(function (methods) {
-    var st = setOauthFrom(methods);
-    if (!st.ready) throw err(oauthHelpMessage(), 'auth');
-    return pb();
-  }).then(function (p) {
-    var origOpen = global.open;
-    if (typeof origOpen === 'function') {
-      global.open = function () {
-        var w = origOpen.apply(global, arguments);
-        if (!w) before.blockedPopup = true;
-        return w;
-      };
+  var popup = null;
+  try {
+    var w = 520, h = 640;
+    var left = Math.max(0, (window.screen.width - w) / 2);
+    var top = Math.max(0, (window.screen.height - h) / 2);
+    popup = window.open('about:blank', 'pb_google_auth', 'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',resizable=yes,scrollbars=yes');
+  } catch (e) {
+    popup = null;
+  }
+
+  function closePopup() {
+    if (popup && !popup.closed) {
+      try { popup.close(); } catch (e) {}
     }
-    function done() { if (typeof origOpen === 'function') global.open = origOpen; }
-    return p.collection('users').authWithOAuth2({ provider: PROVIDER })
-      .then(function (res) { done(); setUser(userFrom(res && res.record)); return null; },
-        function (e) {
-          done();
-          if (before.blockedPopup) {
-            throw err('Your browser blocked the sign-in window. Allow pop-ups for this site (the Google ' +
-              'consent screen opens in a small window) and click Sign in again.', 'auth');
-          }
-          throw friendly(e);
-        });
-  }).catch(function (e) { throw friendly(e); });
+  }
+
+  return pb().then(function (p) {
+    return p.collection('users').authWithOAuth2({
+      provider: PROVIDER,
+      urlCallback: function (url) {
+        if (popup && !popup.closed) {
+          popup.location.href = url;
+          try { popup.focus(); } catch (e) {}
+        } else {
+          window.location.href = url;
+        }
+      }
+    }).then(function (res) {
+      closePopup();
+      setUser(userFrom(res && res.record));
+      return res;
+    }, function (e) {
+      closePopup();
+      throw friendly(e);
+    });
+  }).catch(function (e) {
+    closePopup();
+    throw friendly(e);
+  });
 }
 function signOut() {
   var p = ST.pb;
@@ -391,11 +404,9 @@ function docMap(rows) {
 
 function listTrips() {
   return pb().then(function (p) {
-    /* sort by title, NOT by -created: on this backend the autodate fields of
-       the Base collections are empty, and sorting by one answers
-       HTTP 400 "Something went wrong while processing your request" (verified
-       against the live API with an owner token). */
-    return p.collection('trips').getFullList({ sort: 'title', requestKey: null });
+    /* newest first: the trips collection has PocketBase's autodate fields, so
+       sorting on one is the list order DESIGN.md 6.2 specifies. */
+    return p.collection('trips').getFullList({ sort: '-created', requestKey: null });
   }).then(function (rows) { return (rows || []).map(mapTrip); }, function (e) { throw friendly(e); });
 }
 
