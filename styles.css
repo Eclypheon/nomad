@@ -13,6 +13,7 @@
   --bad: #b91c1c;
   --warn: #96601a;
   --warnbg: #fdf4e3;
+  --accent-soft: rgba(11, 107, 203, .06);
   --radius: 14px;
   --tap: 46px;
 }
@@ -31,6 +32,7 @@
     --bad: #f08a8a;
     --warn: #e0b070;
     --warnbg: #2a2314;
+    --accent-soft: rgba(89, 165, 238, .10);
   }
 }
 
@@ -339,3 +341,109 @@ details.addpanel > div {
 }
 
 .foot { padding-top: 18px; padding-bottom: 26px; }
+
+/* ---------- account chip (header) ---------- */
+
+.hd-auth { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hd-auth .acct {
+  font-size: .8rem;
+  color: var(--muted);
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.avatar { width: 26px; height: 26px; border-radius: 50%; display: block; flex: 0 0 auto; }
+.avatar.big { width: 46px; height: 46px; margin-top: 8px; }
+
+.chipbtn {
+  border: 1px solid var(--line);
+  background: var(--chip);
+  color: var(--fg);
+  border-radius: 999px;
+  font: inherit;
+  font-size: .78rem;
+  padding: 6px 11px;
+  min-height: 34px;
+  cursor: pointer;
+}
+button:disabled { opacity: .5; cursor: default; }
+
+/* ---------- decisions ---------- */
+
+.decwrap { margin-top: 8px; font-size: .85rem; }
+.hd-dec { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hd-dec .decsum { font-weight: 600; }
+
+.decbadges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+
+.badge.decided { background: #dff3e4; color: #14532d; }
+.badge.nomad { background: #dce9fb; color: #0b4f9e; }
+.badge.yours { background: #efe0ff; color: #5b21b6; }
+.badge.delta { background: #fde2e2; color: #8c1c1c; }
+.badge.current-badge { background: var(--accent); color: var(--accent-fg); }
+@media (prefers-color-scheme: dark) {
+  .badge.decided { background: #14301f; color: #86e0a8; }
+  .badge.nomad { background: #14263f; color: #8fbcf3; }
+  .badge.yours { background: #2a1c42; color: #c4a6f5; }
+  .badge.delta { background: #3a1a1a; color: #f0a0a0; }
+}
+
+.decq { font-size: .95rem; margin: 6px 0 0; }
+.pickline { margin-top: 4px; }
+
+.opt { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
+.opt.current { border-color: var(--accent); background: var(--accent-soft); }
+.opthead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.optlabel { font-weight: 700; overflow-wrap: anywhere; }
+.optdelta { margin-left: auto; font-size: .82rem; color: var(--muted); white-space: nowrap; }
+.optdelta.up { color: var(--bad); }
+.optdelta.down { color: var(--good); }
+.optsum { font-size: .92rem; margin: 6px 0 0; }
+.optfacts { font-size: .87rem; color: var(--muted); margin-top: 6px; }
+.optfacts div { margin-top: 3px; }
+.optfacts b { color: var(--fg); font-weight: 600; }
+.optsub {
+  font-size: .76rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.althead {
+  font-size: .76rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  margin: 16px 0 0;
+}
+
+ul.changes { list-style: none; margin: 6px 0 0; padding: 0; }
+ul.changes li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  font-size: .88rem;
+}
+ul.changes .ctext { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.dayjump { flex: 0 0 auto; }
+.optsrc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+.dectotal-line { font-weight: 700; font-size: 1rem; margin-top: 2px; }
+.deltanote { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: .9rem; }
+
+/* the day a "Day 8 →" jump landed on */
+.day.target { box-shadow: 0 0 0 2px var(--accent); }
+.day { scroll-margin-top: 76px; }
+
+/* ---------- sharing ---------- */
+
+.steps { margin: 8px 0 0; padding-left: 20px; font-size: .88rem; }
+.steps li { margin: 7px 0; }
+.shareline { margin: 8px 0 0; overflow-wrap: anywhere; }
+.shareline code { display: inline-block; padding: 7px 9px; }
+
+.alert.ok { border-color: var(--good); color: var(--good); background: transparent; }
+.alert.warn { border-color: var(--warn); }

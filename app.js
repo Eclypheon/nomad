@@ -1,15 +1,16 @@
 /* ==========================================================================
    Trip app — plain JS, no framework, no build step.
    Reads data/*.json (relative paths only) and keeps local state in
-   localStorage. Nothing leaves the device.
+   localStorage. Nothing leaves the device unless a backend is configured in
+   pocketbase-config.js and you sign in — see auth.js + backends/.
    ========================================================================== */
 (function () {
 'use strict';
 
 /* ---------------------------------------------------------------- helpers */
 
-var FILES = ['trip', 'itinerary', 'accommodation', 'expenses', 'packing', 'recommendations'];
-var TABS  = ['itinerary', 'accommodation', 'expenses', 'packing', 'recommendations'];
+var FILES = ['trip', 'itinerary', 'accommodation', 'expenses', 'packing', 'recommendations', 'decisions'];
+var TABS  = ['itinerary', 'accommodation', 'expenses', 'packing', 'recommendations', 'decisions', 'share'];
 var REC_STATUSES = ['idea', 'shortlisted', 'planned'];
 
 var LS = {
@@ -17,7 +18,9 @@ var LS = {
   packing:   'vt.packing.v1',
   recs:      'vt.recs.v1',
   recstatus: 'vt.recstatus.v1',
-  cache:     'vt.cache.v1'
+  cache:     'vt.cache.v1',
+  decisions: 'vt.decisions.v1',
+  trip:      'vt.trip.v1'
 };
 
 var DATA = {};        /* parsed data files, keyed by file name            */
@@ -25,6 +28,33 @@ var LOAD_ERR = {};    /* file name -> parse error message                 */
 var MISSING = {};     /* file name -> true when absent / empty            */
 var BLOCKED = false;  /* browser refused to read local files (file://)     */
 var CACHE_NOTE = '';  /* non-error notice shown in the header             */
+
+/* decisions: the option the user has picked, per decision id.
+   { 'dec-nye': {option_id:'opt-y', picked_by:'someone@example.com', at: 1791…} } */
+var PICKS = {};
+var PICKS_CLOUD = false;   /* true once picks live in a shared trip's rows  */
+var DIRTY = {};            /* tab name -> needs re-render before showing    */
+var RENDERERS = {};        /* tab name -> its render function (filled in init) */
+var REPO = {};             /* the data/*.json copy, kept so a shared trip's
+                              documents can be dropped again on sign-out    */
+
+/* account / sharing — app.js only ever talks to auth.js (the backend facade);
+   with no adapter configured this is all inert and the page stays local      */
+var AUTH = {
+  ready: false,
+  configured: false,
+  error: '',
+  user: null,
+  trip: null,       /* {id, slug, name, currency, travellers} when shared  */
+  role: '',         /* owner | member — membership IS read+write here     */
+  canEdit: false,
+  members: [],      /* members AND pending invitations (kind: member/invite) */
+  trips: null,      /* null = not loaded, [] = loaded empty                */
+  invites: null,    /* null = not loaded; my own pending invitations        */
+  busy: false,
+  msg: null,        /* {kind:'good'|'bad', text:''} shown on the Share tab */
+  oauth: { checked: false, ready: false, offline: false, message: '' }
+};
 
 function $(sel, root) { return (root || document).querySelector(sel); }
 function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -492,13 +522,36 @@ function renderHeader() {
     }
   }
 
+  /* decisions: the trip-level delta belongs with the other summary numbers */
+  var dw = $('#hd-decisions');
+  if (dw) {
+    clear(dw);
+    var dline = decisionsSummaryLine();
+    if (!dline) dw.hidden = true;
+    else {
+      dw.hidden = false;
+      var row = ce('div', 'hd-dec');
+      row.appendChild(ce('span', 'decsum', dline));
+      var jb = ce('button', 'chipbtn', 'Review');
+      jb.addEventListener('click', function () {
+        showTab('decisions', true); lsSet('vt.tab', 'decisions'); window.scrollTo(0, 0);
+      });
+      row.appendChild(jb);
+      dw.appendChild(row);
+    }
+  }
+
   var alert = $('#hd-alert');
   clear(alert);
   var msgs = [];
   if (CACHE_NOTE) msgs.push(CACHE_NOTE);
+  if (AUTH.trip) msgs.push('Shared trip \u201c' + (txt(AUTH.trip.name) || txt(AUTH.trip.slug)) + '\u201d \u00b7 you are ' + (AUTH.role || 'a member') + '.');
+  if (AUTH.msg && AUTH.msg.kind === 'bad') msgs.push(AUTH.msg.text);
   if (LOAD_ERR.trip) msgs.push('data/trip.json ' + LOAD_ERR.trip + ' — header is showing what it can infer.');
   if (msgs.length) { alert.hidden = false; alert.textContent = msgs.join(' '); }
   else alert.hidden = true;
+
+  renderAuthChip();
 }
 
 /* --------------------------------------------------------------- itinerary */
@@ -521,9 +574,15 @@ function renderItinerary() {
     var head = ce('div', 'dayhead');
     var left = ce('div');
     var dayNo = num(pick(d, ['day', 'day_number', 'n']));
+    if (dayNo == null) dayNo = i + 1;
     var dateS = firstString(d, ['date', 'day_date', 'when']);
     var dt = parseDate(dateS);
-    left.appendChild(ce('div', 'daynum', 'Day ' + (dayNo != null ? dayNo : i + 1) +
+    d.__n = dayNo;
+    /* anchor + date, so the Decisions tab can jump straight here */
+    card.id = 'day-' + dayNo;
+    card.setAttribute('data-day', dayNo);
+    if (dateS) card.setAttribute('data-date', dateS);
+    left.appendChild(ce('div', 'daynum', 'Day ' + dayNo +
       (dt ? ' · ' + fmtDate(dt) : (dateS ? ' · ' + dateS : ''))));
     var base = firstString(d, ['base', 'city', 'location', 'where']);
     var title = firstString(d, ['title', 'name', 'summary']);
@@ -738,6 +797,11 @@ function renderExpenses() {
     wrap.appendChild(table);
     sumCard.appendChild(wrap);
     if (!actuals.length) sumCard.appendChild(ce('p', 'muted small', 'No actual spend logged yet — the Actual column fills in as you add entries below.'));
+  }
+  /* the decisions delta sits with the summary numbers, not in its own tab */
+  if (anyP) {
+    var dnote = decisionsDeltaNote(totP, cur);
+    if (dnote) sumCard.appendChild(dnote);
   }
   box.appendChild(sumCard);
 
@@ -1389,18 +1453,1085 @@ function addRecPanel() {
   return panel;
 }
 
+/* --------------------------------------------------------------- decisions */
+/* data/decisions.json — one entry per open question, with a primary option
+   (Nomad's recommendation, cost_delta_sgd always 0) and its alternatives.
+   Picks live in localStorage; on a shared trip they are written into that
+   trip's decisions document on the backend (the backend has no picks table —
+   one row per section, and a pick is one field of the decision it belongs to).
+   Nothing here is inferred: a decision with no options renders as such.      */
+
+function normDecisions() {
+  var raw = DATA.decisions;
+  if (raw == null) return [];
+  var list = Array.isArray(raw) ? raw : asArray(raw, ['decisions', 'items', 'list']);
+  return list.filter(function (d) { return d && typeof d === 'object' && !Array.isArray(d); });
+}
+function decisionOptions(d) {
+  return (d && Array.isArray(d.options) ? d.options : [])
+    .filter(function (o) { return o && typeof o === 'object' && !Array.isArray(o); });
+}
+function optionById(d, id) {
+  var want = txt(id);
+  var found = decisionOptions(d).filter(function (o) { return txt(o.id) === want; });
+  return found.length ? found[0] : null;
+}
+function decisionPrimary(d) {
+  var opts = decisionOptions(d);
+  return optionById(d, d.primary_option_id) || opts[0] || null;
+}
+function recommenderName() {
+  var ds = normDecisions();
+  for (var i = 0; i < ds.length; i++) {
+    var b = firstString(ds[i], ['decided_by', 'by', 'recommended_by']);
+    if (b) return b.charAt(0).toUpperCase() + b.slice(1);
+  }
+  return 'Nomad';
+}
+function optionsCurrency() { return tripCurrency() || 'SGD'; }
+
+function pickOf(d) {
+  var p = PICKS[txt(d.id)];
+  if (!p) return null;
+  return optionById(d, typeof p === 'object' ? p.option_id : p);
+}
+function currentOption(d) { return pickOf(d) || decisionPrimary(d); }
+function deltaOf(o) { if (!o) return 0; var n = num(o.cost_delta_sgd); return n == null ? 0 : n; }
+
+/* one pass over the decisions, with the current pick already resolved */
+function picksState() {
+  return normDecisions().map(function (d) {
+    var p = PICKS[txt(d.id)] || null;
+    var cur = currentOption(d), prim = decisionPrimary(d);
+    return {
+      d: d,
+      pick: p,
+      current: cur,
+      primary: prim,
+      switched: !!(p && cur && prim && txt(cur.id) !== txt(prim.id)),
+      delta: deltaOf(cur),
+      status: p ? 'decided' : (txt(d.status).toLowerCase() || 'open')
+    };
+  });
+}
+function tripDelta() {
+  var st = picksState();
+  if (!st.length) return null;
+  var t = 0;
+  st.forEach(function (s) { t += s.delta; });
+  return t;
+}
+function travellers() {
+  var t = DATA.trip;
+  if (!t || typeof t !== 'object') return null;
+  return num(pick(t, ['travellers', 'travelers', 'pax', 'people']));
+}
+/* "on Nomad's plan" / "+S$145/person vs Nomad's plan (S$290 for 2)" */
+function deltaSentence() {
+  var st = picksState();
+  if (!st.length) return '';
+  var d = tripDelta() || 0, cur = optionsCurrency();
+  if (!d) return 'on ' + recommenderName() + '\u2019s plan';
+  var tv = travellers();
+  return fmtVariance(d, cur) + '/person vs ' + recommenderName() + '\u2019s plan' +
+    (tv && tv > 1 ? ' (' + fmtVariance(d * tv, cur) + ' for ' + tv + ' travellers)' : '');
+}
+function decisionsSummaryLine() {
+  var st = picksState();
+  if (!st.length) return '';
+  var picked = st.filter(function (s) { return !!s.pick; }).length;
+  return 'Decisions: ' + picked + ' of ' + st.length + ' picked \u00b7 ' + deltaSentence();
+}
+
+/* ---------------------------------------------------------------- day refs */
+
+function changeText(c) {
+  if (c == null) return '';
+  if (typeof c === 'object') return firstString(c, ['text', 'what', 'change', 'description', 'summary', 'detail']);
+  return String(c);
+}
+function changeDayNo(c) {
+  if (c && typeof c === 'object') {
+    var n = num(pick(c, ['day', 'day_number', 'n']));
+    if (n != null) return n;
+  }
+  var m = /\bday\s*(\d+)\b/i.exec(changeText(c));
+  return m ? parseInt(m[1], 10) : null;
+}
+function changeDate(c) {
+  var m = /\b(\d{4}-\d{2}-\d{2})\b/.exec(changeText(c));
+  return m ? m[1] : null;
+}
+/* Only offer a jump when that day is actually on the Itinerary tab. */
+function dayAnchor(no, dateS) {
+  if (no != null && document.getElementById('day-' + no)) return document.getElementById('day-' + no);
+  if (dateS) {
+    var all = $$('[data-date]');
+    for (var i = 0; i < all.length; i++) if (all[i].getAttribute('data-date') === dateS) return all[i];
+  }
+  return null;
+}
+function jumpToDay(no, dateS) {
+  showTab('itinerary', true);
+  lsSet('vt.tab', 'itinerary');
+  var el = dayAnchor(no, dateS);
+  if (!el) return false;
+  window.scrollTo(0, 0);
+  try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { el.scrollIntoView(); }
+  el.classList.add('target');
+  setTimeout(function () { el.classList.remove('target'); }, 2200);
+  return true;
+}
+
+/* ----------------------------------------------------------------- picking */
+
+function pickerName() {
+  if (AUTH.user && AUTH.user.email) return AUTH.user.email;
+  if (AUTH.user && AUTH.user.name) return AUTH.user.name;
+  return 'this device';
+}
+function pickLabel(p) {
+  if (!p) return '';
+  var who = typeof p === 'object' ? txt(p.picked_by) : '';
+  return who || 'this device';
+}
+function savePick(d, option) {
+  var id = txt(d.id);
+  if (!id || !option) return;
+  PICKS[id] = { option_id: txt(option.id), picked_by: pickerName(), at: Date.now() };
+  if (PICKS_CLOUD && AUTH.trip) {
+    AUTH.busy = true;
+    renderHeader(); renderDecisions(); markDirty('expenses'); markDirty('share');
+    /* DATA.decisions rides along as the seed: the first pick on a trip whose
+       decisions were never imported creates that section row from this copy */
+    TripAuth.savePick(AUTH.trip.id, id, txt(option.id), DATA.decisions).then(function () {
+      AUTH.busy = false;
+      renderAll();
+    }, function (e) {
+      AUTH.busy = false;
+      AUTH.msg = { kind: 'bad', text: 'Could not save that choice to the shared trip: ' + (e && e.message ? e.message : e) };
+      renderAll();
+    });
+  } else {
+    lsSet(LS.decisions, PICKS);
+    renderHeader(); renderDecisions(); markDirty('expenses'); markDirty('share');
+  }
+}
+function loadPicksLocal() {
+  var p = lsGet(LS.decisions, {});
+  PICKS = (p && typeof p === 'object' && !Array.isArray(p)) ? p : {};
+  PICKS_CLOUD = false;
+}
+function anyPicks() {
+  for (var k in PICKS) if (Object.prototype.hasOwnProperty.call(PICKS, k)) return true;
+  return false;
+}
+
+/* -------------------------------------------------------------- decisions UI */
+
+function renderDecisions() {
+  var box = content('decisions');
+  clear(box);
+  var err = errBanner('decisions'); if (err) box.appendChild(err);
+
+  var st = picksState();
+  if (!st.length) {
+    box.appendChild(emptyState((MISSING.decisions || LOAD_ERR.decisions)
+      ? 'No decisions to review yet \u2014 they arrive in data/decisions.json.'
+      : 'data/decisions.json has no decisions in it yet.', 'data/decisions.json'));
+    return;
+  }
+  box.appendChild(decisionSummaryCard(st));
+  st.forEach(function (s) { box.appendChild(decisionCard(s)); });
+}
+
+function decisionSummaryCard(st) {
+  var cur = optionsCurrency(), d = tripDelta() || 0;
+  var card = ce('div', 'card dectotal');
+  card.appendChild(ce('h3', null, 'Your picks'));
+  var open = st.filter(function (s) { return !s.pick; }).length;
+  card.appendChild(ce('div', 'dectotal-line', deltaSentence()));
+  card.appendChild(ce('p', 'muted small',
+    (st.length - open) + ' of ' + st.length + ' decided' +
+    (open ? ' \u00b7 ' + open + ' still open' : ' \u00b7 nothing left to pick')));
+  if (d !== 0) {
+    var tv = travellers();
+    card.appendChild(ce('p', 'muted small',
+      'That is ' + fmtVariance(d * (tv || 1), cur) + ' in total' + (tv && tv > 1 ? ' for ' + tv : '') +
+      ' against the researched plan.'));
+  }
+  if (AUTH.trip) card.appendChild(ce('p', 'muted small',
+    'Shared trip \u00b7 ' + AUTH.trip.name + (AUTH.role ? ' \u00b7 you are ' + AUTH.role : '')));
+  if (anyPicks()) {
+    var reset = ce('button', 'btn tiny ghost', 'Reset all picks');
+    reset.addEventListener('click', function () {
+      if (reset.getAttribute('data-armed') !== '1') {
+        reset.setAttribute('data-armed', '1');
+        reset.textContent = 'Tap again to reset';
+        setTimeout(function () {
+          reset.setAttribute('data-armed', '0');
+          reset.textContent = 'Reset all picks';
+        }, 3000);
+        return;
+      }
+      for (var k in PICKS) if (Object.prototype.hasOwnProperty.call(PICKS, k)) delete PICKS[k];
+      if (PICKS_CLOUD && AUTH.trip) {
+        /* the picks are in the trip's decisions document: clear them there, or
+           they come back on the next load */
+        AUTH.busy = true;
+        TripAuth.clearPicks(AUTH.trip.id).then(function () {
+          AUTH.busy = false;
+          markDirty('expenses'); markDirty('share');
+          renderAll();
+        }, function (e) {
+          AUTH.busy = false;
+          AUTH.msg = { kind: 'bad', text: 'Picks were cleared here but not on the shared trip: ' + (e && e.message ? e.message : e) };
+          renderAll();
+        });
+        return;
+      }
+      lsSet(LS.decisions, PICKS);
+      markDirty('expenses'); markDirty('share');
+      renderAll();
+    });
+    card.appendChild(ce('div', 'actions')).appendChild(reset);
+  }
+  return card;
+}
+
+function decisionCard(s) {
+  var d = s.d, cur = optionsCurrency();
+  var card = ce('article', 'card decision');
+  card.setAttribute('data-decision', txt(d.id));
+
+  var head = ce('div', 'dechead');
+  head.appendChild(ce('h3', null, txt(d.title) || txt(d.question) || 'Decision ' + txt(d.id)));
+  card.appendChild(head);
+
+  var badges = ce('div', 'decbadges');
+  badges.appendChild(ce('span', 'badge ' + slugClass(s.status), s.status));
+  if (s.current && s.primary && txt(s.current.id) === txt(s.primary.id)) {
+    badges.appendChild(ce('span', 'badge nomad', recommenderName() + ' recommends'));
+  }
+  if (s.switched) badges.appendChild(ce('span', 'badge yours', 'Your pick'));
+  if (s.delta) badges.appendChild(ce('span', 'badge delta', fmtVariance(s.delta, cur) + ' /person'));
+  card.appendChild(badges);
+
+  if (has(d.question)) card.appendChild(ce('p', 'decq', txt(d.question)));
+  if (s.pick) {
+    card.appendChild(ce('div', 'small muted pickline',
+      'Chosen by ' + pickLabel(s.pick) +
+      (s.pick && s.pick.at ? ' \u00b7 ' + fmtDate(new Date(s.pick.at), true) : '')));
+  }
+  if (PICKS_CLOUD && AUTH.busy) card.appendChild(ce('div', 'small muted', 'Saving\u2026'));
+
+  card.appendChild(optionBlock(d, s.current, true));
+
+  var alts = decisionOptions(d).filter(function (o) {
+    return !s.current || txt(o.id) !== txt(s.current.id);
+  });
+  if (alts.length) {
+    card.appendChild(ce('h4', 'althead', 'Alternatives'));
+    alts.forEach(function (o) { card.appendChild(optionBlock(d, o, false)); });
+  }
+  if (s.switched && s.primary) {
+    var back = ce('button', 'btn tiny ghost backbtn', 'Back to ' + recommenderName() + '\u2019s pick');
+    back.addEventListener('click', function () { savePick(d, s.primary); });
+    var act = ce('div', 'actions');
+    act.appendChild(back);
+    card.appendChild(act);
+  }
+  return card;
+}
+
+function optionBlock(d, o, isCurrent) {
+  var cur = optionsCurrency();
+  var box = ce('div', 'opt' + (isCurrent ? ' current' : ' alt'));
+  if (!o) { box.appendChild(ce('div', 'muted small', 'This decision has no options to show.')); return box; }
+
+  var head = ce('div', 'opthead');
+  head.appendChild(ce('div', 'optlabel', txt(o.label) || txt(o.id)));
+  if (isCurrent) head.appendChild(ce('span', 'badge current-badge', 'Current'));
+  head.appendChild(ce('span', 'optdelta' + (deltaOf(o) > 0 ? ' up' : (deltaOf(o) < 0 ? ' down' : '')),
+    deltaOf(o) === 0 ? 'in ' + recommenderName() + '\u2019s plan' : fmtVariance(deltaOf(o), cur) + ' /person'));
+  box.appendChild(head);
+
+  if (has(o.summary)) box.appendChild(ce('p', 'optsum', txt(o.summary)));
+
+  var facts = ce('div', 'optfacts');
+  if (has(o.booking_impact)) {
+    var b = ce('div');
+    b.appendChild(ce('b', null, 'Booking: '));
+    b.appendChild(document.createTextNode(txt(o.booking_impact)));
+    facts.appendChild(b);
+  }
+  if (has(o.tradeoffs)) {
+    var t = ce('div');
+    t.appendChild(ce('b', null, 'Trade-offs: '));
+    t.appendChild(document.createTextNode(txt(o.tradeoffs)));
+    facts.appendChild(t);
+  }
+  if (facts.childNodes.length) box.appendChild(facts);
+
+  var changes = Array.isArray(o.changes) ? o.changes
+    : (has(o.changes) ? [o.changes] : []);
+  var texts = changes.map(changeText).filter(has);
+  if (texts.length) {
+    var h = ce('div', 'optsub', 'What changes on the itinerary');
+    box.appendChild(h);
+    var ul = ce('ul', 'changes');
+    changes.forEach(function (c, i) {
+      var text = changeText(c);
+      if (!has(text)) return;
+      var li = ce('li');
+      li.appendChild(ce('span', 'ctext', text));
+      var no = changeDayNo(c), dateS = changeDate(c);
+      if (dayAnchor(no, dateS)) {
+        var j = ce('button', 'btn tiny ghost dayjump', no != null ? 'Day ' + no + ' \u2192' : 'That day \u2192');
+        j.setAttribute('data-day', no != null ? no : '');
+        j.addEventListener('click', function () { jumpToDay(no, dateS); });
+        li.appendChild(j);
+      }
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+  }
+
+  var srcs = Array.isArray(o.sources) ? o.sources.filter(isUrl) : [];
+  if (srcs.length) {
+    var links = ce('div', 'optsrc');
+    srcs.forEach(function (u) { links.appendChild(link(u, 'Source')); });
+    box.appendChild(links);
+  }
+
+  if (!isCurrent) {
+    var act = ce('div', 'actions');
+    if (PICKS_CLOUD && AUTH.trip && !AUTH.canEdit) {
+      /* the backend only shares a trip with the owner and its members, so a
+         trip you can read but not change should not be happening: say so
+         rather than failing on tap */
+      var ro = ce('button', 'btn tiny ghost', 'Read-only');
+      ro.disabled = true;
+      ro.title = 'The backend is not giving this account write access to the trip (you are ' + (AUTH.role || 'a member') + ').';
+      act.appendChild(ro);
+    } else {
+      var sw = ce('button', 'btn tiny', 'Switch to this');
+      sw.addEventListener('click', function () { savePick(d, o); });
+      act.appendChild(sw);
+    }
+    box.appendChild(act);
+  }
+  return box;
+}
+
+function slugClass(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'open';
+}
+
+/* The trip-level delta, shown with the other summary numbers (Expenses tab). */
+function decisionsDeltaNote(planTotal, cur) {
+  var st = picksState();
+  if (!st.length) return null;
+  var d = tripDelta() || 0;
+  var box = ce('div', 'deltanote');
+  var tv = travellers();
+  box.appendChild(ce('div', null, 'If you take your current picks: ' + deltaSentence() + '.'));
+  if (d && planTotal != null) {
+    box.appendChild(ce('div', 'muted small',
+      'This plan is ' + money(planTotal, cur) + '/person, so your picks put it at ' +
+      money(planTotal + d, cur) + '/person' + (tv && tv > 1 ? ' (' + money((planTotal + d) * tv, cur) + ' for ' + tv + ')' : '') + '.'));
+  }
+  var j = ce('button', 'btn tiny ghost', 'Review the decisions');
+  j.addEventListener('click', function () { showTab('decisions', true); lsSet('vt.tab', 'decisions'); window.scrollTo(0, 0); });
+  var act = ce('div', 'actions');
+  act.appendChild(j);
+  box.appendChild(act);
+  return box;
+}
+
+/* ------------------------------------------------------- account / sharing */
+
+function markDirty(name) { DIRTY[name] = true; }
+function authReady() { return !!(window.TripAuth); }
+
+function accountLine() {
+  if (!authReady() || !AUTH.configured) return 'Local mode \u2014 no backend is configured, so everything stays on this device.';
+  if (!AUTH.ready) return 'Connecting to ' + (TripAuth.backendName() || 'the backend') + '\u2026';
+  if (!AUTH.user) return 'Not signed in \u2014 the app is showing only the local data files.';
+  return 'Signed in as ' + (AUTH.user.email || AUTH.user.name || AUTH.user.id);
+}
+/* Why the sign-in button cannot work yet. Straight from the backend's
+   /api/collections/users/auth-methods, which answers "no providers" until the
+   owner has pasted a Google client id/secret into the admin console. */
+function noSignInReason() {
+  if (AUTH.oauth.offline) return backendLabel() + ' is not answering right now.';
+  if (AUTH.oauth.message) return AUTH.oauth.message;
+  return 'no sign-in method is available yet.';
+}
+
+function doSignIn() {
+  if (!authReady()) return;
+  AUTH.msg = null;
+  AUTH.busy = true;
+  renderShare(); renderHeader();
+  TripAuth.signIn().then(function () {
+    AUTH.busy = false;
+    renderAll();
+  }, function (e) {
+    AUTH.busy = false;
+    AUTH.msg = { kind: 'bad', text: 'Sign-in did not start: ' + (e && e.message ? e.message : e) };
+    renderAll();
+  });
+}
+function doSignOut() {
+  if (!authReady()) return;
+  TripAuth.signOut().then(function () {
+    AUTH.user = null; AUTH.trip = null; AUTH.role = ''; AUTH.canEdit = false;
+    AUTH.members = []; AUTH.trips = null; AUTH.invites = null; AUTH.msg = null;
+    lsDel(LS.trip);
+    restoreRepo();
+    loadPicksLocal();
+    renderAll();
+  });
+}
+function loadTrips() {
+  if (!authReady() || !AUTH.user) { AUTH.trips = null; return; }
+  TripAuth.listTrips().then(function (rows) {
+    AUTH.trips = Array.isArray(rows) ? rows : [];
+    markDirty('share');
+    if (currentTabName() === 'share') renderShare();
+  }, function (e) {
+    AUTH.trips = [];
+    AUTH.msg = { kind: 'bad', text: 'Could not list your trips: ' + (e && e.message ? e.message : e) };
+    markDirty('share');
+    if (currentTabName() === 'share') renderShare();
+  });
+}
+/* invitations addressed to my own email, which the backend lets me read
+   before I am a member of anything (that is the whole point of the row) */
+function loadInvites() {
+  if (!authReady() || !AUTH.user) { AUTH.invites = null; return; }
+  TripAuth.pendingInvites().then(function (rows) {
+    AUTH.invites = Array.isArray(rows) ? rows : [];
+    markDirty('share');
+    if (currentTabName() === 'share') renderShare();
+  }, function (e) {
+    AUTH.invites = [];
+    AUTH.msg = { kind: 'bad', text: 'Could not check for invitations: ' + (e && e.message ? e.message : e) };
+    markDirty('share');
+    if (currentTabName() === 'share') renderShare();
+  });
+}
+function doAcceptInvite(inv) {
+  AUTH.busy = true;
+  AUTH.msg = null;
+  renderShare(); renderHeader();
+  TripAuth.acceptInvite(inv).then(function () {
+    AUTH.busy = false;
+    var label = txt(inv.trip_title) || ('trip ' + txt(inv.trip));
+    AUTH.msg = { kind: 'good', text: 'Joined \u201c' + label + '\u201d. Opening it\u2026' };
+    loadInvites();
+    loadTrips();
+    loadSharedTrip(inv.trip, 'You are now a member of \u201c' + label + '\u201d. Everyone on a trip can read and change it.');
+  }, function (e) {
+    AUTH.busy = false;
+    AUTH.msg = { kind: 'bad', text: 'Could not accept that invitation: ' + (e && e.message ? e.message : e) };
+    renderAll();
+  });
+}
+function doLeaveTrip() {
+  var mine = null;
+  AUTH.members.forEach(function (m) {
+    if (!mine && m.kind === 'member' && AUTH.user && m.user_id === AUTH.user.id) mine = m;
+  });
+  if (!mine) return;
+  AUTH.busy = true;
+  renderShare(); renderHeader();
+  TripAuth.removeMember(mine).then(function () {
+    AUTH.busy = false;
+    AUTH.trip = null; AUTH.role = ''; AUTH.canEdit = false; AUTH.members = [];
+    PICKS_CLOUD = false;
+    lsDel(LS.trip);
+    restoreRepo();
+    loadPicksLocal();
+    AUTH.msg = { kind: 'good', text: 'You left that trip. It is no longer on your list; ask the owner to invite you again if that was a mistake.' };
+    loadTrips(); loadInvites();
+    renderAll();
+  }, function (e) {
+    AUTH.busy = false;
+    AUTH.msg = { kind: 'bad', text: 'Could not leave: ' + (e && e.message ? e.message : e) };
+    renderAll();
+  });
+}
+function requestedSlug() {
+  var m = /(?:^|[#&?])trip=([^&]+)/.exec(String(location.hash || ''));
+  if (m) { try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; } }
+  return lsGet(LS.trip, '') || '';
+}
+function loadSharedTrip(key, notice) {
+  if (!authReady() || !AUTH.user || !AUTH.configured || !has(key)) return;
+  AUTH.busy = true;
+  AUTH.msg = null;
+  renderShare(); renderHeader();
+  TripAuth.openTrip(key).then(function (res) {
+    AUTH.trip = res.trip;
+    AUTH.role = res.role || 'member';
+    AUTH.canEdit = !!res.canEdit;
+    AUTH.members = res.members || [];
+    restoreRepo();
+    applyDocs(res.docs);
+    lsSet(LS.trip, res.trip.id);
+    /* a caller that just did something (invited, imported, removed) keeps its
+       own confirmation; otherwise say what is on screen now */
+    AUTH.msg = notice
+      ? { kind: 'good', text: notice }
+      : {
+        kind: AUTH.canEdit ? 'good' : 'warn',
+        text: 'Showing the shared trip \u201c' + res.trip.name + '\u201d. You are ' + AUTH.role +
+          (AUTH.canEdit
+            ? ' \u2014 everyone on this trip can read and change it.'
+            : ' \u2014 the backend is not giving you access to this trip.')
+      };
+    return TripAuth.loadPicks(res.trip.id).then(function (picks) {
+      PICKS = picks || {};
+      PICKS_CLOUD = true;
+    });
+  }).then(function () {
+    AUTH.busy = false;
+    renderAll();
+  }, function (e) {
+    AUTH.busy = false;
+    AUTH.trip = null;
+    AUTH.canEdit = false;
+    AUTH.members = [];
+    PICKS_CLOUD = false;
+    loadPicksLocal();
+    AUTH.msg = { kind: 'bad', text: (e && e.message) ? e.message : String(e) };
+    renderAll();
+  });
+}
+/* Cloud documents win over the local files; anything a trip does not carry
+   falls back to the copy in data/ so a half-seeded trip still renders. */
+function applyDocs(docs) {
+  if (!docs) return 0;
+  var n = 0;
+  FILES.forEach(function (name) {
+    if (docs[name] !== undefined && docs[name] !== null) {
+      DATA[name] = docs[name];
+      delete MISSING[name];
+      delete LOAD_ERR[name];
+      n++;
+    }
+  });
+  return n;
+}
+function snapshotRepo() {
+  REPO = {};
+  FILES.forEach(function (name) { if (DATA[name] !== undefined) REPO[name] = DATA[name]; });
+}
+function restoreRepo() {
+  FILES.forEach(function (name) {
+    if (REPO[name] !== undefined) DATA[name] = REPO[name];
+  });
+}
+function docPayload() {
+  var out = {};
+  FILES.forEach(function (name) { if (DATA[name] !== undefined) out[name] = DATA[name]; });
+  return out;
+}
+
+function renderShare() {
+  var box = content('share');
+  clear(box);
+  box.appendChild(accountCard());
+  if (!authReady() || !AUTH.configured) { box.appendChild(setupCard()); return; }
+  if (AUTH.msg) box.appendChild(ce('div', 'alert ' + (AUTH.msg.kind === 'bad' ? 'err' : (AUTH.msg.kind === 'good' ? 'ok' : 'warn')), AUTH.msg.text));
+  if (!AUTH.user) { box.appendChild(signInCard()); return; }
+  box.appendChild(invitedCard());
+  box.appendChild(tripsCard());
+  box.appendChild(sharedTripCard());
+  box.appendChild(membersCard());
+  box.appendChild(inviteCard());
+  box.appendChild(importCard());
+}
+
+function accountCard() {
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'Account'));
+  card.appendChild(ce('div', null, accountLine()));
+  if (AUTH.error) card.appendChild(ce('div', 'small bad', (authReady() && TripAuth.backendName() ? TripAuth.backendName() : 'The backend') + ' said: ' + AUTH.error));
+  if (AUTH.user && AUTH.user.avatar) {
+    var img = ce('img', 'avatar big');
+    img.src = AUTH.user.avatar;
+    img.alt = '';
+    img.setAttribute('referrerpolicy', 'no-referrer');
+    card.appendChild(img);
+  }
+  var actions = ce('div', 'actions');
+  if (authReady() && AUTH.configured && !AUTH.user) {
+    var inBtn = ce('button', 'btn', 'Sign in with Google');
+    inBtn.addEventListener('click', doSignIn);
+    if (AUTH.busy || !AUTH.oauth.ready) inBtn.disabled = true;
+    if (!AUTH.oauth.ready) inBtn.title = noSignInReason();
+    actions.appendChild(inBtn);
+  }
+  if (AUTH.user) {
+    var outBtn = ce('button', 'btn ghost', 'Sign out');
+    outBtn.addEventListener('click', doSignOut);
+    actions.appendChild(outBtn);
+  }
+  if (actions.childNodes.length) card.appendChild(actions);
+  return card;
+}
+
+function setupCard() {
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'Local mode \u2014 no backend configured'));
+  card.appendChild(ce('p', 'muted small',
+    'This page reads data/*.json and keeps everything in this browser. No backend is configured, so signing in, sharing and invitations are off, and nothing leaves this device.'));
+  card.appendChild(ce('p', 'muted small',
+    'The app is built for a self-hosted PocketBase backend (alienlab). Point it at one by setting backendBase in pocketbase-config.js \u2014 that file is the only place the address lives, and it is the only configuration the client has (this backend needs no key).'));
+  var ul = ce('ul', 'steps');
+  function step(text, code) {
+    var li = ce('li');
+    li.appendChild(document.createTextNode(text));
+    if (code) li.appendChild(ce('code', null, code));
+    ul.appendChild(li);
+    return li;
+  }
+  step('Backend configured? Google sign-in still has to be authorised once by the owner (client ID + secret in the PocketBase admin console). Until then the backend answers \u201cnot configured\u201d and the sign-in button says so.');
+  step('The adapter contract and the swap procedure are in ', 'backends/README.md');
+  step('The deployed adapter is ', 'backends/pocketbase-adapter.js');
+  card.appendChild(ul);
+  card.appendChild(ce('p', 'muted small',
+    'None of this affects the trip itself: the itinerary, expenses, packing, ideas and the Decisions tab all run off the local files, with or without a backend.'));
+  return card;
+}
+
+function signInCard() {
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'Sign in to share this trip'));
+  card.appendChild(ce('p', 'muted small',
+    'Signing in with Google links this browser to your trips. The app then shows the trips you own or were invited to \u2014 the backend\u2019s collection rules decide that, not this page.'));
+  var actions = ce('div', 'actions');
+  var b = ce('button', 'btn', 'Sign in with Google');
+  if (AUTH.busy || !AUTH.oauth.ready) b.disabled = true;
+  b.addEventListener('click', doSignIn);
+  actions.appendChild(b);
+  if (!AUTH.oauth.ready) {
+    var again = ce('button', 'btn tiny ghost', 'Check again');
+    again.addEventListener('click', function () {
+      AUTH.busy = true;
+      renderShare(); renderHeader();
+      TripAuth.refreshAuthMethods().then(function (st) {
+        applyAuthStatus(st);
+        AUTH.busy = false;
+        if (AUTH.oauth.ready) AUTH.msg = { kind: 'good', text: 'Google sign-in is available now \u2014 sign in below.' };
+        renderAll();
+      });
+    });
+    actions.appendChild(again);
+  }
+  card.appendChild(actions);
+  if (!AUTH.oauth.ready) {
+    card.appendChild(ce('div', 'alert warn', 'Sign-in is switched off. ' + noSignInReason()));
+  }
+  if (AUTH.error) card.appendChild(ce('div', 'small bad', AUTH.error));
+  card.appendChild(ce('p', 'muted small', 'Signed out, everything on this page stays on this device.'));
+  return card;
+}
+
+/* Invitations addressed to my email but not accepted yet. The backend lets an
+   invitee read their own trip_invites row before they are a member of
+   anything; accepting is one POST that makes me a member of that trip. */
+function invitedCard() {
+  if (AUTH.invites === null) {
+    var loading = ce('div', 'card');
+    loading.appendChild(ce('h3', null, 'Invitations'));
+    loading.appendChild(ce('div', 'muted small', 'Checking for invitations\u2026'));
+    return loading;
+  }
+  if (!AUTH.invites.length) return ce('div', 'card', '');   /* empty, no heading */
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'You have been invited'));
+  var ul = ce('ul', 'rows');
+  AUTH.invites.forEach(function (inv) {
+    var li = ce('li');
+    li.appendChild(ce('div', null, txt(inv.trip_title) || ('trip ' + txt(inv.trip))));
+    li.appendChild(ce('div', 'meta', 'invited as ' + (inv.role || 'member')));
+    var act = ce('div', 'actions');
+    var b = ce('button', 'btn tiny', 'Accept');
+    if (AUTH.busy) b.disabled = true;
+    b.addEventListener('click', function () { doAcceptInvite(inv); });
+    act.appendChild(b);
+    li.appendChild(act);
+    ul.appendChild(li);
+  });
+  card.appendChild(ul);
+  card.appendChild(ce('p', 'muted small',
+    'Accepting adds you to that trip as a member: you can read it and change it, like everyone else it is shared with.'));
+  return card;
+}
+
+function tripsCard() {
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'Your trips'));
+  if (AUTH.trips === null) { card.appendChild(ce('div', 'muted small', 'Loading\u2026')); return card; }
+  if (!AUTH.trips.length) {
+    card.appendChild(ce('div', 'muted small',
+      'No trips are shared with ' + (AUTH.user.email || 'this account') + ' yet \u2014 signed in but not a member of anything, so this page is showing the local copy in data/.'));
+    card.appendChild(ce('p', 'muted small',
+      'If someone has shared a trip, follow their link (it carries the trip id, \u2026#trip=<trip id>) or paste that link under \u201cOpen a shared trip\u201d below. The backend matches on the exact email address, so it has to be the one you were invited with.'));
+    return card;
+  }
+  var ul = ce('ul', 'rows');
+  AUTH.trips.forEach(function (t) {
+    if (!t || !t.slug) return;
+    var li = ce('li');
+    li.appendChild(ce('div', null, txt(t.name) || txt(t.slug)));
+    li.appendChild(ce('div', 'meta', (t.owner_id === (AUTH.user && AUTH.user.id) ? 'you own it' : 'shared with you') +
+      ' \u00b7 ' + txt(t.travellers) + ' traveller' + (num(t.travellers) === 1 ? '' : 's') +
+      (t.currency ? ' \u00b7 ' + txt(t.currency) : '') + ' \u00b7 id ' + txt(t.id)));
+    var open = ce('button', 'btn tiny', 'Open');
+    open.addEventListener('click', function () { loadSharedTrip(t.id); });
+    var tools = ce('div', 'tools');
+    tools.appendChild(open);
+    li.appendChild(tools);
+    ul.appendChild(li);
+  });
+  card.appendChild(ul);
+  return card;
+}
+
+function sharedTripCard() {
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'This trip'));
+  if (!AUTH.trip) {
+    card.appendChild(ce('div', 'muted small',
+      'No shared trip is open \u2014 this page is reading the copy in data/. Open one by its id below, or follow a share link.'));
+    var gr = ce('div', 'fgrid');
+    var lab = ce('label', 'fld', 'Open a shared trip (id or share link)');
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = 'gyhin4g0a03b1gq or \u2026#trip=gyhin4g0a03b1gq';
+    inp.id = 'share-slug';
+    lab.appendChild(inp);
+    gr.appendChild(lab);
+    card.appendChild(gr);
+    var actions = ce('div', 'actions');
+    var b = ce('button', 'btn tiny', 'Open');
+    b.addEventListener('click', function () {
+      if (!inp.value.trim()) return;
+      loadSharedTrip(inp.value.trim());
+    });
+    actions.appendChild(b);
+    card.appendChild(actions);
+    return card;
+  }
+
+  var t = AUTH.trip;
+  var head = ce('div', 'row');
+  head.appendChild(ce('div', null, txt(t.name) || txt(t.slug)));
+  head.appendChild(ce('span', 'badge ' + (AUTH.canEdit ? 'planned' : 'wishlist'), AUTH.role || 'member'));
+  card.appendChild(head);
+  card.appendChild(ce('div', 'muted small', 'trip id ' + txt(t.id) + (t.travellers ? ' \u00b7 ' + txt(t.travellers) + ' travellers' : '')));
+
+  var linkLine = ce('div', 'shareline');
+  linkLine.appendChild(ce('code', null, TripAuth.shareLink(t.id)));
+  card.appendChild(linkLine);
+
+  var actions = ce('div', 'actions');
+  var copy = ce('button', 'btn tiny', 'Copy link');
+  copy.addEventListener('click', function () { copyFrom(TripAuth.shareLink(t.id), copy); });
+  actions.appendChild(copy);
+  var reload = ce('button', 'btn tiny ghost', 'Reload from the backend');
+  reload.addEventListener('click', function () { loadSharedTrip(t.id); });
+  actions.appendChild(reload);
+  var close = ce('button', 'btn tiny ghost', 'Close (back to local)');
+  close.addEventListener('click', function () {
+    AUTH.trip = null; AUTH.role = ''; AUTH.canEdit = false; AUTH.members = [];
+    AUTH.msg = null; AUTH.trips = null;
+    PICKS_CLOUD = false;
+    lsDel(LS.trip);
+    restoreRepo();
+    loadPicksLocal();
+    renderAll();
+    loadTrips();
+  });
+  actions.appendChild(close);
+  if (AUTH.role && AUTH.role !== 'owner') {
+    var leave = ce('button', 'btn tiny danger', 'Leave this trip');
+    leave.addEventListener('click', function () { doLeaveTrip(); });
+    actions.appendChild(leave);
+  }
+  card.appendChild(actions);
+  card.appendChild(ce('p', 'muted small',
+    'Share links are not secret \u2014 they carry the trip id, nothing else. Anyone who follows one still has to sign in, ' +
+    'and the backend only shows the trip to the owner and to invited addresses. Ask the owner to invite the exact ' +
+    'Google address of everyone who needs it.'));
+  return card;
+}
+
+function membersCard() {
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'Who can see it'));
+  if (!AUTH.trip) {
+    card.appendChild(ce('div', 'muted small', 'Open a shared trip to see and edit its member list.'));
+    return card;
+  }
+  if (!AUTH.members.length) {
+    card.appendChild(ce('div', 'muted small', 'No members visible \u2014 that should not happen; reload the trip.'));
+    return card;
+  }
+  var isOwner = AUTH.role === 'owner';
+  var ul = ce('ul', 'rows');
+  AUTH.members.forEach(function (m) {
+    var isInvite = m.kind === 'invite';
+    var li = ce('li');
+    li.appendChild(ce('div', null, txt(m.name) || txt(m.invited_email) || 'member'));
+    if (m.name && m.invited_email && String(m.name).toLowerCase() !== String(m.invited_email).toLowerCase()) li.appendChild(ce('div', 'meta', txt(m.invited_email)));
+    li.appendChild(ce('span', 'badge ' + (isInvite ? 'idea' : 'planned'),
+      (m.role || 'member') + (isInvite ? ' \u00b7 invited' : '')));
+    li.appendChild(ce('div', 'meta',
+      isInvite ? 'has not accepted yet'
+        : (m.user_id === (AUTH.user && AUTH.user.id) ? 'that is you' : 'a member \u2014 can read and change the trip')));
+    if (isOwner && m.role !== 'owner') {
+      var rm = ce('button', 'btn tiny danger', isInvite ? 'Revoke invitation' : 'Remove');
+      rm.addEventListener('click', function () {
+        AUTH.busy = true;
+        renderShare();
+        TripAuth.removeMember(m).then(function () {
+          AUTH.busy = false;
+          var what = txt(m.invited_email) || 'that member';
+          loadSharedTrip(AUTH.trip.id, (isInvite ? 'Revoked the invitation for ' : 'Removed ') + what +
+            (isInvite ? '.' : ' \u2014 they can no longer open this trip.'));
+        }, function (e) {
+          AUTH.busy = false;
+          AUTH.msg = { kind: 'bad', text: 'Could not remove that: ' + (e && e.message ? e.message : e) };
+          renderAll();
+        });
+      });
+      var tools = ce('div', 'tools');
+      tools.appendChild(rm);
+      li.appendChild(tools);
+    } else if (isOwner && m.role === 'owner') {
+      li.appendChild(ce('div', 'meta', 'an owner cannot be removed here'));
+    }
+    ul.appendChild(li);
+  });
+  card.appendChild(ul);
+  return card;
+}
+
+function inviteCard() {
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'Invite by email'));
+  if (!AUTH.trip) {
+    card.appendChild(ce('div', 'muted small', 'Open a shared trip to invite someone to it.'));
+    return card;
+  }
+  if (AUTH.role !== 'owner') {
+    card.appendChild(ce('div', 'muted small',
+      'Only the owner can change who a trip is shared with. You are ' + (AUTH.role || 'a member') + '.'));
+    return card;
+  }
+  card.appendChild(ce('p', 'muted small',
+    'The backend matches on the exact email address of the Google account the person signs in with \u2014 the ' +
+    'address they will use, not a nickname. Inviting someone adds them as a member: on this backend a member can ' +
+    'read and change the trip (there is no read-only tier).'));
+  var gr = ce('div', 'fgrid');
+  var l1 = ce('label', 'fld', 'Their Google email');
+  var email = document.createElement('input');
+  email.type = 'email';
+  email.placeholder = 'them@example.com';
+  email.id = 'invite-email';
+  l1.appendChild(email);
+  gr.appendChild(l1);
+  card.appendChild(gr);
+  var actions = ce('div', 'actions');
+  var b = ce('button', 'btn tiny', 'Send invitation');
+  if (AUTH.busy) b.disabled = true;
+  b.addEventListener('click', function () {
+    var who = email.value.trim().toLowerCase();
+    if (!who) return;
+    AUTH.busy = true;
+    renderShare();
+    TripAuth.invite(AUTH.trip.id, who).then(function () {
+      AUTH.busy = false;
+      AUTH.msg = { kind: 'good', text: 'Invited ' + who + '.' };
+      loadSharedTrip(AUTH.trip.id, 'Invited ' + who + '. They see the trip as soon as they sign in with that address ' +
+        'and accept it on the Share tab.');
+    }, function (e) {
+      AUTH.busy = false;
+      AUTH.msg = { kind: 'bad', text: 'Could not invite: ' + (e && e.message ? e.message : e) };
+      renderAll();
+    });
+  });
+  actions.appendChild(b);
+  card.appendChild(actions);
+  return card;
+}
+
+function importCard() {
+  var card = ce('div', 'card');
+  card.appendChild(ce('h3', null, 'Import data/*.json into this trip'));
+  if (!AUTH.trip) {
+    card.appendChild(ce('div', 'muted small', 'Open a shared trip first \u2014 this uploads the sections this page is showing into that trip.'));
+    return card;
+  }
+  if (!AUTH.canEdit) {
+    card.appendChild(ce('div', 'muted small', 'You are ' + (AUTH.role || 'a member') + ' on this trip, so you can read it but not overwrite its content.'));
+    return card;
+  }
+  card.appendChild(ce('p', 'muted small',
+    'Uploads the sections this page is currently rendering (itinerary, accommodation, expenses, packing, recommendations and, ' +
+    'if data/decisions.json exists, decisions) into \u201c' +
+    (txt(AUTH.trip.name) || txt(AUTH.trip.id)) + '\u201d as one document per section. Existing content for those sections is replaced, ' +
+    'and the trip\u2019s own details (title, dates, bases, budget) are written back as well when you are the owner.'));
+  var actions = ce('div', 'actions');
+  var b = ce('button', 'btn tiny', 'Import this page\u2019s data into the trip');
+  if (AUTH.busy) b.disabled = true;
+  b.addEventListener('click', function () {
+    AUTH.busy = true;
+    renderShare();
+    TripAuth.saveDocs(AUTH.trip.id, docPayload()).then(function (n) {
+      AUTH.busy = false;
+      AUTH.msg = { kind: 'good', text: 'Uploaded ' + n + ' document' + (n === 1 ? '' : 's') + ' from this page.' };
+      loadSharedTrip(AUTH.trip.id, 'Uploaded ' + n + ' document' + (n === 1 ? '' : 's') + ' of data/*.json into \u201c' +
+        (txt(AUTH.trip.name) || txt(AUTH.trip.id)) + '\u201d.');
+    }, function (e) {
+      AUTH.busy = false;
+      AUTH.msg = { kind: 'bad', text: 'Import failed: ' + (e && e.message ? e.message : e) };
+      renderAll();
+    });
+  });
+  actions.appendChild(b);
+  card.appendChild(actions);
+  return card;
+}
+
+/* -------------------------------------------------------------- auth wiring */
+
+/* copy one facade status object into the UI's own state */
+function applyAuthStatus(st) {
+  if (!st) return;
+  AUTH.ready = !!st.ready;
+  AUTH.configured = !!st.configured;
+  AUTH.error = st.error || '';
+  AUTH.user = st.user || null;
+  if (st.oauth) {
+    AUTH.oauth = {
+      checked: !!st.oauth.checked,
+      ready: !!st.oauth.ready,
+      offline: !!st.oauth.offline,
+      message: st.oauth.message || ''
+    };
+  }
+}
+
+function initAuth() {
+  if (!authReady()) { AUTH.ready = true; renderAll(); return; }
+  AUTH.configured = TripAuth.status().configured;
+  applyAuthStatus(TripAuth.status());
+  TripAuth.onChange(function (st) {
+    var before = AUTH.user && AUTH.user.id;
+    applyAuthStatus(st);
+    var after = AUTH.user && AUTH.user.id;
+    if (after !== before) {
+      if (after) { loadTrips(); loadInvites(); loadSharedTrip(requestedSlug()); }
+      else { AUTH.trip = null; AUTH.trips = null; AUTH.invites = null; PICKS_CLOUD = false; restoreRepo(); loadPicksLocal(); }
+    }
+    renderAll();
+  });
+  TripAuth.init().then(function () { renderAll(); });
+}
+
+function renderAuthChip() {
+  var box = $('#hd-auth');
+  if (!box) return;
+  clear(box);
+  if (!authReady()) return;
+  if (!AUTH.configured) {
+    var b = ce('button', 'chipbtn', 'Local only');
+    b.title = 'No backend is configured, so this page never leaves your device. Open Share to see what sharing will need.';
+    b.addEventListener('click', function () { showTab('share', true); lsSet('vt.tab', 'share'); window.scrollTo(0, 0); });
+    box.appendChild(b);
+    return;
+  }
+  if (!AUTH.user) {
+    if (!AUTH.oauth.ready) {
+      var off = ce('button', 'chipbtn', 'Sign-in off');
+      off.title = noSignInReason();
+      off.addEventListener('click', function () { showTab('share', true); lsSet('vt.tab', 'share'); window.scrollTo(0, 0); });
+      box.appendChild(off);
+      return;
+    }
+    var sb = ce('button', 'btn tiny', 'Sign in');
+    if (AUTH.busy) sb.disabled = true;
+    sb.addEventListener('click', doSignIn);
+    box.appendChild(sb);
+    return;
+  }
+  if (AUTH.user.avatar) {
+    var img = ce('img', 'avatar');
+    img.src = AUTH.user.avatar;
+    img.alt = '';
+    img.setAttribute('referrerpolicy', 'no-referrer');
+    box.appendChild(img);
+  }
+  box.appendChild(ce('span', 'acct', AUTH.user.email || AUTH.user.name || 'signed in'));
+  var so = ce('button', 'chipbtn', 'Sign out');
+  so.addEventListener('click', doSignOut);
+  box.appendChild(so);
+}
+
+function renderFooter() {
+  var f = $('#foot-text');
+  if (!f) return;
+  if (!AUTH.configured) {
+    f.textContent = 'Data lives in data/*.json. Nothing leaves this device \u2014 no analytics, no backend.';
+  } else if (!AUTH.user) {
+    f.textContent = 'Not signed in: this page is reading only the local data files (data/*.json). Nothing is sent to the ' +
+      'backend until you sign in.';
+  } else {
+    f.textContent = 'Signed in as ' + (AUTH.user.email || 'you') + '. Trips, membership and section documents come from ' +
+      'the ' + (authReady() ? TripAuth.backendName() || 'configured' : 'configured') + ' backend (' + backendLabel() +
+      '); changes you make there are saved to it. Sign out to go back to a purely local copy.';
+  }
+}
+function backendLabel() {
+  if (!authReady()) return 'unknown address';
+  var st = TripAuth.status();
+  return st.backendBase || 'the configured address';
+}
+
 /* -------------------------------------------------------------------- tabs */
+
+function currentTabName() {
+  for (var i = 0; i < TABS.length; i++) {
+    var el = document.getElementById('tab-' + TABS[i]);
+    if (el && !el.hidden) return TABS[i];
+  }
+  return '';
+}
 
 function showTab(name, push) {
   if (TABS.indexOf(name) === -1) name = TABS[0];
   var active = null;
   TABS.forEach(function (t) {
     var on = t === name;
-    document.getElementById('tab-' + t).hidden = !on;
+    var sec = document.getElementById('tab-' + t);
+    if (sec) sec.hidden = !on;
     var b = document.getElementById('tabbtn-' + t);
     if (b) b.setAttribute('aria-selected', on ? 'true' : 'false');
     if (on) active = b;
   });
+  /* a tab whose content went stale (a pick changed the numbers on it) is
+     redrawn on the way in, so half-typed form input is not thrown away */
+  if (DIRTY[name] && RENDERERS[name]) {
+    DIRTY[name] = false;
+    RENDERERS[name]();
+  }
   if (active) scrollTabIntoView(active);
   if (push && location.hash !== '#' + name) {
     try { history.replaceState(null, '', '#' + name); } catch (e) { location.hash = name; }
@@ -1425,12 +2556,16 @@ function tabFromHash() {
 /* ------------------------------------------------------------------- init */
 
 function renderAll() {
+  DIRTY = {};
   renderHeader();
   renderItinerary();
   renderAccommodation();
   renderExpenses();
   renderPacking();
   renderRecommendations();
+  renderDecisions();
+  renderShare();
+  renderFooter();
 }
 
 function wireLocalFilePanel() {
@@ -1476,6 +2611,14 @@ function wireLocalFilePanel() {
 }
 
 function init() {
+  RENDERERS.itinerary = renderItinerary;
+  RENDERERS.accommodation = renderAccommodation;
+  RENDERERS.expenses = renderExpenses;
+  RENDERERS.packing = renderPacking;
+  RENDERERS.recommendations = renderRecommendations;
+  RENDERERS.decisions = renderDecisions;
+  RENDERERS.share = renderShare;
+  loadPicksLocal();
   showTab(tabFromHash(), false);
   TABS.forEach(function (t) {
     var b = document.getElementById('tabbtn-' + t);
@@ -1490,8 +2633,10 @@ function init() {
 
   loadAll().then(function () {
     $('#loadbar').hidden = true;
+    snapshotRepo();
     wireLocalFilePanel();
     renderAll();
+    initAuth();
     if (BLOCKED) {
       var note = $('#localfiles-why');
       if (note) note.textContent = 'You opened the page straight from disk (file://) and this browser blocks pages from reading neighbouring files. Pick the JSON files in data/ once — the app will render them and remember them in this browser. (Served over http://, or from GitHub Pages, it loads them by itself.)';

@@ -1,0 +1,524 @@
+[
+  {
+    "id": "dec-budget",
+    "title": "How to read the S$1,500 budget",
+    "question": "Is the S$1,500 per person a cap on the on-the-ground spend, with the SIN-HAN fares tracked separately — or does it have to cover the flights as well?",
+    "primary_option_id": "opt-budget-excl-flights",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-budget-excl-flights",
+        "label": "On-the-ground cap — the S$1,500 excludes the flights, and Ninh Binh stays in",
+        "summary": "Per person, SGD: S$978 on the ground against the S$1,500 cap (S$522 headroom); the SIN-HAN return sits outside it as an unquoted S$450–700 planning range. This is what the plan, the budget and the Stay tab all show.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "No deadline moves. The flights still have to be booked by ~21 Oct 2026 (day 1) because the loop tour and the 24–25 Dec and 31 Dec hotels hang off the dates — but the airfare must be quoted live first: no fare has been checked for 24 Dec 2026 – 1 Jan 2027.",
+        "tradeoffs": "It only holds if the fare really is outside the cap. At the S$450 low end the whole trip costs S$1,428 including flights and still fits; at the S$580 midpoint it is S$1,558 and does not. Ninh Binh is NOT the lever for fixing that: its two nights cost S$58, and two Hanoi nights to replace them cost S$102–118, so cutting the karst to pay for a flight makes the trip dearer, not cheaper. What would change my mind: a live return fare above ~S$520 per person.",
+        "sources": [
+          "https://www.flyscoot.com/flights/en/flights-from-singapore-to-hanoi",
+          "https://www.shopback.sg/blog/travel/sg-cheapest-month-fly-singapore-to-hanoi-2026"
+        ]
+      },
+      {
+        "id": "opt-budget-incl-flights",
+        "label": "Flights inside the cap — fly home on 31 Dec and give up the NYE night",
+        "summary": "The only version that fits a S$580 return fare with margin: still 8 days and still Ninh Binh, but the trip ends on New Year's Eve. Per person it lands near S$824 on the ground, ~S$1,404 including the flight.",
+        "changes": [
+          "Day 8 (31 Dec) loses its Hanoi night and everything after it: no acc-009 check-in, no pre-NYE dinner, no fireworks over Hoan Kiem, no massage. The day becomes the Tam Coc boat at first light, then the transfer to Noi Bai for an evening flight.",
+          "Day 9 (1 Jan) stops being a trip day — the return flight moves to 31 Dec and the Old Quarter morning is gone.",
+          "Days 6–7 (29–30 Dec, Tam Coc) do not change: Ninh Binh is what you keep.",
+          "Days 8–9 (31 Dec – 1 Jan), expenses: the acc-009 row (exp-a4, S$70), the NYE-night extras (exp-m5, S$7), the pre-NYE dinner (S$20), the massage (exp-t10, S$30) and the 31 Dec food inside exp-f4 (S$27) all come out — S$154 in total."
+        ],
+        "cost_delta_sgd": -154,
+        "booking_impact": "Book the 31 Dec return flight instead of the 1 Jan one, at the same time as the outbound (~21 Oct 2026). Do NOT book acc-009 for the 31st. The Christmas nights (24–25 Dec) and the loop are unaffected.",
+        "tradeoffs": "You lose the finish: New Year's Eve in the Old Quarter, the fireworks, and the one night the plan deliberately stays within walking distance of the lake for. It also puts an international flight at the end of 31 Dec — the busiest travel day of the Vietnamese year — so take a morning or early-afternoon departure, not an evening one. What would change my mind: a live fare at or under ~S$520 return per person keeps the NYE night affordable.",
+        "sources": [
+          "https://www.flyscoot.com/flights/en/flights-from-singapore-to-hanoi",
+          "https://breezevietnam.com/noi-bai-airport-to-hanoi"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-dates",
+    "title": "The dates: 24 Dec – 1 Jan, or shift two days for a cheaper fare",
+    "question": "Keep the Christmas-to-New-Year window, or move to 26 Dec – 3 Jan, which is usually materially cheaper on this route?",
+    "primary_option_id": "opt-dates-as-planned",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-dates-as-planned",
+        "label": "24 Dec (Thu) out, 1 Jan (Fri) back — Christmas Day and NYE both in Hanoi",
+        "summary": "The window the whole plan is built on: 9 days / 8 nights, two travellers from SIN, per person S$978 on the ground plus an unquoted S$450–700 return fare.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Flights first, by ~21 Oct 2026. Then the loop tour 4–8 weeks out (by ~mid-November 2026), then the hotels 2–4 weeks out (by ~4 Nov 2026) — with the 31 Dec NYE room booked first of all.",
+        "tradeoffs": "24 Dec – 1 Jan is the single most expensive week of the year on this route. The S$450–700 band is a planning number, not a quote, and this window should be assumed to price at the top of it. If it does, the fix is the other option here, not a bigger budget.",
+        "sources": [
+          "https://www.flyscoot.com/flights/en/flights-from-singapore-to-hanoi",
+          "https://www.shopback.sg/blog/travel/sg-cheapest-month-fly-singapore-to-hanoi-2026"
+        ]
+      },
+      {
+        "id": "opt-dates-shifted",
+        "label": "26 Dec (Sat) out, 3 Jan (Sun) back — same 9 days, off the peak",
+        "summary": "Every date in trip.json and itinerary.json moves +2 days. Same length, same on-the-ground S$978 — the entire difference is in the fare, and no fare has been quoted for either window, so the saving is unverified. The plan's own advice is that this shift is 'usually materially cheaper'; that is not a number.",
+        "changes": [
+          "Day 1 moves from 24 Dec to 26 Dec, day 2 from 25 Dec to 27 Dec, and so on: day 9 becomes 3 Jan. Every date field in trip.json and itinerary.json shifts +2 days.",
+          "Day 1 (26 Dec): Christmas Day is no longer in Hanoi — the trip starts the day after.",
+          "Day 6 (31 Dec): the 31st now falls on the plan's transit day, so NYE would be spent in Tam Coc or on the road rather than at Hoan Kiem Lake; this pairs with dec-nye's alternative.",
+          "Days 1–9 (26 Dec – 3 Jan): nothing on the ground costs more or less — the nights, the loop and the boats are unchanged."
+        ],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Quote BOTH windows before booking the flights (~21 Oct 2026) — the fare is the entire point of this option. The hotel deadlines soften slightly (2 Jan is not a public-holiday night), but the loop tour's 4–8 week deadline does not.",
+        "tradeoffs": "You lose Christmas Day in the Old Quarter, which is genuinely one of the plan's better days, and NYE lands on a travelling day. The airfare saving is the whole case and it has not been measured by anyone. What would change my mind: two live quotes within ~S$50 of each other, in which case the Christmas window wins outright.",
+        "sources": [
+          "https://www.flyscoot.com/flights/en/flights-from-singapore-to-hanoi",
+          "https://www.shopback.sg/blog/travel/sg-cheapest-month-fly-singapore-to-hanoi-2026"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-nye",
+    "title": "New Year's Eve: Hanoi or Tam Coc",
+    "question": "Where do you spend 31 Dec?",
+    "primary_option_id": "opt-hanoi-nye",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-hanoi-nye",
+        "label": "Hanoi — fireworks over Hoan Kiem, walking distance from the room",
+        "summary": "The plan's finish: back from Tam Coc by late afternoon on the 31st, dinner early, then the lake. Per person S$159 for the day including the acc-009 room.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "THE most time-critical booking of the trip: acc-009 La Siesta Premium Hang Be (2,860,000 VND per room) within 2–4 weeks of today — by ~4 Nov 2026 — and at the same time as the 24–25 Dec Hanoi night. Fallbacks if it is gone: acc-004 O'Gallery Premier (2,600,000), acc-006 Hanoi Pearl (2,080,000), acc-005 Tirant (1,820,000).",
+        "tradeoffs": "The scarcest and most expensive single night of the window, and the Old Quarter mid-range is what sells out first. Millions converge on the lake, and taxis are useless for an hour after midnight — which is exactly why the plan keeps this night within walking distance.",
+        "sources": [
+          "https://www.getyourguide.com/explorer/hanoi-ttd205/new-years-eve-in-hanoi/",
+          "https://hanoitourism.org/old-quarter-accommodation"
+        ]
+      },
+      {
+        "id": "opt-tam-coc-nye",
+        "label": "Tam Coc — a quiet New Year in the karst, then Hanoi on 1 Jan for the flight",
+        "summary": "About S$31 per person cheaper: a third night at Tam Coc Garden instead of moving to Hanoi, and the run to Noi Bai on New Year's Day. Cheaper room, no crowds — at the cost of a 2.5h+ road transfer in front of an international flight.",
+        "changes": [
+          "Day 8 (31 Dec) no longer moves to Hanoi: the Tam Coc boat and the lanes stay, and the train, hotel, dinner and fireworks block is replaced by a third night at acc-010.",
+          "Day 9 (1 Jan) gains a 2.5–3h transfer from Tam Coc to Noi Bai before the flight — be at the airport 3h before departure, so the return flight has to be afternoon or evening, not morning.",
+          "Days 8–9 (31 Dec – 1 Jan), expenses: −S$70 (exp-a4, the acc-009 night), −S$7 (exp-m5, the NYE extras), +S$29 (a third acc-010 night) and +S$17 for the 1 Jan run from Tam Coc to Noi Bai instead of the 31 Dec hop into the Old Quarter — a net S$31."
+        ],
+        "cost_delta_sgd": -31,
+        "booking_impact": "Book acc-010 Tam Coc Garden for three nights (29–31 Dec) instead of two, on the same 4–6 week deadline. You do NOT need acc-009 at all — which removes the single hardest booking of the trip.",
+        "tradeoffs": "You give up the fireworks over Hoan Kiem and the trip's one big-night-in-a-city. Tam Coc on 31 Dec is quiet — no source found for what, if anything, it does for New Year, so assume nothing. The real risk is 1 Jan: a public holiday, the whole country travelling, and a 2.5–3h road transfer standing between the karst and your flight.",
+        "sources": [
+          "https://bestofninhbinh.com/best-ninh-binh-hotels",
+          "https://bestofninhbinh.com/hanoi-to-ninh-binh"
+        ]
+      },
+      {
+        "id": "opt-hanoi-nye-fallback",
+        "label": "Hanoi, but at the fallback hotel — same night, cheaper room",
+        "summary": "Same NYE in the Old Quarter, same fireworks: acc-006 Hanoi Pearl at 2,080,000 VND per room (S$51 per person) against La Siesta's S$70, or acc-004 O'Gallery Premier at S$64.",
+        "changes": [
+          "Day 8 (31 Dec): the lodging line and the hotel item change from acc-009 La Siesta Premium to acc-006 Hanoi Pearl (or acc-004 O'Gallery Premier). Nothing else about the day moves.",
+          "Day 8 (31 Dec), expenses: exp-a4 drops from S$70 to S$51 (Hanoi Pearl) or S$64 (O'Gallery)."
+        ],
+        "cost_delta_sgd": -19,
+        "booking_impact": "The order does not change — book the 31 Dec room within 2–4 weeks of today, by ~4 Nov 2026 — you are simply booking a cheaper property, which is also easier to get in a sold-out week.",
+        "tradeoffs": "Hanoi Pearl is 'solid and unexciting' in the research's own words; O'Gallery is a boutique with a fruit bar. Neither is 300 m from the lake with an inside courtyard and its own spa. Take this if La Siesta is gone or its rate has jumped — not to save S$19.",
+        "sources": [
+          "https://vietnamspot.ru/en/blog/hanoi-hotels",
+          "https://hanoitourism.org/old-quarter-accommodation"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-loop-start",
+    "title": "Starting the loop off an 04:30–06:00 sleeper-bus arrival",
+    "question": "Ride out on the morning you land, or buy a bed and start fresh?",
+    "primary_option_id": "opt-loop-start-same-day",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-loop-start-same-day",
+        "label": "Ride the same day — breakfast in Ha Giang city, on the bike by mid-morning",
+        "summary": "The plan: the 21:00 sleeper bus on the 25th, arrival 04:30–06:00 on the 26th, meet the operator, and ride out late morning once the passes have warmed and the fog has burned off. One Hanoi night, not two.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Two deadlines, not one: the sleeper bus 1–2 weeks out for the holiday week (normally 2–4 days) on 12Go.asia or Vexere.com, and the loop tour 4–8 weeks out (by ~mid-November 2026). Confirm in writing that the operator will meet a 05:00 arrival and collect you from the bus.",
+        "tradeoffs": "You land at 04:30–06:00 into a town that is shut, and ride 90–100 km after a night in a berth — day 1 is the day that gets clipped if the bus runs late or the passes are frosted. The S$59 it saves is real (no bed nobody sleeps in), but the price is no shower and no bed between the bus and the bike.",
+        "sources": [
+          "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
+          "https://daytripsvietnam.com/transport/hanoi-to-ha-giang"
+        ]
+      },
+      {
+        "id": "opt-hanoi-two-nights",
+        "label": "Two Hanoi nights, a daytime van on the 26th, a fresh loop start on the 27th",
+        "summary": "Buys back the missed sleep and the missed Christmas evening. Costs one Tam Coc night and the Trang An day, and leaves only one Ninh Binh night.",
+        "changes": [
+          "Day 2 (25 Dec) becomes a full Hanoi day instead of a travel day — Christmas dinner, then a hotel bed, no 21:00 bus.",
+          "Day 3 (26 Dec) becomes the transfer: a daytime limousine van Hanoi → Ha Giang (6–7h, S$22) arriving late afternoon, and a night in Ha Giang city (acc-015) instead of on the bus.",
+          "Days 4–6 (27–29 Dec) are the loop, unchanged in shape, one day later.",
+          "Day 7 (30 Dec) becomes the transit day, arriving Tam Coc mid-afternoon — so day 8 (31 Dec) is the only Ninh Binh day and Hang Mua at sunrise, the Trang An boat and the paddy lanes can no longer all fit: pick one.",
+          "Days 2–8 (25–31 Dec), expenses: +S$59 Hanoi night, +S$37 for the extra day of Hanoi food, +S$26 Ha Giang night, +S$5 for the daytime van over the sleeper bus; −S$29 Tam Coc night, −S$12 Trang An, −S$7 Hang Mua, −S$2 bicycle, −S$37 of Ninh Binh food. Net +S$40."
+        ],
+        "cost_delta_sgd": 40,
+        "booking_impact": "Book a SECOND Hanoi night (24–25 Dec AND 25–26 Dec) — both are Christmas-window nights, the tightest of the year, so the ~4 Nov deadline becomes two rooms instead of one. Book a daytime van on the 26th rather than the sleeper bus (2–4 days ahead normally, 1–2 weeks over the holiday week).",
+        "tradeoffs": "Ninh Binh is where this is paid for: one night instead of two, and its three best experiences (Hang Mua at sunrise, the Trang An boat, the cycling lanes) cannot all fit into one morning. What would change my mind: if you would rather cut the loop to 2D/1N to keep two Ninh Binh nights — but sources.md §4.3 rejects that, you would spend the saved day on the bike and lose Ma Pi Leng.",
+        "sources": [
+          "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
+          "https://bestofninhbinh.com/best-ninh-binh-hotels"
+        ]
+      },
+      {
+        "id": "opt-daytime-van-christmas",
+        "label": "Take the daytime van on the 25th — a fresh 08:00 start on the 26th, nothing lost in Ninh Binh",
+        "summary": "Cheapest way to arrive fresh: still one Hanoi night, but the 25th is a 6–7h daytime van and the 26th starts on the bike at 08:00 with a bed behind you. No Ninh Binh night is lost.",
+        "changes": [
+          "Day 2 (25 Dec) becomes the van day: leave the Old Quarter ~08:00, arrive Ha Giang late afternoon, sleep in Ha Giang city (acc-015). Christmas Day in Hanoi shrinks to breakfast and a short walk.",
+          "Day 3 (26 Dec) starts at 08:00 fresh instead of mid-morning off a berth; the loop runs 26–28 Dec and everything after it is unchanged.",
+          "Day 2 (25 Dec), expenses: +S$26 for the Ha Giang night of 25–26 Dec, +S$5 for the van over the sleeper bus. The 28–29 Dec Ha Giang night stays."
+        ],
+        "cost_delta_sgd": 31,
+        "booking_impact": "Book the 25 Dec daytime limousine van (2–4 days ahead normally, 1–2 weeks in the holiday week) instead of the sleeper bus, and add the 25–26 Dec Ha Giang city night (acc-015, 4–8 weeks out).",
+        "tradeoffs": "Christmas Day becomes seven hours in a van — the one day the plan wants you eating your way around the Old Quarter — and you pay for a bed you would not otherwise have needed. It is the better of the two 'fresh start' options precisely because it costs Ninh Binh nothing.",
+        "sources": [
+          "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
+          "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-loop-length",
+    "title": "The loop: 3 days / 2 nights, or 4 days / 3 nights",
+    "question": "Add the fourth riding day — Dữ Già and its waterfalls — and give up a Ninh Binh day for it?",
+    "primary_option_id": "opt-loop-3d2n",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-loop-3d2n",
+        "label": "3D/2N — the standard minimum, and Ninh Binh keeps both its days",
+        "summary": "The plan: Ha Giang → Quản Bạ Heaven's Gate → Yên Minh → Đồng Văn (Sunday market) → Mã Pì Lèng → Mèo Vạc → back via Dữ Già, three riding days, with two Tam Coc nights behind them.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Book 4–8 weeks out (by ~mid-November 2026). Ask in writing for the inclusion list and whether the border-area permit is in it (~US$10 — operator guidance, not confirmed law), and ask which day Đồng Văn's Sunday market falls on.",
+        "tradeoffs": "You pass through Dữ Già rather than sleeping in it. A fourth riding day is the single best addition available to this trip and the plan turns it down only because Ninh Binh has the best weather and the best photograph of the three bases.",
+        "sources": [
+          "https://hagiangmotorventures.com/blogs/best-ha-giang-loop-tour-companies-recommendations",
+          "https://www.timeout.com/asia/news/ha-giang-loop-permits-what-travellers-need-to-know-before-riding-vietnams-famous-mountain-route-061426"
+        ]
+      },
+      {
+        "id": "opt-loop-4d3n",
+        "label": "4D/3N — add the Dữ Già day and homestay, lose Trang An",
+        "summary": "A fourth day on the bike for Dữ Già and its waterfalls, one fewer Ninh Binh day and one fewer Tam Coc night. Counter-intuitively S$56 cheaper: you trade a Ninh Binh day for a loop day, and the loop day is inside the tour price.",
+        "changes": [
+          "Days 3–6 (26–29 Dec) become FOUR riding days with a third homestay night at Dữ Già, inside the tour price.",
+          "Day 7 (30 Dec) becomes the transit day: Ha Giang → Hanoi → Tam Coc, arriving mid-afternoon — one Ninh Binh evening and one Ninh Binh sunrise.",
+          "Day 8 (31 Dec) can keep either Hang Mua at sunrise or the Tam Coc boat, not both, and Trang An drops out entirely.",
+          "Days 3–8 (26–31 Dec), expenses: +S$19 on the tour (US$225 midpoint against US$210) and +S$12 for a fourth day of easy-rider tip, against −S$29 Tam Coc night, −S$12 Trang An, −S$7 Hang Mua, −S$2 bicycle and −S$37 of Ninh Binh food: a net S$56 cheaper."
+        ],
+        "cost_delta_sgd": -56,
+        "booking_impact": "Book the 4D/3N product 4–8 weeks out (by ~mid-November 2026) and book only ONE Tam Coc night (29–30 Dec or 30–31 Dec) instead of two.",
+        "tradeoffs": "You pay for the fourth day with the trip's best photograph: Hang Mua at sunrise, the Trang An boat and the paddy-lane cycling all compete for one morning, and the recovery day off the bike is compressed into an afternoon. What would change my mind: if the plateau's weather turns out better than Ninh Binh's in the actual week, this becomes the stronger trip.",
+        "sources": [
+          "https://hagiangmotorventures.com/blogs/best-ha-giang-loop-tour-companies-recommendations",
+          "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-transit-29",
+    "title": "The 29 December transit day (~10h) and the post-loop reset night",
+    "question": "Keep the Ha Giang city reset night and the 10-hour daytime transit, or trade one for the other?",
+    "primary_option_id": "opt-reset-night-and-daytime-transit",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-reset-night-and-daytime-transit",
+        "label": "Keep both — sleep in Ha Giang city, do the 10h transit in daylight",
+        "summary": "The plan: the loop ends on the 28th, hot shower and thắng cố in Ha Giang city, then the 29th is a 7h van to Hanoi plus ~2h on to Tam Coc, arriving for sunset over the paddies.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Book the 28–29 Dec Ha Giang room 4–8 weeks out (by ~mid-November). Book the Ha Giang → Hanoi van 2–4 days ahead normally, 1–2 weeks in the holiday week, and the Hanoi → Tam Coc van at the same time.",
+        "tradeoffs": "The one genuinely punishing leg of the trip: ~10h door-to-door on the 29th, and it is accepted deliberately — a hot shower and a real bed after three days on a bike is worth half a day, and the mountain road is only worth seeing in daylight. Do NOT also compress the loop to buy this day back; you would spend it on the bike.",
+        "sources": [
+          "https://daytripsvietnam.com/transport/hanoi-to-ha-giang",
+          "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025"
+        ]
+      },
+      {
+        "id": "opt-skip-reset-night",
+        "label": "Skip the reset night — 21:00 sleeper bus straight through to Tam Coc",
+        "summary": "Off the bike and onto a night bus the same evening: Ha Giang 21:00 → Hanoi ~05:00 on the 29th → Tam Coc by ~09:00, which buys half a day in the karst. Costs about S$26 less and one night's sleep.",
+        "changes": [
+          "Day 5 (28 Dec) loses its hotel: the loop finishes, you eat thắng cố, tip the rider and board the 21:00 bus (a ~S$17 sleeper ticket).",
+          "Day 6 (29 Dec) starts in Tam Coc at ~09:00 instead of Ha Giang at 06:30 — the whole day is Ninh Binh, and the Trang An boat can move from the 30th to the 29th.",
+          "Day 7 (30 Dec) then frees up for Hang Mua and the cycling lanes, or a second attempt if the dawn is fogged out.",
+          "Days 5–6 (28–29 Dec), expenses: −S$26 (exp-a2, the Ha Giang night); the S$17 sleeper bus replaces the S$22 daytime van (−S$5), which roughly cancels against the extra half-day of eating in Ninh Binh."
+        ],
+        "cost_delta_sgd": -26,
+        "booking_impact": "Book the 28 Dec 21:00 sleeper bus out of Ha Giang instead of the 29th daytime van (1–2 weeks out over the holiday week). Do not hold the 28–29 Dec Ha Giang room.",
+        "tradeoffs": "It is two overnight buses in four nights — into the loop on the 25th–26th, back out on the 28th–29th — with no shower between the bike and the second one. You also need the operator to have you off the mountain and back in Ha Giang city by 19:00 on the 28th, which is the one day of the loop that cannot run late.",
+        "sources": [
+          "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
+          "https://daytripsvietnam.com/transport/hanoi-to-ha-giang"
+        ]
+      },
+      {
+        "id": "opt-private-car-transit",
+        "label": "Same day, same night — private car door-to-door",
+        "summary": "Turns the 10h day into roughly 8h: one private car Ha Giang → Tam Coc instead of two vans through Hanoi. S$115 per person against S$39, with the car shared between the two of you.",
+        "changes": [
+          "Day 6 (29 Dec): the 07:30 van, the Hanoi change and the 15:30 van collapse into one private car (5.5–6.5h Ha Giang → Hanoi, plus ~2h on to Tam Coc), door to door.",
+          "Days 5–7 (28–30 Dec): nothing else moves — the 28 Dec reset night and both Ninh Binh nights are unchanged.",
+          "Day 6 (29 Dec), expenses: exp-x3 and exp-x4 (S$22 + S$17 = S$39) are replaced by one car at 3,800,000–5,500,000 VND per vehicle = S$94–136 per person; the delta here uses the S$115 midpoint, so +S$76, against a band of +S$55 to +S$97."
+        ],
+        "cost_delta_sgd": 76,
+        "booking_impact": "Book the car with the loop operator or a Hanoi company 1–2 weeks out — earlier over the holiday week. It is a per-vehicle price, so it does not get cheaper for two.",
+        "tradeoffs": "S$55–97 to save two hours, and the band is wide. It is the least efficient money on the trip, which is exactly why the plan does not do it: it shortens the day rather than removing it.",
+        "sources": [
+          "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
+          "https://daytripsvietnam.com/transport/hanoi-to-ha-giang"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-ride",
+    "title": "Self-ride or easy rider on the loop",
+    "question": "Ride your own bike, or go as a pillion behind a local licensed driver?",
+    "primary_option_id": "opt-easy-rider",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-easy-rider",
+        "label": "Easy rider — pillion behind a local licensed driver",
+        "summary": "The plan's centrepiece: S$269 per person for 3D/2N all-inclusive plus S$37 of tipping, and the licence problem disappears because you are not the rider.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Book 4–8 weeks out (by ~mid-November 2026). Ask in writing about the driver's licence and about the pillion's safety gear — helmet, gloves, protective and rain gear — as well as the border permit.",
+        "tradeoffs": "You are on the back of a bike for three days rather than in control of it, and you do not pick the route or the stops. What you buy: Mã Pì Lèng has no guardrails and local traffic, and a Singapore licence plus a 1949-convention IDP does not legally qualify you to ride a >50cc bike in Vietnam — so an accident would be both a legal exposure and very likely uninsured.",
+        "sources": [
+          "https://aas.com.sg/idp-carnet/",
+          "https://vn.usembassy.gov/driving-in-vietnam/",
+          "https://daytripsvietnam.com/guides/driving-in-vietnam-idp-rules-2026/"
+        ]
+      },
+      {
+        "id": "opt-self-ride",
+        "label": "Self-ride — rent bikes in Ha Giang and do the loop yourselves",
+        "summary": "Roughly S$104 per person instead of S$306 (tour plus tip): three days of bike rental, fuel, the permit, two homestay nights and your own meals — against a route you plan and a bike you ride unlicensed.",
+        "changes": [
+          "Days 3–5 (26–28 Dec) keep the route and the days; what changes is what you pay for and who is on the front.",
+          "Days 3–5 (26–28 Dec), expenses: the tour row (exp-t1, S$269) and the tip (exp-t2, S$37) come out — S$306 — and in come three days of bike rental (150,000–200,000 VND/day ≈ S$30), fuel (~S$5), the border permit (~US$10, unconfirmed), two homestay nights (~S$18), meals (~S$27) and the boat and geopark tickets (~S$11): S$104. Net S$202 cheaper."
+        ],
+        "cost_delta_sgd": -202,
+        "booking_impact": "Rentals and homestays can be arranged days ahead rather than 4–8 weeks, but the bikes themselves are scarce over the holiday week — book them when you book the flights. You would also have to obtain the border permit yourselves at local immigration or police in Ha Giang city, and it is not confirmed law.",
+        "tradeoffs": "This is not a nerve question, it is a legal one: AA Singapore's own site says Vietnam does not recognise the 1949-convention IDP it issues, while Vietnam's statutory route is the 1968 convention — so you would be riding unlicensed and a medical claim from a bike accident would very likely not be paid. The unverified '≤50cc needs no licence' rule is not relied on, and a 50cc scooter is the wrong tool for Mã Pì Lèng anyway. What would change my mind: a Vietnamese-recognised motorcycle entitlement, or an insurer confirming in writing that a self-ride claim would be paid — neither of which exists today.",
+        "sources": [
+          "https://aas.com.sg/idp-carnet/",
+          "https://vn.usembassy.gov/driving-in-vietnam/",
+          "https://wanderinvietnam.com/guides/ha-giang-on-a-budget-real-costs-how-to-save"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-boat",
+    "title": "The Ninh Binh boats: Trang An, Tam Coc, or both",
+    "question": "Which river-cave boat do you actually take?",
+    "primary_option_id": "opt-both-boats",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-both-boats",
+        "label": "Both — Trang An on the 30th, Tam Coc at first light on the 31st",
+        "summary": "The plan: Trang An's longer route on day 7 (S$12), then the Tam Coc boat at 07:00 on day 8 before the day-trippers arrive (S$11 all in, including the rower's tip). S$23 per person for both.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Nothing to pre-book — tickets are bought at the wharf. Be at Trang An before 09:00 on the 30th (the Hanoi coaches land 09:00–10:00) and at the Tam Coc wharf by 07:00 on the 31st.",
+        "tradeoffs": "Two boats in two days is one boat too many for some people; they are the same landscape at different lengths and one of them is a dawn start on a day you are also travelling to Hanoi. S$23 per person is the cost of not choosing.",
+        "sources": [
+          "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices"
+        ]
+      },
+      {
+        "id": "opt-trang-an-only",
+        "label": "Trang An only",
+        "summary": "Keep the longer, better boat — 2.5–3h, three routes, UNESCO — and give the 31st's first light back to breakfast or a second Hang Mua attempt.",
+        "changes": [
+          "Day 8 (31 Dec): the 07:00 Tam Coc boat comes out; the morning becomes breakfast, bags and a last walk before the 14:30 departure for Hanoi.",
+          "Day 8 (31 Dec), expenses: exp-t6 (S$11) drops out."
+        ],
+        "cost_delta_sgd": -11,
+        "booking_impact": "Nothing to book either way. It does free the 31st morning, which is the day the flight-relevant deadline sits on.",
+        "tradeoffs": "Tam Coc's boat goes through three caves foot-paddled rather than rowed, and at 07:00 it is the quiet version of the boat everyone photographs. You would be keeping the better route and giving up the better light.",
+        "sources": [
+          "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices"
+        ]
+      },
+      {
+        "id": "opt-tam-coc-only",
+        "label": "Tam Coc only",
+        "summary": "One boat, on the morning you leave, and Trang An's 2.5–3 hour UNESCO route goes. Keeps S$12 and half a day.",
+        "changes": [
+          "Day 7 (30 Dec): the 09:00 Trang An boat comes out — the day becomes Hang Mua, the bicycle lanes out to Bích Động and Thái Vi, and a slow afternoon.",
+          "Day 7 (30 Dec), expenses: exp-t4 (S$12) drops out."
+        ],
+        "cost_delta_sgd": -12,
+        "booking_impact": "Nothing to book — but it puts the two best Ninh Binh mornings (Hang Mua at dawn, the boat) on separate days with no weather fallback for either.",
+        "tradeoffs": "Trang An is the longer, better and quieter boat, and the one the research explicitly recommends; Tam Coc is shorter and busier. Taking only the shorter one because it happens to fall on the way out is the weaker call.",
+        "sources": [
+          "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices",
+          "https://bestofninhbinh.com/ninh-binh-homestay-guide"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-food",
+    "title": "The food experience in Hanoi",
+    "question": "A guided street-food crawl on Christmas Day, or eat the same streets on your own?",
+    "primary_option_id": "opt-food-tour",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-food-tour",
+        "label": "Guided Old Quarter street-food walk — Christmas Day, and it is lunch",
+        "summary": "S$20 per person for a half-day group crawl — bún chả, bánh mì, bánh cuốn, chè — which is the plan's one structured eat. The price is a labelled assumption: no operator and no price could be sourced.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Book 1–2 weeks ahead, and only after getting a price and a meeting point in writing — S$20 is unverified. If nothing credible exists, this falls back to the option below and the day's food budget already covers it.",
+        "tradeoffs": "S$20 is an assumption, not a price, and it is the least-verified line in the plan. What a guide actually adds here is street literacy and ordering, not access to food you could not otherwise find.",
+        "sources": [
+          "https://guide.michelin.com/vn/en/article/dining-out/where-to-eat-the-best-pho-bun-cha-and-noodle-soups-in-hanoi"
+        ]
+      },
+      {
+        "id": "opt-food-diy",
+        "label": "No tour — eat the same streets yourselves",
+        "summary": "Drops the assumed S$20 fee and spends ~S$5 more on the same lunch, at places you can already name: Bún Chả Đắc Kim, Phở Bò Ấu Triệu, Chả Cá Thăng Long, Giang Café.",
+        "changes": [
+          "Day 2 (25 Dec): the 13:00 guided crawl becomes a self-guided one over the same streets; the day's food line picks up the lunch it was previously not paying for.",
+          "Day 2 (25 Dec), expenses: exp-t3 (S$20, unverified) comes out; exp-f1 gains roughly S$5 to cover that lunch."
+        ],
+        "cost_delta_sgd": -15,
+        "booking_impact": "Nothing to book, and nothing to chase for a price — it removes the plan's least-verified line entirely.",
+        "tradeoffs": "You lose the ordering and the street knowledge, and on Christmas Day the well-known places will be busy with locals and tourists alike. What would change my mind: a verified operator quote at or under S$20 with a real itinerary — then the guided version earns its money on a first Hanoi day.",
+        "sources": [
+          "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
+          "https://guide.michelin.com/vn/en/article/dining-out/where-to-eat-the-best-pho-bun-cha-and-noodle-soups-in-hanoi"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-splurge",
+    "title": "What the S$522 of headroom is for",
+    "question": "Keep the headroom as peak-season buffer, or spend some of it deliberately?",
+    "primary_option_id": "opt-keep-headroom",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-keep-headroom",
+        "label": "Keep it — the buffer is the point",
+        "summary": "Every hotel figure in the plan is a 2026 guide 'typical', not a quote. A 30–50% Christmas/NYE premium moves the rooms from S$213 to S$277–320 per person, and the plan still spends only S$978 of the S$1,500.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "The headroom is what lets you pay up rather than drop to a worse property at the last minute — but the 24–25 Dec and 31 Dec rooms still carry the 2–4 week deadline, by ~4 Nov 2026.",
+        "tradeoffs": "Nothing is bought with it. If the rooms come in at guide prices you finish S$522 per person under budget with nothing to show for it but margin — which is the honest price of not knowing what Christmas week costs.",
+        "sources": [
+          "https://vietnamspot.ru/en/blog/hanoi-hotels",
+          "https://hanoitourism.org/old-quarter-accommodation"
+        ]
+      },
+      {
+        "id": "opt-papiu-splurge",
+        "label": "One splurge night — P'apiu Resort instead of Ha Giang city",
+        "summary": "Swap the post-loop reset night for P'apiu, on P'apiu Hill 40 minutes from Ha Giang town: 5-star, 12 guests maximum, whole-resort privacy, ~14,280,000 VND per room (S$352 per person). The single biggest line you could add.",
+        "changes": [
+          "Day 5 (28 Dec): the lodging line changes from acc-015 Yen Bien Luxury (S$26) to acc-023 P'apiu Resort (S$352), and the late afternoon becomes the drive out to Bắc Mê instead of a walk around Ha Giang city.",
+          "Day 5 (28 Dec), expenses: exp-a2 rises from S$26 to S$352.",
+          "Day 5 (28 Dec) is the post-loop night, which is the right night for it — a hot shower and a view after three days on a bike."
+        ],
+        "cost_delta_sgd": 326,
+        "booking_impact": "Twelve guests maximum: book it as early as the loop itself (4–8 weeks out, by ~mid-November 2026), and confirm in writing what the rate includes — the source lists it as all-inclusive at ~US$550 per night.",
+        "tradeoffs": "A third of the whole budget for one night, 40 minutes out of town so it complicates the 29 Dec transit, and the plan's own note marks it as almost certainly out of budget. What would change my mind: a quote materially under the guide figure, or a resort-credit deal.",
+        "sources": [
+          "https://www.agoda.com/p-apiu-resort/hotel/ha-giang-vn.html",
+          "https://wherebest.com/en/top10-hotels-ha-giang"
+        ]
+      },
+      {
+        "id": "opt-upgrade-rooms",
+        "label": "Upgrade the two rooms that matter",
+        "summary": "La Siesta-class for the Hanoi round-1 night and a garden resort in Tam Coc: acc-001 at S$70 instead of S$59, and acc-012 Tam Coc Rice Fields at S$46 instead of S$29 for both Ninh Binh nights.",
+        "changes": [
+          "Day 1 (24 Dec): lodging moves from acc-003 Peridot Grand (S$59) to acc-001 La Siesta Premium Hang Be (S$70).",
+          "Days 6–7 (29–30 Dec): lodging moves from acc-010 Tam Coc Garden (S$29 per night) to acc-012 Tam Coc Rice Fields Resort (S$46 per night).",
+          "Day 8 (31 Dec) is already the La Siesta-class pick, so nothing moves there.",
+          "Days 1 and 6–7 (24, 29–30 Dec), expenses: +S$11 on exp-a1 and +S$35 on exp-a3 (S$17.50 × 2 nights) — a net S$46."
+        ],
+        "cost_delta_sgd": 46,
+        "booking_impact": "Same deadlines as the plan — 2–4 weeks for the Hanoi 24th, 4–6 weeks for Tam Coc — just at a higher tier, which is also the tier that sells out first in this window.",
+        "tradeoffs": "S$46 per person for beds, not experiences: the Tam Coc view and the Hanoi courtyard improve, no day changes. It also spends most of the headroom that exists to absorb a 30–50% peak-season premium.",
+        "sources": [
+          "https://hanoitourism.org/old-quarter-accommodation",
+          "https://bestofninhbinh.com/best-ninh-binh-hotels"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dec-insurance",
+    "title": "Travel insurance, at what level",
+    "question": "What cover do you buy for a trip whose centrepiece is three days as a pillion on a mountain plateau?",
+    "primary_option_id": "opt-insurance-mid",
+    "status": "open",
+    "decided_by": "nomad",
+    "options": [
+      {
+        "id": "opt-insurance-mid",
+        "label": "Mid-range comprehensive, S$50 per person",
+        "summary": "The plan's labelled assumption — no quote was ever obtained — for a 10-day mid-range policy per person, with the loop's pillion riding and the winter riding inside it.",
+        "changes": [],
+        "cost_delta_sgd": 0,
+        "booking_impact": "Buy it with the flights, within 1–2 weeks (by ~21 Oct 2026): policies bought close to departure sometimes exclude cancellation cover you are already exposed to. Get the pillion cover confirmed in writing and keep the reply.",
+        "tradeoffs": "S$50 is an assumption, not a quote, and nobody opened a policy. The thing to check is the wording, not the price: you are a pillion, not the rider, so the usual exclusion of unlicensed foreign riders should not bite — but that is reasoned from the licensing position, not quoted from a policy.",
+        "sources": [
+          "https://www.mfa.gov.sg/travelling-overseas/travel-advisories-notices-and-visa-information/vietnam/"
+        ]
+      },
+      {
+        "id": "opt-insurance-none",
+        "label": "Fly without it",
+        "summary": "Saves the assumed S$50 per person and takes on the whole medical and cancellation risk of an 8-night winter trip that includes three days on a motorbike in a province where the nearest serious hospital is hours away.",
+        "changes": [
+          "Days 1–9 (24 Dec – 1 Jan): no day changes; expenses exp-m1 (S$50) comes out."
+        ],
+        "cost_delta_sgd": -50,
+        "booking_impact": "Nothing to book — and it removes the cover that the operator's permit questions and the pillion riding are exactly the cases for.",
+        "tradeoffs": "MFA strongly encourages comprehensive insurance, and the one thing on this trip that can genuinely ruin a year is a bike accident. What would change my mind: nothing, after the event — which is the whole reason the plan buys the cover.",
+        "sources": [
+          "https://www.mfa.gov.sg/travelling-overseas/travel-advisories-notices-and-visa-information/vietnam/"
+        ]
+      }
+    ]
+  }
+]

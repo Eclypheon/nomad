@@ -18,7 +18,7 @@
       {
         "time": "~11:00 (assumed)",
         "what": "Depart Changi for Hanoi — NOT YET BOOKED",
-        "notes": "The exact flight, time and fare for 24 Dec 2026 are UNVERIFIED — no booking engine was opened. Non-stops run 2-3 daily on each of Scoot, VietJet, Vietnam Airlines and Singapore Airlines. Planning fare S$450-700 return per person; 24 Dec-2 Jan is the most expensive week of the year on this route, so plan at the top of the band and verify before locking the dates. DECISION DEADLINE: book flights within 1-2 weeks (by ~21 Oct 2026) — the loop and the hotels hang off the dates.",
+        "notes": "The exact flight, time and fare for 24 Dec 2026 are UNVERIFIED — no booking engine was opened. Non-stops run 2-3 daily on each of Scoot, VietJet, Vietnam Airlines and Singapore Airlines. Planning fare S$450-700 return per person; 24 Dec-2 Jan is the most expensive week of the year on this route, so plan at the top of the band and verify before locking the dates. DECISION DEADLINE: book flights within 1-2 weeks (by ~21 Oct 2026) — the loop and the hotels hang off the dates. Quote the 26 Dec – 3 Jan window at the same time before committing: that comparison is dec-dates in data/decisions.json, and it is the only real lever on this number.",
         "cost": 0,
         "currency": "SGD",
         "refs": ["https://www.flyscoot.com/en/plan/booking-your-flight/fares-fees"]
@@ -212,7 +212,7 @@
       {
         "time": "—",
         "what": "Lodging: none — the berth is the bed",
-        "notes": "This is why Hanoi round 1 is ONE night and not two: the 25th is spent on the bus, arriving in Ha Giang at 04:30-06:00. It saves ~S$59 per person against the research's 2-night Hanoi booking. TRADE-OFF, YOUR CALL: if you would rather have a hotel room to sleep in and start the loop on the 27th off a daytime limousine van, say so — it costs one Tam Coc night and pushes the loop to 27-29 Dec.",
+        "notes": "This is why Hanoi round 1 is ONE night and not two: the 25th is spent on the bus, arriving in Ha Giang at 04:30-06:00. It saves ~S$59 per person against the research's 2-night Hanoi booking. DECIDED — dec-loop-start in data/decisions.json: one Hanoi night, the 25th on the bus. The alternative stays available in the app: a second Hanoi night, a daytime limousine van on the 26th and a fresh loop start on the 27th, at +S$40 per person and the cost of one Tam Coc night.",
         "cost": 0,
         "currency": "SGD",
         "refs": []
@@ -278,7 +278,7 @@
       {
         "time": "—",
         "what": "Ha Giang 3-day / 2-night EASY RIDER tour — paid in full (all-inclusive)",
-        "notes": "This is the trip's centrepiece and its biggest single cost: US$210 per person (~5,452,000 VND), the interpolated midpoint for a 3D/2N all-inclusive easy-rider tour. Sourced comparators: a 3-day/2-night easy-rider product from Hanoi is listed 'from US$206' (GetYourGuide, 4.9*, 165 reviews — the page 403s to an automated fetch, so verify in a browser), and 4-day/3-night versions run US$200-250. INCLUSIONS TO DEMAND at this price: bike, licensed driver, fuel, the border permit, homestay accommodation, all meals, the Nho Quế river boat ticket and geopark/entrance fees. Operators quoting much under US$200 for the equivalent are usually cutting the permit or the safety gear. SELF-RIDING IS NOT AN OPTION: see the packing list's IDP item.",
+        "notes": "This is the trip's centrepiece and its biggest single cost: US$210 per person (~5,452,000 VND), the interpolated midpoint for a 3D/2N all-inclusive easy-rider tour. Sourced comparators: a 3-day/2-night easy-rider product from Hanoi is listed 'from US$206' (GetYourGuide, 4.9*, 165 reviews — the page 403s to an automated fetch, so verify in a browser), and 4-day/3-night versions run US$200-250. INCLUSIONS TO DEMAND at this price: bike, licensed driver, fuel, the border permit, homestay accommodation, all meals, the Nho Quế river boat ticket and geopark/entrance fees. Operators quoting much under US$200 for the equivalent are usually cutting the permit or the safety gear. SELF-RIDING IS NOT AN OPTION: see the packing list's IDP item, and dec-ride in data/decisions.json, which prices the self-ride alternative at roughly S$202 per person cheaper and explains why a Singapore licence would make it illegal and uninsured.",
         "cost": 269,
         "currency": "SGD",
         "refs": ["https://hagiangmotorventures.com/blogs/best-ha-giang-loop-tour-companies-recommendations"]
@@ -426,7 +426,7 @@
       {
         "time": "—",
         "what": "DECISION / TIMING CONSTRAINT",
-        "notes": "The loop has to finish tonight for the rest of the plan to work (transit tomorrow, Tam Coc on the 29th-30th, Hanoi for NYE on the 31st). Do NOT compress the loop to 2 days/1 night to buy a day back — you would spend it on the bike and lose the pass. If you want the 4-day loop instead, the night that has to give is one of the two Tam Coc nights.",
+        "notes": "The loop has to finish tonight for the rest of the plan to work (transit tomorrow, Tam Coc on the 29th-30th, Hanoi for NYE on the 31st). DECIDED — dec-loop-length and dec-transit-29 in data/decisions.json: the loop stays 3 days / 2 nights and this Ha Giang night stays. Do NOT compress the loop to 2 days/1 night to buy a day back — you would spend it on the bike and lose the pass. The 4-day loop is the priced alternative: it gives up a Tam Coc night and Trang An, and comes out ~S$56 cheaper.",
         "cost": 0,
         "currency": "SGD",
         "refs": []
@@ -516,7 +516,7 @@
       {
         "time": "—",
         "what": "WHY THIS DAY EXISTS (and the alternative)",
-        "notes": "Ninh Binh comes AFTER Ha Giang deliberately: coming off three cold, foggy mountain days and a night bus, a mild 20°C boat ride through a river cave is the recovery day, and Ninh Binh has the best weather of the three bases and the best photographs. Doing it the other way round would end the trip on this transit instead. DECISION: if a 10-hour transit day is unacceptable, the fix is to skip the Ha Giang city night and take the overnight sleeper bus straight back (Ha Giang 21:00 → Hanoi ~05:00 → Tam Coc by 09:00 on the 29th). That buys half a day in Ninh Binh and costs the post-loop reset.",
+        "notes": "Ninh Binh comes AFTER Ha Giang deliberately: coming off three cold, foggy mountain days and a night bus, a mild 20°C boat ride through a river cave is the recovery day, and Ninh Binh has the best weather of the three bases and the best photographs. Doing it the other way round would end the trip on this transit instead. DECIDED — dec-transit-29 in data/decisions.json: the reset night and the daylight transit both stay. Both alternatives are priced there: skip the reset night and take the 21:00 sleeper straight through (Ha Giang 21:00 → Hanoi ~05:00 → Tam Coc by 09:00 on the 29th, −S$26, half a day of Ninh Binh gained), or a private car door-to-door (+S$76, roughly 8h instead of 10h).",
         "cost": 0,
         "currency": "SGD",
         "refs": []
@@ -648,7 +648,7 @@
       {
         "time": "16:00",
         "what": "Check in to the NYE hotel in the Old Quarter",
-        "notes": "BOOKING DEADLINE — THE MOST TIME-CRITICAL ITEM OF THE WHOLE TRIP: New Year's Eve in the Old Quarter is the scarcest inventory of the window and the good mid-range is gone first. Book within 2-4 weeks of today (by ~4 Nov 2026), at the same time as the Christmas nights. DECISION: if the Old Quarter is sold out or silly-priced, the alternative is to spend NYE in Tam Coc (far quieter and much cheaper) and travel back on 1 Jan for the flight — but check the 1 Jan flight time carefully before choosing that, because it eats the margin.",
+        "notes": "BOOKING DEADLINE — THE MOST TIME-CRITICAL ITEM OF THE WHOLE TRIP: New Year's Eve in the Old Quarter is the scarcest inventory of the window and the good mid-range is gone first. Book within 2-4 weeks of today (by ~4 Nov 2026), at the same time as the Christmas nights. DECIDED — dec-nye in data/decisions.json: NYE is in the Old Quarter. Two priced alternatives if this room is gone or silly-priced: the fallback hotels in the same area (acc-006 Hanoi Pearl / acc-004 O'Gallery, −S$19), or NYE in Tam Coc with a 1 Jan run to the airport (−S$31, and it needs a non-morning flight).",
         "cost": 0,
         "currency": "SGD",
         "refs": ["https://hanoitourism.org/old-quarter-accommodation"]

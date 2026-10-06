@@ -14,10 +14,12 @@
   <div class="wrap">
     <div id="hd-top">
       <h1 id="hd-title">Trip</h1>
+      <div id="hd-auth" class="hd-auth"></div>
       <div id="hd-dates" class="muted"></div>
     </div>
     <div id="hd-facts" class="facts"></div>
     <div id="hd-budget" class="budget" hidden></div>
+    <div id="hd-decisions" class="decwrap" hidden></div>
     <div id="hd-alert" class="alert" hidden></div>
   </div>
 </header>
@@ -29,6 +31,8 @@
     <button class="tabbtn" id="tabbtn-expenses" role="tab" aria-controls="tab-expenses" aria-selected="false" data-tab="expenses">Expenses</button>
     <button class="tabbtn" id="tabbtn-packing" role="tab" aria-controls="tab-packing" aria-selected="false" data-tab="packing">Packing</button>
     <button class="tabbtn" id="tabbtn-recommendations" role="tab" aria-controls="tab-recommendations" aria-selected="false" data-tab="recommendations">Ideas</button>
+    <button class="tabbtn" id="tabbtn-decisions" role="tab" aria-controls="tab-decisions" aria-selected="false" data-tab="decisions">Decisions</button>
+    <button class="tabbtn" id="tabbtn-share" role="tab" aria-controls="tab-share" aria-selected="false" data-tab="share">Share</button>
   </div>
 </nav>
 
@@ -72,12 +76,23 @@
     <div data-content></div>
   </section>
 
+  <section class="tab" id="tab-decisions" role="tabpanel" aria-labelledby="tabbtn-decisions" hidden>
+    <div data-content></div>
+  </section>
+
+  <section class="tab" id="tab-share" role="tabpanel" aria-labelledby="tabbtn-share" hidden>
+    <div data-content></div>
+  </section>
+
 </main>
 
 <footer class="wrap foot muted small">
-  Data lives in <code>data/*.json</code>. Nothing leaves this device &mdash; no analytics, no third-party calls.
+  <span id="foot-text">Data lives in <code>data/*.json</code>. Nothing leaves this device until you sign in to the configured backend &mdash; no analytics, no third-party calls.</span>
 </footer>
 
+<script src="pocketbase-config.js"></script>
+<script src="backends/pocketbase-adapter.js"></script>
+<script src="auth.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

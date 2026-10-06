@@ -167,13 +167,15 @@ live in `research/*.md`; this is the index of what the plan actually leans on.
    assumed 24–26 Dec) and it saves ~S$59 per person. The trade-off — no hotel room to
    nap in before the night bus — is stated on day 2, together with the alternative
    (2 Hanoi nights + a daytime van on the 26th, at the cost of one Tam Coc night).
-   **Knock-on effect I am NOT papering over:** `data/accommodation.json` (the researcher's
-   file, `acc-001`–`acc-008`) still carries `checkin 2026-12-24 / checkout 2026-12-26` and
-   `nights: 2` for the round-1 Hanoi shortlist, so the **Stay tab will show 2 nights for
-   the 24th–26th while the plan and the budget use 1 night (24th–25th)**. I left that file
-   untouched — it is the researcher's artifact and its prices and notes are still the
-   shortlist — and flagged the mismatch on the kanban task instead. `acc-009` (the NYE
-   night) and `acc-010` (Tam Coc) are already correct for this plan.
+   **Knock-on effect I am NOT papering over — now FIXED (2026-10-07):** `data/accommodation.json`
+   (the researcher's file, `acc-001`–`acc-008`) carried `checkin 2026-12-24 / checkout
+   2026-12-26` and `nights: 2` for the round-1 Hanoi shortlist, so the **Stay tab showed 2
+   nights for the 24th–26th while the plan and the budget use 1 night (24th–25th)**. I
+   flagged the mismatch rather than fixing it while the file was the researcher's. It is now
+   my file to reconcile and I have: all eight entries carry `nights: 1` and `checkout
+   2026-12-25`, each with a one-line note saying why, and **nothing else about them changed**
+   — same prices, areas, links, statuses and sources. `acc-009` (the NYE night) and `acc-010`
+   (Tam Coc) were already correct for this plan.
 3. **The loop is 3 days / 2 nights, not 4.** A fourth riding day only fits by giving up
    a Ninh Binh night, and Ninh Binh is the trip's best-weather photography base.
 4. **No multi-day trek is planned**, so the packing list is a walking-and-riding list,
@@ -222,6 +224,17 @@ plan; it is recorded so nobody has to reverse-engineer it.
    from) and the per-item `buy` flags the README documents for "buy or arrange before
    departure". Ten items are flagged; the IDP is deliberately flagged **false**, because
    the correct action is *not* to buy one.
+7. **`data/decisions.json` is a new file** (2026-10-07), the source of truth for every open
+   choice. It is an array of decision objects with exactly these keys: `id`, `title`,
+   `question`, `primary_option_id`, `status`, `decided_by`, `options`. Each option has
+   exactly: `id`, `label`, `summary`, `changes`, `cost_delta_sgd`, `booking_impact`,
+   `tradeoffs`, `sources`. `cost_delta_sgd` is a signed difference **against that decision's
+   own primary**, which is therefore always `0`; the alternatives are what the plan is not
+   spending (or is). `status` is `open` on all of them — they are propositions the two of
+   you flip, not states the app mutates. **`app.js`'s `FILES` list does not include it yet**
+   — the UI that renders it is separate work — so until that lands the file is inert:
+   nothing in the app reads it, and every headline number in the other files already
+   reflects the primaries. Section 7 lists what each primary rests on.
 
 ---
 
@@ -257,3 +270,45 @@ include a foreign-transaction or card-fee line, because no fee schedule was sour
 **What the headroom could buy instead**, if you'd rather spend it than keep it: a second
 Hanoi night for a slower finish, the 4-day loop with Dữ Già, La Siesta-class rooms
 throughout, or private-car transfers on the two long legs (~+S$75–100 per person each).
+All four are now priced options rather than prose — see §7.
+
+---
+
+## 7. The decisions: every open choice, its primary, and what the primary rests on
+
+Decided **2026-10-07**. All of it lives in `data/decisions.json` (contract in §5.7). The
+plan, the budget and the Stay tab are committed to the **primary** in each row; every delta
+below is per person and signed against that decision's primary, so it can be applied
+straight to the S$978.
+
+| # | Decision | Primary — what the plan does | Priced alternatives (`cost_delta_sgd`) | What the primary rests on |
+|---|---|---|---|---|
+| 1 | **Budget reading** (`dec-budget`) | S$1,500 is on-the-ground; the SIN–HAN fare sits outside it; **Ninh Binh stays** | Fly home on 31 Dec and drop the NYE night, to fit a S$580 fare inside the cap (**−154**) | §6: S$978 against S$1,500. The fare is unquoted, so the cap's reading is the brief's own. Swapping Ninh Binh's S$58 of rooms for Hanoi's S$102–118 is *not* a saving |
+| 2 | **Dates** (`dec-dates`) | 24 Dec (Thu) → 1 Jan (Fri) | Shift to 26 Dec → 3 Jan (**0** on the ground) | §1.8 weekdays; the fare bands in §2. The shifted window's saving is unmeasured, and NYE lands on a travelling day |
+| 3 | **NYE base** (`dec-nye`) | Hanoi Old Quarter; fireworks over Hoàn Kiếm | Tam Coc for the night and a 1 Jan run to the airport (**−31**); an Old Quarter fallback hotel (**−19**) | The Hanoi NYE sourcing and the old-quarter scarcity argument; acc-009 booked first |
+| 4 | **Loop start** (`dec-loop-start`) | Ride out the same day off the 04:30–06:00 arrival, one Hanoi night | Two Hanoi nights + a daytime van on the 26th (**+40**); the daytime van on the 25th (**+31**) | The sleeper-bus timetable and the operator's late-morning start advice; the 25th on a bus is a night nobody sleeps in a hotel |
+| 5 | **Loop length** (`dec-loop-length`) | 3 days / 2 nights | 4 days / 3 nights, Dữ Già (**−56**) | 3D/2N is the sourced standard minimum; Ninh Binh has the better weather and the better photograph. The 4-day version is *cheaper* because the loop day sits inside the tour price |
+| 6 | **29 Dec transit** (`dec-transit-29`) | Keep the Ha Giang reset night **and** do the 10h transit in daylight | Sleeper bus straight through, no reset night (**−26**); private car door-to-door (**+76**) | A hot shower and a real bed after three days on a bike; the mountain road is only worth seeing in daylight (§2) |
+| 7 | **Ride** (`dec-ride`) | Easy rider — pillion behind a licensed local | Self-ride (**−202**) | The 1949-vs-1968 IDP finding: a Singapore licence plus a Singapore IDP is not legal for >50cc, so self-ride is uninsurable. Cost is not the reason |
+| 8 | **Boats** (`dec-boat`) | Both: Trang An on the 30th, the Tam Coc boat at first light on the 31st | Trang An only (**−11**); Tam Coc only (**−12**) | The sourced bands — Trang An 250,000 VND vs Tam Coc 150,000–200,000 VND plus a tip |
+| 9 | **Food** (`dec-food`) | The guided Old Quarter street-food walk on Christmas Day | Eat the same streets unguided (**−15**) | Michelin-listed venues are named and checkable; the S$20 tour fee is an **assumption** — the least-verified line in the plan |
+| 10 | **Splurge** (`dec-splurge`) | Keep the S$522 unspent, as peak-season buffer | P'apiu Resort for the post-loop night (**+326**); La Siesta-class rooms throughout (**+46**) | `expenses.basis.peak_season_sensitivity`: a 30–50% Christmas premium is the live risk |
+| 11 | **Insurance** (`dec-insurance`) | Mid-range comprehensive, S$50/person | Fly uninsured (**−50**) | MFA's advice, and the pillion question. S$50 is an **assumption**, not a quote — get the pillion wording in writing |
+
+**What committing to the primaries actually changed in the plan files:**
+- `data/itinerary.json` — the five items that used to read "DECISION:" or "TRADE-OFF, YOUR
+  CALL:" now state the primary and cite the decision id. **No date, cost or `day_cost`
+  changed**: the nine day costs still sum to 883.
+- `data/expenses.json` — **no row changed value**, and the tracked total is still 978. One
+  factual slip was corrected: the acc-014 note read "~S$18/person/night" against a
+  375,000 VND *room* rate — it is ~S$18 per room, about **S$9 per person**.
+- `data/trip.json` — `notes` now states the primaries. Dates, budget, cap and currency
+  untouched.
+- `data/accommodation.json` — `acc-001`–`acc-008` reconciled to one night (§4.2), which is
+  the change that makes the Stay tab agree with the budget instead of double-counting the
+  25th.
+- `data/sources.md` — this section, plus §4.2 and §5.7.
+
+The headline numbers are deliberately unchanged: **S$978 per person on the ground, S$1,500
+cap, S$522 headroom** — every primary is what the plan already showed. What is new is that
+each of them now has a price attached to the alternatives.

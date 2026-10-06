@@ -3,6 +3,7 @@
   "basis": {
     "who_pays": "All amounts are PER PERSON, SGD, planned. 1 SGD = 20,285 VND (open.er-api.com, rate dated 6 Oct 2026); USD converted at 1 USD = 25,965 VND. Room rates are halved because the two of you share a twin/double.",
     "scope": "On-the-ground only. The international SIN-HAN return is in this file as category 'flights' but its amount is written as a text range, not a number, so it is shown in the list without inflating the total - that is deliberate, so the tracked figure stays comparable to the S$1,500/person cap. Scoot cabin-baggage and the 20 kg checked-bag add-on are not costed here (buy at booking); assume S$40-80 per person each way if you check a bag.",
+    "decisions": "Every open choice now has a primary option, committed in data/decisions.json, and the itinerary, this budget and the Stay tab all follow the primaries: the S$1,500 read as on-the-ground excluding flights, Ninh Binh kept, NYE in Hanoi, the 3D/2N loop as an easy rider, the 28-29 Dec Ha Giang reset night kept, Trang An and the Tam Coc boat both taken. The cost deltas in that file are signed differences against the rows below, so a flipped option moves the tracked figure by exactly that amount.",
     "peak_season_sensitivity": "Every hotel figure is a 2026 guide 'typical' rate, not a quote. If the Old Quarter and Tam Coc price 30-50% above those figures over Christmas/NYE, accommodation goes from S$213 to roughly S$277-320 per person and the trip total moves to about S$1,042-1,085 - still S$415+ inside the cap. The S$522 of headroom exists for exactly this.",
     "verification": "Every non-obvious line is sourced and dated in data/sources.md. Lines marked 'unverified' in their description are the researcher's or my own gaps, not estimates with a source behind them."
   },
@@ -38,7 +39,7 @@
       "currency": "SGD",
       "paid_by": "shared",
       "status": "planned",
-      "notes": "BOOK 4-6 WEEKS out. Cheaper alternative: acc-014 Tam Coc Sunshine Homestay, from 375,000 VND (~S$18/person/night)."
+      "notes": "BOOK 4-6 WEEKS out. Cheaper alternative: acc-014 Tam Coc Sunshine Homestay, from 375,000 VND per room (~S$18 per room, about S$9 per person per night)."
     },
     {
       "id": "exp-a4",
