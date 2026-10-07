@@ -4933,7 +4933,7 @@ function renderRecommendations() {
   searchBar.appendChild(catRow);
   root.appendChild(searchBar);
 
-  var listContainer = ce('div', 'stay-grid');
+  var listContainer = ce('div', 'ideas-compact-container');
   renderRecList(recs, days, listContainer);
   root.appendChild(listContainer);
 }
@@ -5473,45 +5473,135 @@ function renderRecList(recs, days, container) {
   }
 
   filtered.forEach(function (r) {
-    var card = ce('div', 'stay-card');
-    card.appendChild(ce('div', 'stay-name', r.title || r.name || 'Spot'));
+    var row = ce('div', 'idea-compact-row');
 
-    var meta = [];
-    if (r.area) meta.push('📍 ' + r.area);
-    if (r.category) meta.push('🏷 ' + r.category);
+    // Baseline single-line main row
+    var mainRow = ce('div', 'idea-row-main');
+    mainRow.setAttribute('role', 'button');
+    mainRow.setAttribute('tabindex', '0');
+    mainRow.setAttribute('aria-expanded', 'false');
+    mainRow.title = 'Click to view / hide details';
+
+    var content = ce('div', 'idea-row-content');
+
+    // 1. Title
+    var title = ce('span', 'idea-title', r.title || r.name || 'Idea');
+    title.title = r.title || r.name || 'Idea';
+    content.appendChild(title);
+
+    // 2. Location
+    var locText = r.area || r.location || '';
+    if (locText) {
+      var locTag = ce('span', 'idea-tag idea-tag-loc', '📍 ' + locText);
+      locTag.title = 'Location: ' + locText;
+      content.appendChild(locTag);
+    }
+
+    // 3. Category
+    var catText = r.category || '';
+    if (catText) {
+      var catTag = ce('span', 'idea-tag idea-tag-cat', '🏷️ ' + catText);
+      catTag.title = 'Category: ' + catText;
+      content.appendChild(catTag);
+    }
+
+    // 4. Price
     var costNum = parseVndCostToSgd(r.cost_estimate, r.cost_sgd);
     r.cost_sgd = costNum;
-    var costLabel = costNum > 0 ? sgd(costNum) : 'Free';
-    if (r.cost_estimate && !r.cost_estimate.toLowerCase().includes('free') && !r.cost_estimate.toLowerCase().includes('n/a')) {
-      costLabel += ' (' + r.cost_estimate + ')';
-    }
-    meta.push('💰 ' + costLabel);
-    if (r.duration) meta.push('⏱ ' + r.duration);
-    card.appendChild(ce('div', 'stay-dates', meta.join(' · ')));
+    var priceLabel = costNum > 0 ? sgd(costNum) : 'Free';
+    var priceTag = ce('span', 'idea-tag idea-tag-price', '💰 ' + priceLabel);
+    priceTag.title = 'Est. Price: ' + priceLabel + (r.cost_estimate ? ' (' + r.cost_estimate + ')' : '');
+    content.appendChild(priceTag);
 
-    if (r.why) card.appendChild(ce('p', 'small muted', r.why));
+    // 5. Duration
+    var durText = r.duration || '1h';
+    var durTag = ce('span', 'idea-tag idea-tag-dur', '⏱️ ' + durText);
+    durTag.title = 'Duration: ' + durText;
+    content.appendChild(durTag);
 
-    // Link
-    if (r.source_url) {
-      var a = ce('a', 'small muted', 'Open Guide / Source ↗');
-      a.href = r.source_url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.style.display = 'block';
-      a.style.marginBottom = '8px';
-      card.appendChild(a);
-    }
+    mainRow.appendChild(content);
 
-    // Interactive "Add to Day" button
-    var addBtn = ce('button', 'btn-swap', '+ Add to Day');
+    // 6. Action: "+" Button at end of the line
+    var addBtn = ce('button', 'btn-idea-add-act', '+');
     addBtn.type = 'button';
-    addBtn.title = 'Add this spot to an itinerary day schedule';
-    addBtn.addEventListener('click', function () {
+    addBtn.title = 'Add to itinerary day';
+    addBtn.setAttribute('aria-label', 'Add to Day');
+    addBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
       openAddIdeaToDayModal(r);
     });
-    card.appendChild(addBtn);
+    mainRow.appendChild(addBtn);
+    row.appendChild(mainRow);
 
-    container.appendChild(card);
+    // Expanded details panel (hidden by default)
+    var detailsBox = ce('div', 'idea-details-expanded');
+    detailsBox.style.display = 'none';
+
+    if (r.why) {
+      var whyP = ce('p', 'idea-details-why', r.why);
+      detailsBox.appendChild(whyP);
+    }
+
+    var metaBox = ce('div', 'idea-details-meta');
+    if (r.cost_estimate && !r.cost_estimate.toLowerCase().includes('free') && !r.cost_estimate.toLowerCase().includes('n/a')) {
+      metaBox.appendChild(ce('span', null, '💰 Original Estimate: <strong>' + escapeHtml(r.cost_estimate) + '</strong> (~' + sgd(costNum) + ')'));
+    }
+    if (r.area) {
+      metaBox.appendChild(ce('span', null, '📍 Area: ' + escapeHtml(r.area)));
+    }
+    if (r.category) {
+      metaBox.appendChild(ce('span', null, '🏷️ Category: ' + escapeHtml(r.category)));
+    }
+    if (r.duration) {
+      metaBox.appendChild(ce('span', null, '⏱️ Duration: ' + escapeHtml(r.duration)));
+    }
+    if (metaBox.childNodes.length > 0) {
+      detailsBox.appendChild(metaBox);
+    }
+
+    var footer = ce('div', 'idea-details-footer');
+    if (r.source_url) {
+      var link = ce('a', 'idea-details-link', 'Open Guide / Source ↗');
+      link.href = r.source_url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.addEventListener('click', function (e) { e.stopPropagation(); });
+      footer.appendChild(link);
+    } else {
+      footer.appendChild(ce('span', 'muted tiny', 'Curated spot recommendation'));
+    }
+
+    var addDayBtn = ce('button', 'btn btn-secondary small', '➕ Add to Day Schedule');
+    addDayBtn.type = 'button';
+    addDayBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openAddIdeaToDayModal(r);
+    });
+    footer.appendChild(addDayBtn);
+    detailsBox.appendChild(footer);
+
+    row.appendChild(detailsBox);
+
+    // Click on baseline row toggles details expansion
+    function toggleExpand() {
+      var isHidden = (detailsBox.style.display === 'none');
+      detailsBox.style.display = isHidden ? 'block' : 'none';
+      row.classList.toggle('expanded', isHidden);
+      mainRow.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+    }
+
+    mainRow.addEventListener('click', function () {
+      toggleExpand();
+    });
+
+    mainRow.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleExpand();
+      }
+    });
+
+    container.appendChild(row);
   });
 }
 
