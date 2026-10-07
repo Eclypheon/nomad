@@ -36,6 +36,35 @@
         "sources": [
           "https://www.flyscoot.com/flights/en/flights-from-singapore-to-hanoi",
           "https://breezevietnam.com/noi-bai-airport-to-hanoi"
+        ],
+        "schedule_impact": [
+          {
+            "day": 8,
+            "removes": [
+              "acc-009",
+              "La Siesta",
+              "Hoan Kiem fireworks",
+              "pre-NYE dinner"
+            ],
+            "adds": [
+              {
+                "time": "14:00",
+                "what": "Direct Highway Transfer Tam Coc → Noi Bai Airport (HAN)",
+                "type": "transport",
+                "slot": "afternoon",
+                "cost": 17,
+                "notes": "Direct express minivan to Noi Bai Airport for evening flight back to Singapore on 31 Dec."
+              },
+              {
+                "time": "19:00",
+                "what": "Return Flight to Singapore (SIN) — arrive before midnight",
+                "type": "transport",
+                "slot": "evening",
+                "cost": 0,
+                "notes": "Fly home on 31 Dec to keep flight inside S$1,500 total cap."
+              }
+            ]
+          }
         ]
       }
     ]
@@ -117,6 +146,46 @@
         "sources": [
           "https://bestofninhbinh.com/best-ninh-binh-hotels",
           "https://bestofninhbinh.com/hanoi-to-ninh-binh"
+        ],
+        "schedule_impact": [
+          {
+            "day": 8,
+            "removes": [
+              "La Siesta",
+              "acc-009",
+              "fireworks",
+              "van to Hanoi",
+              "train to Hanoi",
+              "transfer to Hanoi"
+            ],
+            "adds": [
+              {
+                "time": "19:00",
+                "what": "Quiet Countryside New Year's Eve Dinner & Countdown in Tam Coc",
+                "type": "food",
+                "slot": "evening",
+                "cost": 25,
+                "notes": "Celebrate New Year's Eve peacefully surrounded by limestone peaks; festive dinner at resort, avoiding Hanoi city crowds."
+              }
+            ]
+          },
+          {
+            "day": 9,
+            "removes": [
+              "Old Quarter morning",
+              "Walk around Hoan Kiem"
+            ],
+            "adds": [
+              {
+                "time": "11:00",
+                "what": "Direct Minivan Transfer Tam Coc → Noi Bai International Airport (HAN)",
+                "type": "transport",
+                "slot": "morning",
+                "cost": 17,
+                "notes": "Direct highway minivan to Noi Bai Airport (2.5-3h). Arrive 3h before international flight departure."
+              }
+            ]
+          }
         ]
       },
       {
@@ -175,6 +244,50 @@
         "sources": [
           "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
           "https://bestofninhbinh.com/best-ninh-binh-hotels"
+        ],
+        "schedule_impact": [
+          {
+            "day": 2,
+            "removes": [
+              "21:00 sleeper bus",
+              "sleeper bus to Ha Giang"
+            ],
+            "adds": [
+              {
+                "time": "20:00",
+                "what": "Christmas Night in Hanoi Old Quarter & Hotel Bed (acc-003)",
+                "type": "night",
+                "slot": "evening",
+                "cost": 59,
+                "notes": "Enjoy full Christmas evening in Hanoi and a proper night's sleep before traveling tomorrow."
+              }
+            ]
+          },
+          {
+            "day": 3,
+            "removes": [
+              "Ride begins mid-morning",
+              "Ha Giang 3-day / 2-night"
+            ],
+            "adds": [
+              {
+                "time": "08:00",
+                "what": "Daytime Limousine Van Hanoi → Ha Giang city (6-7h)",
+                "type": "transport",
+                "slot": "morning",
+                "cost": 22,
+                "notes": "Daytime mountain highway transit, arriving Ha Giang late afternoon."
+              },
+              {
+                "time": "17:00",
+                "what": "Check in Ha Giang City Hotel (acc-015 Yen Bien Luxury) & evening rest",
+                "type": "night",
+                "slot": "evening",
+                "cost": 26,
+                "notes": "Relax, prepare for fresh 08:00 loop start tomorrow morning."
+              }
+            ]
+          }
         ]
       },
       {
@@ -192,6 +305,33 @@
         "sources": [
           "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
           "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025"
+        ],
+        "schedule_impact": [
+          {
+            "day": 2,
+            "removes": [
+              "21:00 sleeper bus",
+              "Long Biên Bridge at sunset"
+            ],
+            "adds": [
+              {
+                "time": "08:30",
+                "what": "Daytime Limousine Van Hanoi → Ha Giang city (6-7h)",
+                "type": "transport",
+                "slot": "morning",
+                "cost": 22,
+                "notes": "Travel by daytime limousine van on Christmas Day, arriving Ha Giang late afternoon."
+              },
+              {
+                "time": "17:00",
+                "what": "Check in Ha Giang City Hotel (acc-015) & hotpot dinner",
+                "type": "night",
+                "slot": "evening",
+                "cost": 26,
+                "notes": "Good rest before fresh 08:00 morning start on the loop."
+              }
+            ]
+          }
         ]
       }
     ]
@@ -233,6 +373,48 @@
         "sources": [
           "https://hagiangmotorventures.com/blogs/best-ha-giang-loop-tour-companies-recommendations",
           "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices"
+        ],
+        "schedule_impact": [
+          {
+            "day": 5,
+            "title": "Ha Giang Loop Day 3: Mèo Vạc → Dữ Già Village & Waterfalls",
+            "adds": [
+              {
+                "time": "15:00",
+                "what": "Dữ Già Waterfall swim & village walk",
+                "type": "activity",
+                "slot": "afternoon",
+                "cost": 0,
+                "notes": "Afternoon relaxation at Dữ Già waterfall and stream before family dinner."
+              },
+              {
+                "time": "18:00",
+                "what": "Lodging: Dữ Già Homestay Night 3",
+                "type": "night",
+                "slot": "evening",
+                "cost": 18,
+                "notes": "Traditional Tay / H'mong wooden homestay in Dữ Già valley (dinner & breakfast included)."
+              }
+            ],
+            "removes": [
+              "Back in Ha Giang city",
+              "acc-015 Yen Bien Luxury"
+            ]
+          },
+          {
+            "day": 6,
+            "title": "Ha Giang Loop Day 4: Dữ Già → Ha Giang Town → Tam Coc",
+            "adds": [
+              {
+                "time": "08:00",
+                "what": "Ride Dữ Già → Ha Giang town (scenic mountain pass descent)",
+                "type": "activity",
+                "slot": "morning",
+                "cost": 0,
+                "notes": "Complete the loop back to Ha Giang town; return bikes / finish tour."
+              }
+            ]
+          }
         ]
       }
     ]
@@ -274,6 +456,50 @@
         "sources": [
           "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
           "https://daytripsvietnam.com/transport/hanoi-to-ha-giang"
+        ],
+        "schedule_impact": [
+          {
+            "day": 5,
+            "removes": [
+              "Yen Bien Luxury Hotel",
+              "acc-015"
+            ],
+            "adds": [
+              {
+                "time": "20:30",
+                "what": "Board 21:00 overnight sleeper bus Ha Giang → Tam Coc (Ninh Binh)",
+                "type": "transport",
+                "slot": "evening",
+                "cost": 17,
+                "notes": "Direct sleeper bus through the night to Ninh Binh, arriving early morning on the 29th."
+              }
+            ]
+          },
+          {
+            "day": 6,
+            "removes": [
+              "Daytime van Ha Giang",
+              "7h van to Hanoi"
+            ],
+            "adds": [
+              {
+                "time": "09:00",
+                "what": "Early arrival in Tam Coc — check in early / drop bags at Tam Coc Garden",
+                "type": "activity",
+                "slot": "morning",
+                "cost": 0,
+                "notes": "Arrive off the sleeper bus, refresh, enjoy full daylight in the karst."
+              },
+              {
+                "time": "14:00",
+                "what": "Afternoon Trang An UNESCO Boat Tour (moved forward from Day 7)",
+                "type": "activity",
+                "slot": "afternoon",
+                "cost": 12,
+                "notes": "Take advantage of the extra day in Ninh Binh to visit Trang An caves in golden afternoon light."
+              }
+            ]
+          }
         ]
       },
       {
@@ -291,6 +517,25 @@
         "sources": [
           "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
           "https://daytripsvietnam.com/transport/hanoi-to-ha-giang"
+        ],
+        "schedule_impact": [
+          {
+            "day": 6,
+            "removes": [
+              "Daytime van Ha Giang",
+              "7h van to Hanoi"
+            ],
+            "adds": [
+              {
+                "time": "08:30",
+                "what": "Direct Private Car Ha Giang → Tam Coc (~7.5h door-to-door)",
+                "type": "transport",
+                "slot": "morning",
+                "cost": 115,
+                "notes": "Private car direct to Tam Coc resort, saving 2+ hours over public transit and bypassing Hanoi coach change."
+              }
+            ]
+          }
         ]
       }
     ]
@@ -332,6 +577,74 @@
           "https://aas.com.sg/idp-carnet/",
           "https://vn.usembassy.gov/driving-in-vietnam/",
           "https://wanderinvietnam.com/guides/ha-giang-on-a-budget-real-costs-how-to-save"
+        ],
+        "schedule_impact": [
+          {
+            "day": 3,
+            "transit_mode": "self-ride (rented 125cc semi-automatic motorbike)",
+            "removes": [
+              "EASY RIDER tour"
+            ],
+            "adds": [
+              {
+                "time": "10:00",
+                "what": "Ha Giang 3-day / 2-night SELF-RIDE motorbike rental (125cc semi-auto) & fuel",
+                "type": "transport",
+                "slot": "morning",
+                "cost": 35,
+                "notes": "3 days of 125cc semi-automatic bike rental (~200,000 VND/day ≈ S$30) plus fuel (~S$5). Self-guided riding with group.",
+                "booking_platform": "Ha Giang Motorbike Rental",
+                "booking_url": "https://wanderinvietnam.com/guides/ha-giang-on-a-budget-real-costs-how-to-save"
+              },
+              {
+                "time": "18:00",
+                "what": "Lodging: Nam Dam / Yên Minh Homestay night 1 (direct pay)",
+                "type": "night",
+                "slot": "evening",
+                "cost": 18,
+                "notes": "Direct booking / pay-on-arrival at traditional stilt house homestay (family dinner & breakfast included)."
+              }
+            ]
+          },
+          {
+            "day": 4,
+            "transit_mode": "self-ride (125cc semi-automatic motorbike)",
+            "adds": [
+              {
+                "time": "15:00",
+                "what": "Nho Quế river boat trip in Tu Sản gorge (buy ticket at boat wharf)",
+                "type": "activity",
+                "slot": "afternoon",
+                "cost": 8,
+                "notes": "Ride down the steep switchbacks to the river wharf; purchase boat ticket directly (150,000 VND)."
+              },
+              {
+                "time": "18:00",
+                "what": "Lodging: Mèo Vạc / Đồng Văn Homestay night 2 (direct pay)",
+                "type": "night",
+                "slot": "evening",
+                "cost": 18,
+                "notes": "Homestay in Mèo Vạc or Đồng Văn (family dinner & breakfast included)."
+              }
+            ]
+          },
+          {
+            "day": 5,
+            "transit_mode": "self-ride (125cc semi-automatic motorbike)",
+            "removes": [
+              "Tip the easy rider"
+            ],
+            "adds": [
+              {
+                "time": "17:00",
+                "what": "Return rental motorbikes in Ha Giang city, gear return & vehicle deposit retrieval",
+                "type": "transport",
+                "slot": "afternoon",
+                "cost": 0,
+                "notes": "Return rented motorbikes to shop in Ha Giang town. Retrieve deposit, collect stored bags."
+              }
+            ]
+          }
         ]
       }
     ]
@@ -369,6 +682,26 @@
         "tradeoffs": "Tam Coc's boat goes through three caves foot-paddled rather than rowed, and at 07:00 it is the quiet version of the boat everyone photographs. You would be keeping the better route and giving up the better light.",
         "sources": [
           "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices"
+        ],
+        "schedule_impact": [
+          {
+            "day": 8,
+            "removes": [
+              "Tam Coc boat",
+              "Tam Coc sampan",
+              "boat tour"
+            ],
+            "adds": [
+              {
+                "time": "08:00",
+                "what": "Relaxed Countryside Breakfast & Paddy Village Stroll",
+                "type": "food",
+                "slot": "morning",
+                "cost": 5,
+                "notes": "Leisurely resort breakfast, pack bags, gentle walk through lotus ponds and karst scenery before departure for Hanoi."
+              }
+            ]
+          }
         ]
       },
       {
@@ -385,6 +718,25 @@
         "sources": [
           "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices",
           "https://bestofninhbinh.com/ninh-binh-homestay-guide"
+        ],
+        "schedule_impact": [
+          {
+            "day": 7,
+            "removes": [
+              "Trang An boat",
+              "Tràng An boat"
+            ],
+            "adds": [
+              {
+                "time": "09:00",
+                "what": "Bicycle Ride to Bích Động Pagoda & Thung Nham Lotus Fields",
+                "type": "activity",
+                "slot": "morning",
+                "cost": 4,
+                "notes": "Gentle morning cycle through rural paddy lanes, three-tiered cave pagoda, and quiet countryside."
+              }
+            ]
+          }
         ]
       }
     ]
@@ -423,6 +775,26 @@
         "sources": [
           "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
           "https://guide.michelin.com/vn/en/article/dining-out/where-to-eat-the-best-pho-bun-cha-and-noodle-soups-in-hanoi"
+        ],
+        "schedule_impact": [
+          {
+            "day": 2,
+            "removes": [
+              "guided street-food",
+              "street food crawl",
+              "street food tour"
+            ],
+            "adds": [
+              {
+                "time": "13:00",
+                "what": "Old Quarter Self-Guided Street Food Walk",
+                "type": "food",
+                "slot": "afternoon",
+                "cost": 12,
+                "notes": "Self-guided crawl: Bún Chả Đắc Kim (1 Hàng Mành), Phở Bò Ấu Triệu (34 Ấu Triệu), Bánh Mì 25, and Egg Coffee at Giang Café."
+              }
+            ]
+          }
         ]
       }
     ]
@@ -463,6 +835,24 @@
         "sources": [
           "https://www.agoda.com/p-apiu-resort/hotel/ha-giang-vn.html",
           "https://wherebest.com/en/top10-hotels-ha-giang"
+        ],
+        "schedule_impact": [
+          {
+            "day": 5,
+            "removes": [
+              "acc-015 Yen Bien Luxury"
+            ],
+            "adds": [
+              {
+                "time": "17:30",
+                "what": "Lodging: acc-023 P'apiu Resort (Bắc Mê luxury villa, all-inclusive private estate)",
+                "type": "night",
+                "slot": "evening",
+                "cost": 352,
+                "notes": "Post-loop splurge: 5-star mountain sanctuary 40 min from Ha Giang. Private jacuzzi, bespoke dining."
+              }
+            ]
+          }
         ]
       },
       {
@@ -481,6 +871,40 @@
         "sources": [
           "https://hanoitourism.org/old-quarter-accommodation",
           "https://bestofninhbinh.com/best-ninh-binh-hotels"
+        ],
+        "schedule_impact": [
+          {
+            "day": 1,
+            "removes": [
+              "acc-003 Peridot Grand"
+            ],
+            "adds": [
+              {
+                "time": "14:00",
+                "what": "Lodging: acc-001 La Siesta Premium Hang Be (Junior Suite)",
+                "type": "night",
+                "slot": "afternoon",
+                "cost": 70,
+                "notes": "Upgraded Old Quarter boutique stay with courtyard & spa."
+              }
+            ]
+          },
+          {
+            "day": 6,
+            "removes": [
+              "acc-010 Tam Coc Garden"
+            ],
+            "adds": [
+              {
+                "time": "17:00",
+                "what": "Lodging: acc-012 Tam Coc Rice Fields Resort (Deluxe Bungalow)",
+                "type": "night",
+                "slot": "afternoon",
+                "cost": 46,
+                "notes": "Direct view over lotus paddies and limestone peaks."
+              }
+            ]
+          }
         ]
       }
     ]

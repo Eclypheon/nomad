@@ -116,15 +116,21 @@ function applyDecisionsToSchedule(days) {
 
   var cloned = days.map(function (d) {
     return Object.assign({}, d, {
-      items: Array.isArray(d.items) ? d.items.map(function (it) { return Object.assign({}, it); }) : []
+      items: Array.isArray(d.items) ? d.items.map(function (it) { return Object.assign({}, it); }) : [],
+      transit_detail: d.transit_detail ? Object.assign({}, d.transit_detail) : undefined
     });
   });
 
-  var decDatesPick = getActivePick({ id: 'dec-dates' });
-  var decNyePick = getActivePick({ id: 'dec-nye' });
-  var decRidePick = getActivePick({ id: 'dec-ride' });
-  var decBoatPick = getActivePick({ id: 'dec-boat' });
-  var decFoodPick = getActivePick({ id: 'dec-food' });
+  var decDatesPick = getActivePick('dec-dates');
+  var decNyePick = getActivePick('dec-nye');
+  var decRidePick = getActivePick('dec-ride');
+  var decBoatPick = getActivePick('dec-boat');
+  var decFoodPick = getActivePick('dec-food');
+  var decTransitPick = getActivePick('dec-transit-29');
+  var decLoopStartPick = getActivePick('dec-loop-start');
+  var decLoopLengthPick = getActivePick('dec-loop-length');
+  var decBudgetPick = getActivePick('dec-budget');
+  var decSplurgePick = getActivePick('dec-splurge');
 
   // 1. Shift dates if dec-dates is shifted (+2 days: 26 Dec - 3 Jan)
   if (decDatesPick === 'opt-dates-shifted') {
@@ -141,58 +147,117 @@ function applyDecisionsToSchedule(days) {
     });
   }
 
-  // 2. dec-nye: Tam Coc vs Hanoi New Year's Eve
-  if (decNyePick === 'opt-tamcoc-nye') {
-    var day8 = cloned.find(function (d, i) { return (d.day || i + 1) === 8; });
-    if (day8) {
-      day8.base = 'Tam Coc';
-      day8.title = 'Tam Coc — Countryside New Year\'s Eve';
-      day8.lodging = 'acc-015 — Tam Coc Garden Resort';
-      if (day8.items) {
-        day8.items.forEach(function (it) {
+  // 2. dec-ride: Easy Rider vs Self-Ride
+  var isSelfRide = (decRidePick === 'opt-self-ride' || decRidePick === 'opt-ride-self-drive');
+  if (isSelfRide) {
+    [3, 4, 5].forEach(function (dayNumber) {
+      var loopDay = cloned.find(function (d, i) { return (d.day || i + 1) === dayNumber; });
+      if (!loopDay) return;
+
+      if (loopDay.transit_detail) {
+        loopDay.transit_detail.mode = 'self-ride (rented 125cc semi-automatic motorbike)';
+      }
+      if (loopDay.transit) {
+        loopDay.transit = loopDay.transit.replace(/as a pillion/gi, 'as a self-rider (125cc semi-auto)')
+                                         .replace(/easy rider.*?\)/gi, 'self-ride 125cc motorbike)');
+      }
+      if (loopDay.items) {
+        loopDay.items.forEach(function (it) {
           var w = (it.what || '').toLowerCase();
-          if (w.includes('la siesta') || w.includes('hoan kiem') || w.includes('fireworks')) {
-            it.what = 'Peaceful countryside New Year countdown & dinner in Tam Coc';
-            it.notes = 'Quiet NYE surrounded by limestone karsts; avoiding Hanoi lake crowds';
+          if (w.includes('easy rider tour') || w.includes('easy rider')) {
+            it.what = it.what.replace(/EASY RIDER tour.*$/i, 'SELF-RIDE motorbike rental (125cc) & fuel deposit')
+                             .replace(/easy rider/gi, 'self-ride');
           }
         });
       }
-    }
-    var day9 = cloned.find(function (d, i) { return (d.day || i + 1) === 9; });
-    if (day9) {
-      day9.title = 'Tam Coc → Noi Bai Airport (Evening Departure)';
-      day9.transit = 'Private minivan Tam Coc → Noi Bai (2h) for flight back to Singapore';
-    }
-  }
+    });
 
-  // 3. dec-ride: Easy Rider vs Self-Drive
-  var isSelfDrive = (decRidePick === 'opt-ride-self-drive');
-  cloned.forEach(function (d) {
-    if (d.items) {
-      d.items.forEach(function (it) {
+    // Day 3 specific replacements
+    var day3 = cloned.find(function (d, i) { return (d.day || i + 1) === 3; });
+    if (day3 && day3.items) {
+      day3.items.forEach(function (it) {
         var w = (it.what || '').toLowerCase();
-        if (w.includes('easy rider') && isSelfDrive) {
-          it.what = it.what.replace(/Easy Rider.*?\)/i, 'Self-drive motorbike)');
-          it.notes = (it.notes || '') + ' (Self-riding 125cc semi-automatic; riding with group)';
-        } else if (w.includes('self-drive') && !isSelfDrive) {
-          it.what = it.what.replace(/Self-drive.*?\)/i, 'Easy Rider pillion)');
+        if (w.includes('collect gear') || w.includes('breakfast')) {
+          it.what = 'Arrive Ha Giang city — breakfast, pick up 125cc rental motorbikes & safety gear inspection';
+          it.notes = 'Collect rented semi-automatic 125cc motorbikes in Ha Giang town. Inspect brakes, tires, lights, rack straps, helmets & gloves. Secure bags on luggage racks.';
+        } else if (w.includes('booking + permit') || w.includes('permit check')) {
+          it.what = 'Self-Ride Route & Permit Check (Ha Giang immigration/police office)';
+          it.notes = 'Obtain border entry permits (~US$10 / 250,000 VND), download offline GPS maps for Quản Bạ and Yên Minh passes. Refuel before departing town.';
+        } else if (w.includes('quản bạ') && w.includes('heaven')) {
+          it.what = 'Self-Ride: Ha Giang → Quản Bạ "Heaven\'s Gate" (Cổng trời Quản Bạ)';
+          it.notes = 'First mountain climb and switchbacks. Ride at comfortable pace, take hairpins in 2nd gear. Watch for morning mist.';
+        } else if (w.includes('thẩm mã')) {
+          it.what = 'Lunch at Quản Bạ, then self-ride Thẩm Mã pass switchbacks';
+          it.notes = 'Self-ride the famous 9-turn Thẩm Mã pass shelf road. Pull over safely at viewpoints for photos.';
+        } else if (w.includes('easy rider tour') || w.includes('tour — paid in full') || w.includes('self-ride motorbike rental')) {
+          it.what = 'Ha Giang 3-day / 2-night SELF-RIDE motorbike rental (125cc semi-auto) & fuel';
+          it.type = 'transport';
+          it.cost = 35;
+          it.notes = '3 days of 125cc semi-automatic bike rental (~200,000 VND/day ≈ S$30) plus fuel (~S$5). Self-guided riding with group.';
+          it.booking_platform = 'Ha Giang Motorbike Rental';
+          it.booking_url = 'https://wanderinvietnam.com/guides/ha-giang-on-a-budget-real-costs-how-to-save';
+        } else if (w.includes('homestay 1') || w.includes('loop homestay night 1')) {
+          it.what = 'Lodging: Nam Dam / Yên Minh Homestay night 1 (direct pay)';
+          it.cost = 18;
+          it.notes = 'Direct booking / pay-on-arrival at traditional stilt house homestay (family dinner & breakfast included).';
         }
       });
     }
-  });
 
-  // 4. dec-boat: Trang An vs Tam Coc vs Both
+    // Day 4 specific replacements
+    var day4 = cloned.find(function (d, i) { return (d.day || i + 1) === 4; });
+    if (day4 && day4.items) {
+      day4.items.forEach(function (it) {
+        var w = (it.what || '').toLowerCase();
+        if (w.includes('đồng văn old town') || w.includes('ride to đồng văn')) {
+          it.what = 'Self-Ride to Đồng Văn old town — Sunday market & H\'Mong King\'s Palace';
+        } else if (w.includes('mã pì lèng pass') || w.includes('ma pi leng pass')) {
+          it.what = 'Self-Ride Mã Pì Lèng pass — 20 km cliff road above Nho Quế river gorge';
+          it.notes = 'The loop\'s signature ride. Ride with caution: sheer cliffs, mountain curves, local truck traffic. Stop at viewpoint for photos.';
+        } else if (w.includes('nho quế river boat') || w.includes('nho que river boat')) {
+          it.what = 'Nho Quế river boat trip in Tu Sản gorge (buy ticket at boat wharf)';
+          it.cost = 8;
+          it.notes = 'Ride down the steep switchbacks to the river wharf; purchase boat ticket directly (150,000 VND).';
+        } else if (w.includes('homestay 2') || w.includes('loop homestay night 2')) {
+          it.what = 'Lodging: Mèo Vạc / Đồng Văn Homestay night 2 (direct pay)';
+          it.cost = 18;
+          it.notes = 'Homestay in Mèo Vạc or Đồng Văn (family dinner & breakfast included).';
+        }
+      });
+    }
+
+    // Day 5 specific replacements
+    var day5 = cloned.find(function (d, i) { return (d.day || i + 1) === 5; });
+    if (day5 && day5.items) {
+      day5.items = day5.items.filter(function (it) {
+        var w = (it.what || '').toLowerCase();
+        return !w.includes('tip the easy rider');
+      });
+      day5.items.forEach(function (it) {
+        var w = (it.what || '').toLowerCase();
+        if (w.includes('dữ già') || w.includes('du gia')) {
+          it.what = 'Self-Ride: Mèo Vạc → Du Già village & waterfalls';
+          it.notes = 'Quiet scenic southern leg, waterfall swim stop, and scenic mountain descent back toward Ha Giang town.';
+        } else if (w.includes('back in ha giang') || w.includes('hot shower')) {
+          it.what = 'Back in Ha Giang city — return rental motorbikes, gear return & hot shower';
+          it.notes = 'Return rented motorbikes to shop in town. Retrieve deposit, collect stored bags, check in to Yen Bien Luxury Hotel.';
+        }
+      });
+    }
+  }
+
+  // 3. dec-boat: Trang An vs Tam Coc vs Both
   if (decBoatPick === 'opt-trang-an-only' || decBoatPick === 'opt-boat-trangan-only') {
     var day8 = cloned.find(function (d, i) { return (d.day || i + 1) === 8; });
     if (day8 && day8.items) {
       day8.items.forEach(function (it) {
         var w = (it.what || '').toLowerCase();
         if (w.includes('tam coc boat') || w.includes('tam coc sampan') || w.includes('sampan')) {
-          it.what = 'Countryside Breakfast & Village Stroll (Tam Coc)';
+          it.what = 'Relaxed Countryside Breakfast & Paddy Village Stroll (Tam Coc)';
           it.type = 'food';
           it.slot = 'morning';
           it.cost = 5;
-          it.notes = 'Quiet resort breakfast, pack bags, leisurely stroll before departure';
+          it.notes = 'Quiet resort breakfast, pack bags, leisurely stroll through paddy lanes before departure for Hanoi';
           delete it.booking_url;
         }
       });
@@ -214,21 +279,193 @@ function applyDecisionsToSchedule(days) {
     }
   }
 
-  // 5. dec-food: Guided Street Food Tour vs Self-Guided Walk
+  // 4. dec-food: Guided Street Food Tour vs Self-Guided Walk
   if (decFoodPick === 'opt-food-diy') {
-    var day1 = cloned.find(function (d, i) { return (d.day || i + 1) === 1; });
-    if (day1 && day1.items) {
-      day1.items.forEach(function (it) {
+    var day2 = cloned.find(function (d, i) { return (d.day || i + 1) === 2; });
+    if (day2 && day2.items) {
+      day2.items.forEach(function (it) {
         if ((it.what || '').toLowerCase().includes('street food')) {
           it.what = 'Old Quarter Self-Guided Street Food Walk';
           it.cost = 12;
-          it.notes = 'Self-guided stops at Phở Thìn, Bún Chả Đắc Kim, Egg Coffee';
+          it.notes = 'Self-guided stops at Phở Thìn, Bún Chả Đắc Kim, Egg Coffee at Giang Café';
         }
       });
     }
   }
 
-  // 6. Generic decision schedule_impact handling for structured JSON & AI
+  // 5. dec-nye: Tam Coc vs Hanoi New Year's Eve
+  if (decNyePick === 'opt-tam-coc-nye' || decNyePick === 'opt-tamcoc-nye') {
+    var day8 = cloned.find(function (d, i) { return (d.day || i + 1) === 8; });
+    if (day8) {
+      day8.base = 'Tam Coc';
+      day8.title = 'Tam Coc — Countryside New Year\'s Eve in the Karst';
+      day8.lodging = 'acc-010 — Tam Coc Garden (3rd night in the karst)';
+      if (day8.items) {
+        day8.items = day8.items.filter(function (it) {
+          var w = (it.what || '').toLowerCase();
+          return !w.includes('fireworks') && !w.includes('hoan kiem') && !w.includes('la siesta');
+        });
+        day8.items.push({
+          time: '19:00',
+          what: 'Peaceful countryside New Year countdown & dinner in Tam Coc',
+          type: 'food',
+          slot: 'evening',
+          cost: 25,
+          notes: 'Quiet NYE surrounded by limestone karsts; avoiding Hanoi lake crowds'
+        });
+      }
+    }
+    var day9 = cloned.find(function (d, i) { return (d.day || i + 1) === 9; });
+    if (day9) {
+      day9.title = 'Tam Coc → Noi Bai Airport (Evening Departure)';
+      day9.transit = 'Private minivan Tam Coc → Noi Bai (2.5h) for flight back to Singapore';
+      if (day9.items) {
+        day9.items = day9.items.filter(function (it) {
+          return !(it.what || '').toLowerCase().includes('old quarter morning');
+        });
+        day9.items.unshift({
+          time: '11:00',
+          what: 'Direct Minivan Transfer Tam Coc → Noi Bai Airport (HAN)',
+          type: 'transport',
+          slot: 'morning',
+          cost: 17,
+          notes: 'Direct highway minivan from Tam Coc to Noi Bai Airport (2.5h). Arrive 3h before flight departure.'
+        });
+      }
+    }
+  } else if (decNyePick === 'opt-hanoi-nye-fallback') {
+    var day8 = cloned.find(function (d, i) { return (d.day || i + 1) === 8; });
+    if (day8 && day8.items) {
+      day8.lodging = 'acc-006 — Hanoi Pearl Hotel (walking distance to Hoan Kiem)';
+      day8.items.forEach(function (it) {
+        var w = (it.what || '').toLowerCase();
+        if (w.includes('la siesta') || w.includes('acc-009')) {
+          it.what = 'Lodging: acc-006 Hanoi Pearl Hotel (Old Quarter fallback, walking distance to lake)';
+          it.cost = 51;
+        }
+      });
+    }
+  }
+
+  // 6. dec-transit-29: Skip reset night vs Keep reset night
+  if (decTransitPick === 'opt-skip-reset-night') {
+    var day5 = cloned.find(function (d, i) { return (d.day || i + 1) === 5; });
+    if (day5) {
+      day5.lodging = 'On the sleeper bus (21:00 departure Ha Giang → Tam Coc)';
+      if (day5.items) {
+        day5.items = day5.items.filter(function (it) {
+          return !(it.what || '').toLowerCase().includes('yen bien luxury');
+        });
+        day5.items.push({
+          time: '20:30',
+          what: 'Board 21:00 overnight sleeper bus Ha Giang → Tam Coc (Ninh Binh)',
+          type: 'transport',
+          slot: 'evening',
+          cost: 17,
+          notes: 'Direct sleeper bus through the night to Ninh Binh, arriving early morning on the 29th.'
+        });
+      }
+    }
+    var day6 = cloned.find(function (d, i) { return (d.day || i + 1) === 6; });
+    if (day6) {
+      day6.title = 'Early Arrival in Tam Coc: Full Day in Ninh Binh & Trang An Boat Tour';
+      day6.transit = 'Arrive Tam Coc at ~08:30 from overnight sleeper bus';
+      if (day6.items) {
+        day6.items = day6.items.filter(function (it) {
+          var w = (it.what || '').toLowerCase();
+          return !w.includes('daytime van') && !w.includes('7h van');
+        });
+        day6.items.unshift({
+          time: '09:00',
+          what: 'Early arrival in Tam Coc — check in early / drop bags at Tam Coc Garden',
+          type: 'activity',
+          slot: 'morning',
+          cost: 0,
+          notes: 'Arrive off the sleeper bus, refresh, enjoy full daylight in the karst.'
+        });
+        day6.items.push({
+          time: '14:00',
+          what: 'Afternoon Trang An UNESCO Boat Tour (moved forward from Day 7)',
+          type: 'activity',
+          slot: 'afternoon',
+          cost: 12,
+          notes: 'Take advantage of the extra day in Ninh Binh to visit Trang An caves in golden afternoon light.'
+        });
+      }
+    }
+  } else if (decTransitPick === 'opt-private-car-transit') {
+    var day6 = cloned.find(function (d, i) { return (d.day || i + 1) === 6; });
+    if (day6) {
+      day6.transit = 'Direct Private Car Ha Giang → Tam Coc (~7.5h door-to-door)';
+      if (day6.items) {
+        day6.items.forEach(function (it) {
+          var w = (it.what || '').toLowerCase();
+          if (w.includes('van') || w.includes('transit')) {
+            it.what = 'Direct Private Car Ha Giang → Tam Coc door-to-door (~7.5h)';
+            it.cost = 115;
+            it.notes = 'Private car door-to-door, saving 2+ hours and bypassing Hanoi coach change.';
+          }
+        });
+      }
+    }
+  }
+
+  // 7. dec-budget: Flights inside cap (end on 31 Dec)
+  if (decBudgetPick === 'opt-budget-incl-flights') {
+    var day8 = cloned.find(function (d, i) { return (d.day || i + 1) === 8; });
+    if (day8 && day8.items) {
+      day8.items = day8.items.filter(function (it) {
+        var w = (it.what || '').toLowerCase();
+        return !w.includes('la siesta') && !w.includes('fireworks') && !w.includes('pre-nye dinner');
+      });
+      day8.items.push({
+        time: '14:00',
+        what: 'Direct Highway Transfer Tam Coc → Noi Bai Airport (HAN)',
+        type: 'transport',
+        slot: 'afternoon',
+        cost: 17,
+        notes: 'Direct express minivan to Noi Bai Airport for evening flight back to Singapore on 31 Dec.'
+      });
+      day8.items.push({
+        time: '19:00',
+        what: 'Return Flight to Singapore (SIN) — arrive before midnight',
+        type: 'transport',
+        slot: 'evening',
+        cost: 0,
+        notes: 'Fly home on 31 Dec to keep flight inside S$1,500 total cap.'
+      });
+    }
+  }
+
+  // 8. dec-splurge: P'apiu vs Upgrade Rooms
+  if (decSplurgePick === 'opt-papiu-splurge') {
+    var day5 = cloned.find(function (d, i) { return (d.day || i + 1) === 5; });
+    if (day5 && day5.items) {
+      day5.lodging = 'acc-023 — P\'apiu Resort (Bắc Mê luxury villa, all-inclusive private estate)';
+      day5.items.forEach(function (it) {
+        var w = (it.what || '').toLowerCase();
+        if (w.includes('yen bien luxury') || w.includes('acc-015')) {
+          it.what = 'Lodging: acc-023 P\'apiu Resort (Bắc Mê luxury villa, all-inclusive private estate)';
+          it.cost = 352;
+          it.notes = 'Post-loop splurge: 5-star mountain sanctuary 40 min from Ha Giang. Private jacuzzi, bespoke dining.';
+        }
+      });
+    }
+  } else if (decSplurgePick === 'opt-upgrade-rooms') {
+    var day1 = cloned.find(function (d, i) { return (d.day || i + 1) === 1; });
+    if (day1 && day1.items) {
+      day1.lodging = 'acc-001 — La Siesta Premium Hang Be';
+      day1.items.forEach(function (it) {
+        var w = (it.what || '').toLowerCase();
+        if (w.includes('peridot grand') || w.includes('acc-003')) {
+          it.what = 'Lodging: acc-001 La Siesta Premium Hang Be (Junior Suite)';
+          it.cost = 70;
+        }
+      });
+    }
+  }
+
+  // 9. Generic decision schedule_impact handling for structured JSON & AI
   var allDecs = getDecisions();
   allDecs.forEach(function (dec) {
     var pickedOptId = getActivePick(dec);
@@ -246,6 +483,13 @@ function applyDecisionsToSchedule(days) {
         var targetDay = cloned.find(function (d, i) { return (d.day || i + 1) === dayNum; });
         if (!targetDay) return;
         if (!targetDay.items) targetDay.items = [];
+
+        if (imp.transit_mode && targetDay.transit_detail) {
+          targetDay.transit_detail.mode = imp.transit_mode;
+        }
+        if (imp.title) targetDay.title = imp.title;
+        if (imp.lodging) targetDay.lodging = imp.lodging;
+        if (imp.base) targetDay.base = imp.base;
 
         // Support explicit removes list
         var toRemove = imp.removes || imp.remove || [];
@@ -265,13 +509,18 @@ function applyDecisionsToSchedule(days) {
         if (Array.isArray(toAdd)) {
           toAdd.forEach(function (aItem) {
             if (typeof aItem === 'string') aItem = { what: aItem };
-            targetDay.items.push(Object.assign({
-              time: '10:00',
-              what: 'Activity',
-              type: 'activity',
-              slot: 'morning',
-              cost: 0
-            }, aItem));
+            var exists = targetDay.items.some(function (it) {
+              return (it.what || '').toLowerCase() === (aItem.what || '').toLowerCase();
+            });
+            if (!exists) {
+              targetDay.items.push(Object.assign({
+                time: '10:00',
+                what: 'Activity',
+                type: 'activity',
+                slot: 'morning',
+                cost: 0
+              }, aItem));
+            }
           });
         }
 
@@ -307,7 +556,10 @@ function applyDecisionsToSchedule(days) {
             cost: imp.cost || 0,
             notes: imp.notes || ''
           };
-          targetDay.items.push(newItem);
+          var exists = targetDay.items.some(function (it) {
+            return (it.what || '').toLowerCase() === (newItem.what || '').toLowerCase();
+          });
+          if (!exists) targetDay.items.push(newItem);
         }
       });
     }
@@ -1152,11 +1404,21 @@ function switchTab(tabName) {
 /* ------------------------------------------------- DECISIONS & BUDGET MATH */
 
 function getActivePick(decision) {
-  var dId = decision.id;
-  if (STATE.picks[dId] && STATE.picks[dId].option_id) {
+  if (!decision) return null;
+  var dId = typeof decision === 'string' ? decision : decision.id;
+  if (!dId) return null;
+  if (STATE.picks && STATE.picks[dId] && STATE.picks[dId].option_id) {
     return STATE.picks[dId].option_id;
   }
-  return decision.picked_option_id || decision.primary_option_id || ((decision.options && decision.options[0]) ? decision.options[0].id : null);
+  var decObj = typeof decision === 'object' ? decision : null;
+  if (!decObj) {
+    var all = getDecisions();
+    decObj = all.find(function (d) { return d.id === dId; });
+  }
+  if (decObj) {
+    return decObj.picked_option_id || decObj.primary_option_id || ((decObj.options && decObj.options[0]) ? decObj.options[0].id : null);
+  }
+  return null;
 }
 
 function calculateDecisionsDelta() {
@@ -1209,15 +1471,17 @@ function formatDdMmm(dStr) {
   if (!dStr) return '';
   var s = String(dStr).trim();
 
-  // If already like "24-Dec" or "01-Jan"
-  if (/^\d{1,2}-[A-Za-z]{3}$/i.test(s)) {
-    var parts = s.split('-');
-    var dPart = parts[0].length === 1 ? '0' + parts[0] : parts[0];
-    var mPart = parts[1].slice(0, 1).toUpperCase() + parts[1].slice(1, 3).toLowerCase();
-    return dPart + '-' + mPart;
+  // If already like "24-Dec" or "24 Dec"
+  var dayMonthMatch = s.match(/^(\d{1,2})[-/\s]+([A-Za-z]{3,9})$/);
+  if (dayMonthMatch) {
+    var dd = dayMonthMatch[1].length === 1 ? '0' + dayMonthMatch[1] : dayMonthMatch[1];
+    var mName = dayMonthMatch[2].slice(0, 3).toLowerCase();
+    var fIdx = MONTH_NAMES_SHORT.findIndex(function (m) { return m.toLowerCase() === mName; });
+    var mmm = fIdx !== -1 ? MONTH_NAMES_SHORT[fIdx] : (dayMonthMatch[2].slice(0, 1).toUpperCase() + dayMonthMatch[2].slice(1, 3).toLowerCase());
+    return dd + ' ' + mmm;
   }
 
-  // Match ISO YYYY-MM-DD
+  // Match ISO YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
   var isoMatch = s.match(/(\d{4})?-?(\d{1,2})-(\d{1,2})/);
   if (isoMatch && isoMatch[2] && isoMatch[3]) {
     var monthIdx = parseInt(isoMatch[2], 10) - 1;
@@ -1225,11 +1489,11 @@ function formatDdMmm(dStr) {
     if (monthIdx >= 0 && monthIdx < 12 && !isNaN(dayNum)) {
       var dd = dayNum < 10 ? '0' + dayNum : '' + dayNum;
       var mmm = MONTH_NAMES_SHORT[monthIdx];
-      return dd + '-' + mmm;
+      return dd + ' ' + mmm;
     }
   }
 
-  // Text like "24 Dec" or "24 Dec 2026"
+  // Text like "24 Dec" or "24 Dec 2026" or "24 December"
   var textMatch = s.match(/(\d{1,2})\s+([A-Za-z]{3,9})/);
   if (textMatch) {
     var dVal = parseInt(textMatch[1], 10);
@@ -1237,7 +1501,7 @@ function formatDdMmm(dStr) {
     var mName = textMatch[2].slice(0, 3).toLowerCase();
     var foundIdx = MONTH_NAMES_SHORT.findIndex(function (m) { return m.toLowerCase() === mName; });
     if (foundIdx !== -1) {
-      return dd + '-' + MONTH_NAMES_SHORT[foundIdx];
+      return dd + ' ' + MONTH_NAMES_SHORT[foundIdx];
     }
   }
 
@@ -1246,7 +1510,7 @@ function formatDdMmm(dStr) {
   if (!isNaN(parsed.getTime())) {
     var dd = parsed.getDate() < 10 ? '0' + parsed.getDate() : '' + parsed.getDate();
     var mmm = MONTH_NAMES_SHORT[parsed.getMonth()];
-    return dd + '-' + mmm;
+    return dd + ' ' + mmm;
   }
 
   return s;
@@ -1254,12 +1518,13 @@ function formatDdMmm(dStr) {
 
 function getCleanDestination(t) {
   if (!t) return 'Nomad Trip';
-  if (t.destination && t.destination.trim()) return t.destination.trim();
-  if (t.city && t.city.trim()) return t.city.trim();
-  var raw = t.title || t.name || '';
+  var raw = (t.destination && t.destination !== t.title ? t.destination : '') || t.city || t.title || t.name || t.destination || '';
+  raw = String(raw).trim();
   if (/vietnam/i.test(raw)) return 'Vietnam';
   if (raw.includes('—')) raw = raw.split('—')[0].trim();
+  if (raw.includes('–')) raw = raw.split('–')[0].trim();
   if (raw.includes('-')) raw = raw.split('-')[0].trim();
+  if (raw.includes(',')) raw = raw.split(',')[0].trim();
   if (raw.includes('(')) raw = raw.split('(')[0].trim();
   return raw || 'Nomad Trip';
 }
@@ -1268,17 +1533,19 @@ function renderTripBanner() {
   var t = STATE.docs.trip || STATE.trip || {};
 
   var dest = getCleanDestination(t);
-  var startStr = t.start_date || t.start || '';
-  var endStr = t.end_date || t.end || '';
 
-  // Extract from itinerary days if missing on trip doc
-  if (!startStr || !endStr) {
-    var itiDays = getItineraryDays();
-    if (itiDays && itiDays.length > 0) {
-      if (!startStr && itiDays[0].date) startStr = itiDays[0].date;
-      if (!endStr && itiDays[itiDays.length - 1].date) endStr = itiDays[itiDays.length - 1].date;
-    }
+  // Extract from itinerary days so decisions (e.g. dec-dates shift) dynamically update the banner
+  var itiDays = getItineraryDays();
+  var startStr = '';
+  var endStr = '';
+
+  if (itiDays && itiDays.length > 0) {
+    if (itiDays[0].date) startStr = itiDays[0].date;
+    if (itiDays[itiDays.length - 1].date) endStr = itiDays[itiDays.length - 1].date;
   }
+
+  if (!startStr) startStr = t.start_date || t.start || '';
+  if (!endStr) endStr = t.end_date || t.end || '';
 
   // Default fallback for Vietnam trip
   if (!startStr && /vietnam/i.test(dest)) startStr = '2026-12-24';
@@ -1294,7 +1561,7 @@ function renderTripBanner() {
   }
 
   var nameEl = $('#current-trip-name');
-  if (nameEl) nameEl.textContent = dest + ' · ' + datesStr;
+  if (nameEl) nameEl.textContent = dest + ', ' + datesStr;
 
   // Decisions count badge
   var decs = getDecisions();
@@ -2394,7 +2661,11 @@ function getPlannedRoute() {
     return copyRoute;
   }
 
-  var decNyePick = (STATE.picks['dec-nye'] && STATE.picks['dec-nye'].option_id) || 'opt-hanoi-nye';
+  var decNyePick = getActivePick('dec-nye') || 'opt-hanoi-nye';
+  var decRidePick = getActivePick('dec-ride');
+  var decTransitPick = getActivePick('dec-transit-29');
+  var decSplurgePick = getActivePick('dec-splurge');
+  var decDatesPick = getActivePick('dec-dates');
 
   var route = [
     {
@@ -2487,7 +2758,49 @@ function getPlannedRoute() {
     }
   ];
 
-  if (decNyePick === 'opt-tamcoc-nye') {
+  if (decRidePick === 'opt-self-ride' || decRidePick === 'opt-ride-self-drive') {
+    if (route[2]) {
+      route[2].rate = '125cc Bike Rental & Homestay (~S$ 18)';
+      route[2].notes = 'Self-ride night 1: traditional stilt house homestay (family dinner & breakfast included).';
+    }
+    if (route[3]) {
+      route[3].rate = '125cc Bike Rental & Homestay (~S$ 18)';
+      route[3].notes = 'Self-ride night 2: Đồng Văn / Mèo Vạc homestay (family dinner & breakfast included).';
+    }
+  }
+
+  if (decTransitPick === 'opt-skip-reset-night') {
+    if (route[4]) {
+      route[4].stayId = null;
+      route[4].city = 'Ha Giang → Tam Coc (Transit)';
+      route[4].hotelName = '21:00 Overnight Sleeper Bus Ha Giang → Tam Coc';
+      route[4].rate = 'Included in Transit Leg (~S$ 17)';
+      route[4].notes = 'Skip Ha Giang city reset night; direct 21:00 overnight sleeper bus arriving early in Tam Coc on the 29th.';
+    }
+  }
+
+  if (decSplurgePick === 'opt-papiu-splurge') {
+    if (route[4]) {
+      route[4].stayId = 'acc-023';
+      route[4].city = 'Bắc Mê (Ha Giang)';
+      route[4].hotelName = 'P\'apiu Resort';
+      route[4].rate = '14,280,000 VND (~S$ 352/person)';
+      route[4].notes = 'Ultra-splurge post-loop: private villa resort in Bắc Mê mountains.';
+    }
+  } else if (decSplurgePick === 'opt-upgrade-rooms') {
+    if (route[0]) {
+      route[0].stayId = 'acc-001';
+      route[0].hotelName = 'La Siesta Premium Hang Be';
+      route[0].rate = '2,860,000 VND (~S$ 70/person)';
+    }
+    if (route[5]) {
+      route[5].stayId = 'acc-012';
+      route[5].hotelName = 'Tam Coc Rice Fields Resort';
+      route[5].rate = '1,880,000 VND / night (~S$ 46/person)';
+    }
+  }
+
+  if (decNyePick === 'opt-tam-coc-nye' || decNyePick === 'opt-tamcoc-nye') {
     route[6] = {
       id: 'leg-7',
       stayId: 'acc-015',
@@ -2510,6 +2823,24 @@ function getPlannedRoute() {
       notes: 'Private minivan Tam Coc → Noi Bai (2h) for evening flight back to Singapore.',
       alts: []
     };
+  } else if (decNyePick === 'opt-hanoi-nye-fallback') {
+    if (route[6]) {
+      route[6].stayId = 'acc-006';
+      route[6].hotelName = 'Hanoi Pearl Hotel';
+      route[6].rate = '1,240,000 VND (~S$ 51/person)';
+      route[6].notes = 'Old Quarter fallback hotel, walking distance to Hoan Kiem fireworks, saving S$19/person.';
+    }
+  }
+
+  if (decDatesPick === 'opt-dates-shifted') {
+    if (route[0]) route[0].nights = 'Night 1 (26–27 Dec)';
+    if (route[1]) route[1].nights = 'Night 2 (27–28 Dec)';
+    if (route[2]) route[2].nights = 'Night 3 (28–29 Dec)';
+    if (route[3]) route[3].nights = 'Night 4 (29–30 Dec)';
+    if (route[4]) route[4].nights = 'Night 5 (30–31 Dec)';
+    if (route[5]) route[5].nights = 'Nights 6–7 (31 Dec – 2 Jan)';
+    if (route[6]) route[6].nights = 'Night 8 (2–3 Jan)';
+    if (route[7]) route[7].nights = 'Day 9 (3 Jan)';
   }
 
   // Apply generic accommodation_impact from active decisions
