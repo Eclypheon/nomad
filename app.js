@@ -406,6 +406,25 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function initAuth() {
+  // Capture onboarding / invite trip parameter from URL immediately
+  try {
+    var urlParams = new URLSearchParams(window.location.search);
+    var incomingTrip = urlParams.get('trip') || urlParams.get('join');
+    if (!incomingTrip) {
+      var hashMatch = window.location.hash.match(/(?:trip|join)=([^&]+)/);
+      if (hashMatch) {
+        try { incomingTrip = decodeURIComponent(hashMatch[1]); } catch (_) { incomingTrip = hashMatch[1]; }
+      }
+    }
+    if (incomingTrip) {
+      incomingTrip = incomingTrip.trim();
+      sessionStorage.setItem('nomad_pending_join', incomingTrip);
+      localStorage.setItem('nomad_pending_join', incomingTrip);
+    }
+  } catch (e) {
+    console.warn('Failed parsing incoming trip parameter:', e);
+  }
+
   showLoading('Connecting to Nomad...');
 
   // Fallback watchdog: never let the screen hang for > 2.5s
@@ -462,6 +481,20 @@ function renderLandingView() {
   $('#trip-switcher-btn').hidden = true;
   $('#landing-view').hidden = false;
   renderUserArea(null);
+  renderLandingInviteBanner();
+}
+
+function renderLandingInviteBanner() {
+  var pendingTrip = '';
+  try {
+    pendingTrip = (sessionStorage && sessionStorage.getItem('nomad_pending_join')) ||
+                  (localStorage && localStorage.getItem('nomad_pending_join')) || '';
+    pendingTrip = pendingTrip.trim();
+  } catch (_) {}
+  var banner = $('#landing-invite-banner');
+  if (banner) {
+    banner.hidden = !pendingTrip;
+  }
 }
 
 function renderUserArea(user) {
@@ -506,9 +539,12 @@ function loadUserTrips() {
     var queryTripId = urlParams.get('trip') || urlParams.get('join');
     var hashMatch = window.location.hash.match(/(?:trip|join)=([^&]+)/);
     var hashTripId = hashMatch ? decodeURIComponent(hashMatch[1]) : null;
-    var incomingTripId = queryTripId || hashTripId || sessionStorage.getItem('nomad_pending_join');
+    var incomingTripId = queryTripId || hashTripId || sessionStorage.getItem('nomad_pending_join') || localStorage.getItem('nomad_pending_join');
     if (sessionStorage.getItem('nomad_pending_join')) {
       sessionStorage.removeItem('nomad_pending_join');
+    }
+    if (localStorage.getItem('nomad_pending_join')) {
+      localStorage.removeItem('nomad_pending_join');
     }
 
     if (incomingTripId) {
@@ -980,6 +1016,18 @@ function openSignInModal() {
   if (waitCard) waitCard.hidden = true;
   var blockedBtn = $('#oauth-blocked-btn');
   if (blockedBtn) blockedBtn.hidden = true;
+
+  var pendingTrip = '';
+  try {
+    pendingTrip = (sessionStorage && sessionStorage.getItem('nomad_pending_join')) ||
+                  (localStorage && localStorage.getItem('nomad_pending_join')) || '';
+    pendingTrip = pendingTrip.trim();
+  } catch (_) {}
+  var inviteBadge = $('#signin-invite-badge');
+  if (inviteBadge) {
+    inviteBadge.hidden = !pendingTrip;
+  }
+
   modal.hidden = false;
 }
 

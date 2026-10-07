@@ -347,6 +347,47 @@ p { margin: 0 0 10px; }
   margin: 0 auto 26px;
 }
 
+.invite-alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin: 0 auto 24px;
+  max-width: 520px;
+  text-align: left;
+}
+.invite-banner-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.invite-banner-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--fg);
+}
+.invite-banner-sub {
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+  margin-top: 2px;
+}
+.invite-modal-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin: 12px 0 16px;
+}
+
 .hero-actions {
   display: flex;
   justify-content: center;

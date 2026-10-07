@@ -65,6 +65,14 @@
             Shared itineraries, accommodations, expense splits, packing lists, and group decisions &mdash; kept safe and private in your home cloud.
           </p>
 
+          <div id="landing-invite-banner" class="invite-alert-banner" hidden>
+            <div class="invite-banner-icon">✨</div>
+            <div class="invite-banner-text">
+              <div class="invite-banner-title">You've been invited to join a trip!</div>
+              <div class="invite-banner-sub">Sign in with Google below to join the trip and preload the itinerary.</div>
+            </div>
+          </div>
+
           <div class="hero-actions">
             <button id="landing-signin-btn" class="btn btn-google">
               <svg class="google-icon" viewBox="0 0 24 24">
@@ -373,6 +381,10 @@
       </div>
       <div class="modal-body">
         <p class="muted small">Access your shared adventures, budgets, and cloud sync.</p>
+
+        <div id="signin-invite-badge" class="invite-modal-banner" hidden>
+          <span>✨</span> <span>Joining trip via invite link</span>
+        </div>
 
         <!-- Google OAuth Option -->
         <div class="auth-oauth-box">

@@ -279,9 +279,22 @@ function signIn() {
 
   function executeAuth(client) {
     client.autoCancellation(false);
-    return client.collection('users').authWithOAuth2({
+    var pendingTrip = '';
+    try {
+      pendingTrip = (global.sessionStorage && global.sessionStorage.getItem('nomad_pending_join')) ||
+                    (global.localStorage && global.localStorage.getItem('nomad_pending_join')) || '';
+      pendingTrip = (pendingTrip || '').trim();
+    } catch (_) {}
+
+    var authOpts = {
       provider: PROVIDER
-    }).then(function (res) {
+    };
+    if (pendingTrip) {
+      authOpts.createData = { invite_trip: pendingTrip };
+      authOpts.query = { trip: pendingTrip };
+    }
+
+    return client.collection('users').authWithOAuth2(authOpts).then(function (res) {
       setUser(userFrom(res && res.record));
       return res;
     }, function (e) {
@@ -512,13 +525,21 @@ function joinTrip(tripId) {
     if (!ST.user) throw err('You must be signed in to join a trip.', 'auth');
     return p.collection('trip_members').getFirstListItem('trip = ' + quote(k) + ' && member = ' + quote(ST.user.id), { requestKey: null })
       .then(function () { return true; }, function () {
-        return p.collection('trip_members').create({
-          trip: k,
-          member: ST.user.id,
-          role: 'member',
-          member_email: ST.user.email || '',
-          member_name: ST.user.name || ''
-        }, { requestKey: null }).then(function () { return true; });
+        return p.send('/api/nomad/join', {
+          method: 'POST',
+          body: { trip: k }
+        }).then(function () {
+          return true;
+        }, function (apiErr) {
+          console.warn('[Nomad] /api/nomad/join call failed, falling back to direct create:', apiErr);
+          return p.collection('trip_members').create({
+            trip: k,
+            member: ST.user.id,
+            role: 'member',
+            member_email: ST.user.email || '',
+            member_name: ST.user.name || ''
+          }, { requestKey: null }).then(function () { return true; });
+        });
       });
   }).then(function () { return openTrip(k); }, function (e) { throw friendly(e); });
 }
