@@ -1883,6 +1883,37 @@ function renderItineraryGlanceTable(root, days) {
   root.appendChild(tip);
 }
 
+function updateTableStickyOffsets(table) {
+  if (!table) return;
+  var applyHeight = function () {
+    var r1 = table.querySelector('thead tr:first-child');
+    if (r1) {
+      var h = r1.getBoundingClientRect().height || r1.offsetHeight;
+      if (h > 0) {
+        table.style.setProperty('--glance-row1-h', Math.round(h) + 'px');
+      }
+    }
+  };
+  applyHeight();
+  requestAnimationFrame(applyHeight);
+  setTimeout(applyHeight, 60);
+
+  if (typeof ResizeObserver !== 'undefined' && !table._resizeObserved) {
+    table._resizeObserved = true;
+    var obs = new ResizeObserver(function () {
+      applyHeight();
+    });
+    var theadEl = table.querySelector('thead');
+    if (theadEl) obs.observe(theadEl);
+  }
+}
+
+window.addEventListener('resize', function () {
+  document.querySelectorAll('.glance-table').forEach(function (tbl) {
+    updateTableStickyOffsets(tbl);
+  });
+});
+
 function renderFlippedMatrix(table, days) {
   var thead = ce('thead');
   var hrow = ce('tr');
@@ -1913,9 +1944,6 @@ function renderFlippedMatrix(table, days) {
     hrow.appendChild(th);
   });
   thead.appendChild(hrow);
-  table.appendChild(thead);
-
-  var tbody = ce('tbody');
 
   var daySlots = days.map(function (d, dayIdx) {
     var items = d.items || d.events || d.activities || [];
@@ -1929,20 +1957,24 @@ function renderFlippedMatrix(table, days) {
     return { day: d, dayNum: d.day || (dayIdx + 1), dayIdx: dayIdx, slots: slots };
   });
 
-  // Row 1: Focus (Sticky Row)
+  // Row 2: Focus (Sticky Row in thead)
   var trBase = ce('tr', 'glance-tr glance-tr-focus');
-  trBase.appendChild(ce('td', 'glance-dimension-cell', '📍 Route & Focus'));
+  trBase.appendChild(ce('th', 'glance-th glance-dimension-cell', '📍 Route & Focus'));
   daySlots.forEach(function (ds) {
-    var td = ce('td', 'glance-col-day-cell');
+    var th = ce('th', 'glance-th glance-col-day-th glance-focus-cell');
     var focusText = ds.day.title ? ds.day.title.split('—')[0].trim() : (ds.day.base || '');
     var pill = ce('div', null);
     pill.style.fontSize = '0.72rem';
     pill.style.color = 'var(--fg-muted)';
+    pill.style.fontWeight = '500';
     pill.textContent = focusText || '—';
-    td.appendChild(pill);
-    trBase.appendChild(td);
+    th.appendChild(pill);
+    trBase.appendChild(th);
   });
-  tbody.appendChild(trBase);
+  thead.appendChild(trBase);
+  table.appendChild(thead);
+
+  var tbody = ce('tbody');
 
   function buildFlippedSlotRow(slotName, label) {
     var tr = ce('tr', 'glance-tr');
@@ -2040,6 +2072,7 @@ function renderFlippedMatrix(table, days) {
   tbody.appendChild(trCost);
 
   table.appendChild(tbody);
+  updateTableStickyOffsets(table);
 }
 
 function renderStandardMatrix(table, days) {
@@ -2146,6 +2179,7 @@ function renderStandardMatrix(table, days) {
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
+  updateTableStickyOffsets(table);
 }
 
 function createEventPill(dayNum, itemIdx, it) {
@@ -3166,19 +3200,19 @@ function renderAccommodationRouteTable(root, stays) {
     hrow.appendChild(th);
   });
   thead.appendChild(hrow);
+
+  // Row 2: Region / Base (Sticky Row in thead)
+  var trRegion = ce('tr', 'stay-route-tr glance-tr glance-tr-focus');
+  trRegion.appendChild(ce('th', 'glance-th glance-dimension-cell', '📍 Region / Base'));
+  route.forEach(function (leg) {
+    var th = ce('th', 'glance-th glance-col-day-th glance-focus-cell');
+    th.appendChild(ce('span', 'glance-day-base', leg.city));
+    trRegion.appendChild(th);
+  });
+  thead.appendChild(trRegion);
   table.appendChild(thead);
 
   var tbody = ce('tbody');
-
-  // Row 1: Region / Base
-  var trRegion = ce('tr', 'stay-route-tr glance-tr glance-tr-focus');
-  trRegion.appendChild(ce('td', 'glance-dimension-cell', '📍 Region / Base'));
-  route.forEach(function (leg) {
-    var td = ce('td', 'glance-col-day-cell');
-    td.appendChild(ce('span', 'glance-day-base', leg.city));
-    trRegion.appendChild(td);
-  });
-  tbody.appendChild(trRegion);
 
   // Row 2: Active Planned Stay
   var trStay = ce('tr', 'stay-route-tr glance-tr');
@@ -3252,6 +3286,7 @@ function renderAccommodationRouteTable(root, stays) {
   tbody.appendChild(trNotes);
 
   table.appendChild(tbody);
+  updateTableStickyOffsets(table);
   container.appendChild(table);
   root.appendChild(container);
 
