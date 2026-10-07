@@ -1142,6 +1142,49 @@ function bindEvents() {
     });
   }
 
+  var saveNameBtn = $('#user-modal-save-name-btn');
+  if (saveNameBtn) {
+    saveNameBtn.addEventListener('click', function () {
+      var newName = ($('#user-modal-name-input').value || '').trim();
+      if (!newName) return alert('Please enter a display username.');
+
+      if (TripAuth.updateProfile) {
+        TripAuth.updateProfile({ name: newName }).catch(console.warn);
+      }
+      var st = TripAuth.status();
+      if (st && st.user) {
+        st.user.name = newName;
+        localStorage.setItem('nomad_custom_username_' + st.user.id, newName);
+      }
+      if (STATE.user) STATE.user.name = newName;
+      if (Array.isArray(STATE.members)) {
+        var me = STATE.members.find(function (m) {
+          return st && st.user && (m.user_id === st.user.id || m.email === st.user.email);
+        });
+        if (me) me.name = newName;
+      }
+      var nameEl = $('#user-modal-name');
+      if (nameEl) nameEl.textContent = newName;
+      renderUserArea(st ? st.user : STATE.user);
+      renderPacking();
+      renderShare();
+      showToast('Username updated to "' + newName + '"!');
+    });
+  }
+
+  var expDetailClose = $('#expense-detail-modal-close');
+  if (expDetailClose) {
+    expDetailClose.addEventListener('click', function () {
+      $('#expense-detail-modal').hidden = true;
+    });
+  }
+  var expDetailModal = $('#expense-detail-modal');
+  if (expDetailModal) {
+    expDetailModal.addEventListener('click', function (e) {
+      if (e.target === this) this.hidden = true;
+    });
+  }
+
   // 3. AI Trip Generator Modal
   var aiGenClose = $('#ai-gen-modal-close');
   if (aiGenClose) aiGenClose.addEventListener('click', closeAiGeneratorModal);
@@ -1372,6 +1415,7 @@ function doSignOut() {
 }
 
 function switchTab(tabName) {
+  if (tabName === 'travellers') tabName = 'share';
   if (!TABS.includes(tabName)) return;
   STATE.activeTab = tabName;
 
@@ -1639,8 +1683,12 @@ function openUserModal(user) {
     box.appendChild(circle);
   }
 
-  $('#user-modal-name').textContent = (user && user.name) || 'Traveller';
+  var currentName = (user && user.name && user.name !== user.email) ? user.name : ((user && user.id && localStorage.getItem('nomad_custom_username_' + user.id)) || (user && user.email ? user.email.split('@')[0] : 'Kester'));
+  $('#user-modal-name').textContent = currentName;
   $('#user-modal-email').textContent = (user && user.email) || '';
+
+  var nameInp = $('#user-modal-name-input');
+  if (nameInp) nameInp.value = currentName;
 
   // Load saved AI settings
   var prov = localStorage.getItem('nomad_ai_provider') || 'openrouter';
@@ -1678,7 +1726,7 @@ function renderCurrentTab() {
     case 'decisions':      renderDecisions(); break;
     case 'packing':        renderPacking(); break;
     case 'recommendations':renderRecommendations(); break;
-    case 'travellers':     renderTravellers(); break;
+    case 'travellers':
     case 'share':          renderShare(); break;
   }
 }
@@ -2533,6 +2581,13 @@ function savePackingDoc() {
   if (!STATE.activeTripId) return;
   TripAuth.saveDocs(STATE.activeTripId, { packing: STATE.docs.packing }).catch(function (e) {
     console.warn('Failed to save packing update:', e);
+  });
+}
+
+function saveExpensesDoc() {
+  if (!STATE.activeTripId) return;
+  TripAuth.saveDocs(STATE.activeTripId, { expenses: STATE.docs.expenses }).catch(function (e) {
+    console.warn('Failed to save expenses update:', e);
   });
 }
 
@@ -3446,6 +3501,193 @@ function renderAccommodationDirectory(root, stays) {
 /* ==========================================================================
    3. EXPENSES TAB (Budget Ceiling, Headroom, Active Decision Adjustments)
    ========================================================================== */
+
+function getCurrentUserEmail() {
+  var st = TripAuth.status && TripAuth.status();
+  var u = (st && st.user) || STATE.user;
+  return (u && u.email) ? u.email.toLowerCase() : 'kester.neo@gmail.com';
+}
+
+function isExpensePaidForCurrentUser(it) {
+  var isShared = (it.split_type || 'shared').toLowerCase() === 'shared';
+  if (isShared) {
+    return !!it.is_paid;
+  }
+  var myEmail = getCurrentUserEmail();
+  if (!it.paid_users || typeof it.paid_users !== 'object') return false;
+  return !!it.paid_users[myEmail];
+}
+
+function toggleExpensePaid(it) {
+  var isShared = (it.split_type || 'shared').toLowerCase() === 'shared';
+  if (isShared) {
+    it.is_paid = !it.is_paid;
+    if (it.is_paid) {
+      if (!it.paid_users || typeof it.paid_users !== 'object') it.paid_users = {};
+      it.paid_users['shared'] = true;
+    }
+  } else {
+    var myEmail = getCurrentUserEmail();
+    if (!it.paid_users || typeof it.paid_users !== 'object') it.paid_users = {};
+    it.paid_users[myEmail] = !it.paid_users[myEmail];
+  }
+  saveExpensesDoc();
+  renderExpenses();
+}
+
+function toggleExpenseSplit(it) {
+  var currentSplit = (it.split_type || 'shared').toLowerCase();
+  var newSplit = currentSplit === 'shared' ? 'indiv' : 'shared';
+  it.split_type = newSplit;
+  var myEmail = getCurrentUserEmail();
+
+  if (newSplit === 'indiv') {
+    if (!it.paid_users || typeof it.paid_users !== 'object') it.paid_users = {};
+    if (it.is_paid) {
+      it.paid_users[myEmail] = true;
+    }
+  } else {
+    if (it.paid_users && it.paid_users[myEmail]) {
+      it.is_paid = true;
+    }
+  }
+  saveExpensesDoc();
+  renderExpenses();
+}
+
+function formatExpenseDayBadge(it) {
+  if (Array.isArray(it.days) && it.days.length > 0) {
+    if (it.days.length === 1) return 'Day ' + it.days[0];
+    return 'Day ' + it.days[0] + '–' + it.days[it.days.length - 1];
+  }
+  if (it.day != null) {
+    if (String(it.day).toLowerCase().includes('pre')) return 'Pre-trip';
+    return 'Day ' + it.day;
+  }
+  return '';
+}
+
+function getExpenseDayShort(it) {
+  if (Array.isArray(it.days) && it.days.length > 0) {
+    if (it.days.length === 1) return 'D' + it.days[0];
+    return 'D' + it.days[0] + '-' + it.days[it.days.length - 1];
+  }
+  if (it.day != null) {
+    if (String(it.day).toLowerCase().includes('pre')) return 'PRE';
+    return 'D' + it.day;
+  }
+  return '';
+}
+
+function openExpenseDetailModal(it) {
+  var modal = $('#expense-detail-modal');
+  if (!modal) return;
+
+  var titleEl = $('#expense-detail-modal-title');
+  if (titleEl) titleEl.textContent = it.description || it.item || it.name || 'Expense Details';
+
+  var body = $('#expense-detail-modal-body');
+  clear(body);
+
+  // Top badges row
+  var badgesRow = ce('div', null);
+  badgesRow.style.display = 'flex';
+  badgesRow.style.gap = '8px';
+  badgesRow.style.alignItems = 'center';
+  badgesRow.style.flexWrap = 'wrap';
+  badgesRow.style.marginBottom = '12px';
+
+  var catLabel = it.category ? it.category.toUpperCase() : 'MISC';
+  badgesRow.appendChild(ce('span', 'badge', '🏷️ ' + catLabel));
+
+  var dayLabel = formatExpenseDayBadge(it);
+  if (dayLabel) badgesRow.appendChild(ce('span', 'badge', '🗓️ ' + dayLabel));
+
+  var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
+  if (cost != null) {
+    badgesRow.appendChild(ce('span', 'badge badge-good', sgd(cost) + ' SGD'));
+  }
+  body.appendChild(badgesRow);
+
+  // Split and Paid status toggle row
+  var toggleBox = ce('div', 'card-panel');
+  toggleBox.style.padding = '10px 12px';
+  toggleBox.style.marginBottom = '14px';
+  toggleBox.style.display = 'flex';
+  toggleBox.style.justifyContent = 'space-between';
+  toggleBox.style.alignItems = 'center';
+
+  var tLeft = ce('div', null);
+  tLeft.appendChild(ce('div', 'muted tiny', 'PAYMENT & SPLIT STATUS'));
+  var isPaid = isExpensePaidForCurrentUser(it);
+  var isShared = (it.split_type || 'shared').toLowerCase() === 'shared';
+  var statusDesc = isShared 
+    ? (isPaid ? 'Paid (Shared by group)' : 'Unpaid (Shared expense)')
+    : (isPaid ? 'Paid by you (Individual)' : 'Unpaid by you (Individual)');
+  tLeft.appendChild(ce('div', 'small', statusDesc));
+  toggleBox.appendChild(tLeft);
+
+  var tRight = ce('div', null);
+  tRight.style.display = 'flex';
+  tRight.style.gap = '6px';
+
+  var splitBtn = ce('button', 'expense-pill ' + (isShared ? 'pill-shared' : 'pill-indiv'), isShared ? 'Shared' : 'Indiv');
+  splitBtn.title = 'Toggle between Shared (group) and Indiv (individual)';
+  splitBtn.addEventListener('click', function () {
+    toggleExpenseSplit(it);
+    openExpenseDetailModal(it);
+  });
+  tRight.appendChild(splitBtn);
+
+  var paidBtn = ce('button', 'expense-pill ' + (isPaid ? 'pill-paid' : 'pill-unpaid'), isPaid ? '✓ Paid' : 'Unpaid');
+  paidBtn.title = 'Toggle Paid / Unpaid';
+  paidBtn.addEventListener('click', function () {
+    toggleExpensePaid(it);
+    openExpenseDetailModal(it);
+  });
+  tRight.appendChild(paidBtn);
+
+  toggleBox.appendChild(tRight);
+  body.appendChild(toggleBox);
+
+  // Full Details & Notes Section
+  var detailsBox = ce('div', null);
+  detailsBox.style.marginBottom = '14px';
+
+  var descTitle = ce('div', 'muted tiny', 'FULL DESCRIPTION');
+  descTitle.style.marginBottom = '2px';
+  detailsBox.appendChild(descTitle);
+  detailsBox.appendChild(ce('p', null, it.description || it.item || it.name || '—'));
+
+  if (it.notes) {
+    var notesTitle = ce('div', 'muted tiny', 'PLANNING & LOGISTICS NOTES');
+    notesTitle.style.marginTop = '10px';
+    notesTitle.style.marginBottom = '2px';
+    detailsBox.appendChild(notesTitle);
+    var notesP = ce('p', 'small', it.notes);
+    notesP.style.background = 'rgba(255, 255, 255, 0.04)';
+    notesP.style.padding = '8px 10px';
+    notesP.style.borderRadius = 'var(--radius-sm)';
+    notesP.style.lineHeight = '1.4';
+    detailsBox.appendChild(notesP);
+  }
+
+  if (it.booking_url || (it.refs && it.refs[0])) {
+    var bUrl = it.booking_url || it.refs[0];
+    var bookLink = ce('a', 'btn btn-secondary small', '🎟 Open Booking Link ↗');
+    bookLink.href = bUrl;
+    bookLink.target = '_blank';
+    bookLink.rel = 'noopener';
+    bookLink.style.display = 'inline-block';
+    bookLink.style.marginTop = '10px';
+    detailsBox.appendChild(bookLink);
+  }
+
+  body.appendChild(detailsBox);
+
+  modal.hidden = false;
+}
+
 function renderExpenses() {
   var root = $('#tab-expenses');
   clear(root);
@@ -3587,8 +3829,37 @@ function renderExpenses() {
   });
   filterWrap.appendChild(filterRow);
 
+  // Day filter pills row
+  var dayRow = ce('div', 'filter-pills-row');
+  dayRow.style.margin = '4px 0 0 0';
+
+  var rawIti = STATE.docs.itinerary;
+  var itinDays = Array.isArray(rawIti) ? rawIti : (rawIti && rawIti.days ? rawIti.days : []);
+  var numDays = Math.max(9, itinDays.length);
+
+  var dayPillsList = [
+    { key: 'all', label: 'All Days' },
+    { key: 'pre', label: 'Pre-trip' }
+  ];
+  for (var dNum = 1; dNum <= numDays; dNum++) {
+    dayPillsList.push({ key: String(dNum), label: 'Day ' + dNum });
+  }
+
+  STATE.expenseFilterDay = STATE.expenseFilterDay || 'all';
+
+  dayPillsList.forEach(function (dp) {
+    var pill = ce('button', 'filter-pill' + (STATE.expenseFilterDay === dp.key ? ' active' : ''), dp.label);
+    pill.addEventListener('click', function () {
+      STATE.expenseFilterDay = dp.key;
+      renderExpenses();
+    });
+    dayRow.appendChild(pill);
+  });
+  filterWrap.appendChild(dayRow);
+
   // Sort buttons
   var sortRow = ce('div', 'view-toggle-group');
+  sortRow.style.marginTop = '6px';
   var sorts = [
     { key: 'cost-desc', label: '💰 Cost ↓' },
     { key: 'cost-asc', label: '💰 Cost ↑' },
@@ -3610,9 +3881,26 @@ function renderExpenses() {
 
   // Filter items
   var filtered = plannedItems.filter(function (it) {
-    if (STATE.expenseFilterCat === 'all') return true;
-    var c = (it.category || 'misc').toLowerCase();
-    return c.includes(STATE.expenseFilterCat.toLowerCase());
+    if (STATE.expenseFilterCat && STATE.expenseFilterCat !== 'all') {
+      var c = (it.category || 'misc').toLowerCase();
+      if (!c.includes(STATE.expenseFilterCat.toLowerCase())) return false;
+    }
+
+    if (STATE.expenseFilterDay && STATE.expenseFilterDay !== 'all') {
+      if (STATE.expenseFilterDay === 'pre') {
+        var isPre = String(it.day || '').toLowerCase().includes('pre') || (!it.day && !it.days && it.category === 'misc');
+        if (!isPre) return false;
+      } else {
+        var targetDayNum = Number(STATE.expenseFilterDay);
+        var matches = false;
+        if (Number(it.day) === targetDayNum) matches = true;
+        if (Array.isArray(it.days) && it.days.map(Number).includes(targetDayNum)) matches = true;
+        if (String(it.day) === STATE.expenseFilterDay) matches = true;
+        if (!matches) return false;
+      }
+    }
+
+    return true;
   });
 
   // Sort items
@@ -3634,10 +3922,19 @@ function renderExpenses() {
     var table = ce('div', 'compact-expense-table');
     filtered.forEach(function (it) {
       var row = ce('div', 'compact-expense-row');
+      row.title = 'Click to view full details';
+      row.addEventListener('click', function () {
+        openExpenseDetailModal(it);
+      });
 
       var left = ce('div', 'compact-expense-left');
       var catLabel = it.category ? it.category.slice(0, 4).toUpperCase() : 'MISC';
       left.appendChild(ce('span', 'compact-expense-cat', catLabel));
+
+      var dShort = getExpenseDayShort(it);
+      if (dShort) {
+        left.appendChild(ce('span', 'compact-expense-day', dShort));
+      }
 
       var info = ce('div', null);
       info.style.minWidth = '0';
@@ -3645,8 +3942,6 @@ function renderExpenses() {
       info.appendChild(ce('div', 'compact-expense-name', it.description || it.item || it.name || it.category));
 
       var subMeta = [];
-      if (it.paid_by) subMeta.push('Paid: ' + it.paid_by);
-      if (it.status) subMeta.push(it.status);
       if (it.notes) subMeta.push(it.notes.slice(0, 40) + (it.notes.length > 40 ? '...' : ''));
       if (subMeta.length > 0) {
         var subDiv = ce('div', 'muted tiny', subMeta.join(' · '));
@@ -3658,9 +3953,30 @@ function renderExpenses() {
       left.appendChild(info);
       row.appendChild(left);
 
-      var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
-      row.appendChild(ce('div', 'compact-expense-cost', cost != null ? sgd(cost) : '—'));
+      var right = ce('div', 'compact-expense-right');
 
+      var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
+      right.appendChild(ce('div', 'compact-expense-cost', cost != null ? sgd(cost) : '—'));
+
+      var isShared = (it.split_type || 'shared').toLowerCase() === 'shared';
+      var splitBtn = ce('button', 'expense-pill ' + (isShared ? 'pill-shared' : 'pill-indiv'), isShared ? 'Shared' : 'Indiv');
+      splitBtn.title = 'Click to toggle Shared / Indiv';
+      splitBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleExpenseSplit(it);
+      });
+      right.appendChild(splitBtn);
+
+      var isPaid = isExpensePaidForCurrentUser(it);
+      var paidBtn = ce('button', 'expense-pill ' + (isPaid ? 'pill-paid' : 'pill-unpaid'), isPaid ? '✓ Paid' : 'Unpaid');
+      paidBtn.title = 'Click to toggle Paid / Unpaid';
+      paidBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleExpensePaid(it);
+      });
+      right.appendChild(paidBtn);
+
+      row.appendChild(right);
       table.appendChild(row);
     });
     listCard.appendChild(table);
@@ -3757,44 +4073,86 @@ function renderDecisions() {
 
 function getTripTravellersList() {
   var list = [];
-  var seen = {};
+  var seenEmails = {};
+  var seenUserIds = {};
+  var seenNames = {};
 
-  var tData = getTravellersData();
-  var myName = (tData.my_passport && tData.my_passport.full_name) || (TripAuth.status().user && (TripAuth.status().user.name || TripAuth.status().user.email)) || 'Kester';
-  var myId = 'traveller-primary';
-  list.push({
-    id: myId,
-    name: myName,
-    isPrimary: true
-  });
-  seen[myName.toLowerCase()] = true;
+  var curUser = (TripAuth.status && TripAuth.status().user) || STATE.user || null;
+  var curEmail = (curUser && curUser.email) ? curUser.email.toLowerCase() : '';
+  var curUserId = (curUser && curUser.id) ? curUser.id : '';
+  var customName = (curUser && curUser.id && localStorage.getItem('nomad_custom_username_' + curUser.id)) || '';
+  var myName = customName || (curUser && curUser.name && curUser.name !== curUser.email ? curUser.name : '') || 'Kester';
 
-  if (Array.isArray(tData.companions)) {
-    tData.companions.forEach(function (c, idx) {
-      var cName = c.full_name || ('Companion ' + (idx + 1));
-      if (!seen[cName.toLowerCase()]) {
-        seen[cName.toLowerCase()] = true;
-        list.push({
-          id: c.id || ('comp-' + idx),
-          name: cName,
-          isCompanion: true
-        });
+  // 1. Members from backend (trip_members)
+  if (Array.isArray(STATE.members) && STATE.members.length > 0) {
+    STATE.members.forEach(function (m) {
+      var mEmail = (m.email || m.invited_email || m.member_email || '').toLowerCase();
+      var mUserId = m.user_id || m.member || '';
+      var isMe = (curUserId && mUserId === curUserId) || (curEmail && mEmail === curEmail);
+
+      var dispName = '';
+      if (isMe) {
+        dispName = myName;
+      } else {
+        dispName = m.name || m.member_name || (mEmail ? mEmail.split('@')[0] : 'Companion');
       }
+
+      var travId = isMe ? 'traveller-primary' : (mUserId ? ('user-' + mUserId) : ('email-' + mEmail));
+
+      if (mEmail && seenEmails[mEmail]) return;
+      if (mUserId && seenUserIds[mUserId]) return;
+      if (mEmail) seenEmails[mEmail] = true;
+      if (mUserId) seenUserIds[mUserId] = true;
+      seenNames[dispName.toLowerCase()] = true;
+
+      list.push({
+        id: travId,
+        user_id: mUserId,
+        email: mEmail,
+        name: dispName,
+        role: m.role || 'member',
+        isPrimary: isMe,
+        isMember: true
+      });
     });
   }
 
-  // Also include team members if any
-  if (Array.isArray(STATE.members)) {
-    STATE.members.forEach(function (m, idx) {
-      var mName = m.name || (m.invited_email ? m.invited_email.split('@')[0] : (m.email ? m.email.split('@')[0] : ''));
-      if (mName && !seen[mName.toLowerCase()]) {
-        seen[mName.toLowerCase()] = true;
-        list.push({
-          id: m.id || ('member-' + idx),
-          name: mName,
-          isMember: true
-        });
-      }
+  // Ensure current user is in list if not already
+  if (!list.some(function (t) { return t.isPrimary; })) {
+    list.unshift({
+      id: 'traveller-primary',
+      user_id: curUserId,
+      email: curEmail,
+      name: myName,
+      role: 'owner',
+      isPrimary: true,
+      isMember: true
+    });
+    if (curEmail) seenEmails[curEmail] = true;
+    if (curUserId) seenUserIds[curUserId] = true;
+    seenNames[myName.toLowerCase()] = true;
+  }
+
+  // 2. Add non-member companions from travellers doc (only if they aren't duplicate of existing members)
+  var tData = getTravellersData();
+  if (Array.isArray(tData.companions)) {
+    tData.companions.forEach(function (c, idx) {
+      var cName = (c.full_name || c.name || '').trim();
+      var cEmail = (c.email || '').trim().toLowerCase();
+      if (!cName || cName.toLowerCase() === 'accompanying traveller') return; // skip dummy template
+      if (cEmail && seenEmails[cEmail]) return;
+      if (seenNames[cName.toLowerCase()]) return;
+
+      seenNames[cName.toLowerCase()] = true;
+      if (cEmail) seenEmails[cEmail] = true;
+
+      list.push({
+        id: c.id || ('comp-' + idx),
+        email: cEmail,
+        name: cName,
+        role: 'companion',
+        isCompanion: true
+      });
     });
   }
 
@@ -4181,82 +4539,7 @@ function renderRecList(recs, days, container) {
 }
 
 /* ==========================================================================
-   7. SHARE & MEMBERS TAB
-   ========================================================================== */
-function renderShare() {
-  var root = $('#tab-share');
-  clear(root);
-
-  var card = ce('div', 'card-panel');
-  card.appendChild(ce('h2', null, 'Collaborators & Trip Access'));
-  card.appendChild(ce('p', 'muted small', 'Everyone invited to this trip can view schedules, vote on decisions, and track expenses.'));
-
-  // Member roster
-  var mList = ce('div', 'timeline');
-  STATE.members.forEach(function (m) {
-    var row = ce('div', 'timeline-item');
-    var top = ce('div', 'item-top');
-    top.appendChild(ce('div', 'item-title', m.invited_email || m.email || m.name || 'Member'));
-    top.appendChild(ce('span', 'badge ' + (m.role === 'owner' ? 'badge-good' : ''), m.role.toUpperCase()));
-    row.appendChild(top);
-    mList.appendChild(row);
-  });
-  card.appendChild(mList);
-
-  // Instant Onboarding Link box
-  var linkBox = ce('div', 'card-panel');
-  linkBox.style.marginTop = '20px';
-  linkBox.appendChild(ce('h3', null, '🔗 Instant Onboarding Link'));
-  linkBox.appendChild(ce('p', 'muted tiny', 'Anyone with this link can join this trip and collaborate in real-time.'));
-
-  var linkRow = ce('div');
-  linkRow.style.display = 'flex';
-  linkRow.style.gap = '8px';
-  linkRow.style.alignItems = 'center';
-
-  var linkInp = ce('input', 'search-input');
-  linkInp.style.flex = '1';
-  linkInp.readOnly = true;
-  linkInp.value = getTripInviteLink(STATE.activeTripId);
-
-  var copyBtn = ce('button', 'btn btn-secondary small', '📋 Copy Link');
-  copyBtn.addEventListener('click', function () {
-    copyTripInviteLink(STATE.activeTripId);
-  });
-
-  linkRow.appendChild(linkInp);
-  linkRow.appendChild(copyBtn);
-  linkBox.appendChild(linkRow);
-  card.appendChild(linkBox);
-
-  // Invite by email form
-  if (STATE.canEdit) {
-    var inviteBox = ce('div', 'card-panel');
-    inviteBox.style.marginTop = '20px';
-    inviteBox.appendChild(ce('h3', null, 'Invite by Email'));
-    var inp = ce('input', 'search-input');
-    inp.style.marginBottom = '10px';
-    inp.placeholder = 'traveller@example.com';
-
-    var btn = ce('button', 'btn', 'Send Invite');
-    btn.addEventListener('click', function () {
-      if (!inp.value || !inp.value.includes('@')) return alert('Please enter a valid email.');
-      TripAuth.invite(STATE.activeTripId, inp.value.trim()).then(function () {
-        showToast('Invitation sent!');
-        inp.value = '';
-        selectTrip(STATE.activeTripId);
-      }).catch(function (e) { alert('Invite failed: ' + (e.message || e)); });
-    });
-    inviteBox.appendChild(inp);
-    inviteBox.appendChild(btn);
-    card.appendChild(inviteBox);
-  }
-
-  root.appendChild(card);
-}
-
-/* ==========================================================================
-   8. TRAVELLERS & PASSPORTS TAB
+   7. TEAM & PASSPORTS TAB (High-Density, Unified Travelling Party & Passports)
    ========================================================================== */
 
 function escapeHtml(str) {
@@ -4430,131 +4713,192 @@ function getImmigrationAdvisory(dest, customReq) {
   };
 }
 
-function renderTravellers() {
-  var root = $('#tab-travellers');
+function getTravellerPassport(trav) {
+  var data = getTravellersData();
+  data.members_passports = data.members_passports || {};
+  var email = (trav.email || '').toLowerCase();
+
+  if (email && data.members_passports[email]) {
+    return Object.assign({ full_name: trav.name, email: email }, data.members_passports[email]);
+  }
+  if (trav.isPrimary && data.my_passport) {
+    return Object.assign({ full_name: trav.name, email: email }, data.my_passport);
+  }
+  if (Array.isArray(data.companions)) {
+    var c = data.companions.find(function (comp) {
+      return (comp.id && comp.id === trav.id) ||
+             (comp.full_name && comp.full_name.toLowerCase() === (trav.name || '').toLowerCase());
+    });
+    if (c) return c;
+  }
+  return {
+    full_name: trav.name || '',
+    email: email,
+    passport_number: '',
+    nationality: 'Singapore',
+    date_of_birth: '',
+    expiry_date: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    notes: ''
+  };
+}
+
+function renderShare() {
+  var root = $('#tab-share');
   clear(root);
 
-  var data = getTravellersData();
-  STATE.docs.travellers = data;
+  var travellers = getTripTravellersList();
+  var tData = getTravellersData();
 
-  var container = ce('div', 'travellers-section');
+  var container = ce('div', null);
 
-  // Top header with actions
-  var header = ce('div', 'view-mode-bar');
-  var titleBox = ce('div');
-  titleBox.appendChild(ce('h2', null, '🛂 Passports & Travelling Party'));
-  titleBox.appendChild(ce('div', 'muted small', 'Secure travel document records for flight bookings, check-ins, and immigration checks'));
-  header.appendChild(titleBox);
+  // Compact top toolbar
+  var topBar = ce('div', null);
+  topBar.style.display = 'flex';
+  topBar.style.justifyContent = 'space-between';
+  topBar.style.alignItems = 'center';
+  topBar.style.marginBottom = '6px';
 
-  var actionsBox = ce('div', 'table-toolbar-left');
-  var maskBtn = ce('button', 'btn btn-secondary small', STATE.maskPassports ? '👁️ Reveal Numbers' : '🔒 Mask Numbers');
+  var titleBox = ce('div', null);
+  var h2 = ce('h2', null, '👥 Travelling Party & Passports');
+  h2.style.fontSize = '1rem';
+  h2.style.margin = '0';
+  titleBox.appendChild(h2);
+  topBar.appendChild(titleBox);
+
+  var actBox = ce('div', null);
+  actBox.style.display = 'flex';
+  actBox.style.gap = '6px';
+  actBox.style.alignItems = 'center';
+
+  var maskBtn = ce('button', 'btn btn-secondary tiny', STATE.maskPassports ? '👁️ Reveal' : '🔒 Mask');
   maskBtn.addEventListener('click', function () {
     STATE.maskPassports = !STATE.maskPassports;
-    renderTravellers();
+    renderShare();
   });
-  actionsBox.appendChild(maskBtn);
+  actBox.appendChild(maskBtn);
 
-  var addCompBtn = ce('button', 'btn small', '➕ Add Companion');
+  var addCompBtn = ce('button', 'btn tiny', '➕ Companion');
   addCompBtn.addEventListener('click', function () {
-    openTravellerEditor(null, false);
+    openTravellerEditor(null, null, false);
   });
-  actionsBox.appendChild(addCompBtn);
-  header.appendChild(actionsBox);
-  container.appendChild(header);
+  actBox.appendChild(addCompBtn);
 
-  // Dynamic Immigration Advisory Card
-  var t = STATE.docs.trip || STATE.trip || {};
-  var dest = getCleanDestination(t);
-  var customReq = (data && data.entry_requirements) || (t && t.entry_requirements) || null;
+  topBar.appendChild(actBox);
+  container.appendChild(topBar);
+
+  // Dynamic Immigration Advisory (Compact single line alert)
+  var tTrip = STATE.docs.trip || STATE.trip || {};
+  var dest = getCleanDestination(tTrip);
+  var customReq = (tData && tData.entry_requirements) || (tTrip && tTrip.entry_requirements) || null;
   var adv = getImmigrationAdvisory(dest, customReq);
 
-  var noticeCard = ce('div', 'passport-notice-card');
+  var notice = ce('div', 'passport-notice-card');
+  notice.style.padding = '5px 8px';
+  notice.style.marginBottom = '8px';
+  notice.style.gap = '6px';
   var noticeIcon = ce('div', 'notice-icon', 'ℹ️');
-  noticeCard.appendChild(noticeIcon);
-  var noticeContent = ce('div');
-  noticeContent.appendChild(ce('div', 'notice-title', adv.title));
-  noticeContent.appendChild(ce('p', 'notice-text', adv.text));
-  noticeCard.appendChild(noticeContent);
-  container.appendChild(noticeCard);
+  noticeIcon.style.fontSize = '0.95rem';
+  notice.appendChild(noticeIcon);
+  var nContent = ce('div', null);
+  var nTitle = ce('div', 'notice-title', adv.title);
+  nTitle.style.fontSize = '0.75rem';
+  nContent.appendChild(nTitle);
+  var nText = ce('p', 'notice-text', adv.text);
+  nText.style.fontSize = '0.68rem';
+  nContent.appendChild(nText);
+  notice.appendChild(nContent);
+  container.appendChild(notice);
 
-  // Passports Grid
+  // Passports Stack (Ultra-Compact)
   var grid = ce('div', 'passports-grid');
-
-  // 1. My Passport Card (Primary)
-  var myPassport = data.my_passport || {};
-  grid.appendChild(createPassportCard(myPassport, true));
-
-  // 2. Companion Cards
-  var companions = data.companions || [];
-  companions.forEach(function (comp) {
-    grid.appendChild(createPassportCard(comp, false));
+  travellers.forEach(function (trav) {
+    grid.appendChild(createCompactPassportCard(trav));
   });
-
   container.appendChild(grid);
+
   root.appendChild(container);
 }
 
-function createPassportCard(t, isSelf) {
+function createCompactPassportCard(trav) {
+  var passport = getTravellerPassport(trav);
+  var isSelf = !!trav.isPrimary;
+
   var card = ce('div', 'passport-card' + (isSelf ? ' self-card' : ''));
 
-  // Header
+  // Header: Role Badge + Validity Tag
   var head = ce('div', 'passport-card-header');
-  var badge = ce('span', 'passport-badge', isSelf ? '⭐ Primary Traveller (You)' : ('👥 ' + (t.relationship || 'Companion')));
-  head.appendChild(badge);
+  var roleText = isSelf ? '⭐ Primary Traveller (You)' : (trav.role ? '👥 ' + trav.role.toUpperCase() : '👥 Member');
+  head.appendChild(ce('span', 'passport-badge', roleText));
 
-  var val = calculatePassportValidity(t.expiry_date);
-  var valTag = ce('span', 'validity-tag ' + val.tagClass, val.statusText);
-  head.appendChild(valTag);
+  var val = calculatePassportValidity(passport.expiry_date);
+  head.appendChild(ce('span', 'validity-tag ' + val.tagClass, val.statusText));
   card.appendChild(head);
 
-  // Name
-  var nameEl = ce('h3', 'passport-holder-name', t.full_name || 'Unnamed Traveller');
-  card.appendChild(nameEl);
+  // Name & Email Row
+  var nameRow = ce('div', 'passport-name-row');
+  var dispName = passport.full_name || trav.name || 'Unnamed Traveller';
+  nameRow.appendChild(ce('h3', 'passport-holder-name', dispName));
+  var dispEmail = trav.email || passport.email || '';
+  if (dispEmail) {
+    nameRow.appendChild(ce('span', 'passport-holder-email', '✉ ' + dispEmail));
+  }
+  card.appendChild(nameRow);
 
-  // Meta Grid
+  // Meta List
   var metaGrid = ce('div', 'passport-meta-list');
 
-  // Passport Number
-  var mPass = ce('div');
-  mPass.appendChild(ce('div', 'meta-item-label', 'Passport Number'));
-  var passVal = ce('div', 'meta-item-val passport-masked-val', maskPassport(t.passport_number));
+  // 1. Passport Number
+  var mPass = ce('div', null);
+  mPass.appendChild(ce('div', 'meta-item-label', 'Passport No.'));
+  var passValText = passport.passport_number ? maskPassport(passport.passport_number) : 'Not recorded';
+  var passVal = ce('div', 'meta-item-val passport-masked-val', passValText);
+  if (!passport.passport_number) passVal.style.color = 'var(--fg-muted)';
   mPass.appendChild(passVal);
   metaGrid.appendChild(mPass);
 
-  // Nationality
-  var mNat = ce('div');
+  // 2. Nationality
+  var mNat = ce('div', null);
   mNat.appendChild(ce('div', 'meta-item-label', 'Nationality'));
-  mNat.appendChild(ce('div', 'meta-item-val', '🇸🇬 ' + (t.nationality || 'Singapore')));
+  mNat.appendChild(ce('div', 'meta-item-val', '🇸🇬 ' + (passport.nationality || 'Singapore')));
   metaGrid.appendChild(mNat);
 
-  // Expiry Date
-  var mExp = ce('div');
+  // 3. Expiry Date
+  var mExp = ce('div', null);
   mExp.appendChild(ce('div', 'meta-item-label', 'Expiry Date'));
-  mExp.appendChild(ce('div', 'meta-item-val', t.expiry_date || '—'));
+  var expVal = ce('div', 'meta-item-val', passport.expiry_date || '—');
+  if (!passport.expiry_date) expVal.style.color = 'var(--fg-muted)';
+  mExp.appendChild(expVal);
   metaGrid.appendChild(mExp);
 
-  // Date of Birth
-  var mDob = ce('div');
+  // 4. Date of Birth
+  var mDob = ce('div', null);
   mDob.appendChild(ce('div', 'meta-item-label', 'Date of Birth'));
-  mDob.appendChild(ce('div', 'meta-item-val', t.date_of_birth || '—'));
+  var dobVal = ce('div', 'meta-item-val', passport.date_of_birth || '—');
+  if (!passport.date_of_birth) dobVal.style.color = 'var(--fg-muted)';
+  mDob.appendChild(dobVal);
   metaGrid.appendChild(mDob);
 
-  // Emergency contact (if present)
-  if (t.emergency_contact_name || t.emergency_contact_phone) {
-    var mEm = ce('div');
+  // 5. Emergency Contact (if present)
+  if (passport.emergency_contact_name || passport.emergency_contact_phone) {
+    var mEm = ce('div', null);
     mEm.style.gridColumn = '1 / -1';
     mEm.appendChild(ce('div', 'meta-item-label', 'Emergency Contact'));
-    var emStr = (t.emergency_contact_name || '') + (t.emergency_contact_phone ? (' (' + t.emergency_contact_phone + ')') : '');
+    var emStr = (passport.emergency_contact_name || '') + (passport.emergency_contact_phone ? (' (' + passport.emergency_contact_phone + ')') : '');
     mEm.appendChild(ce('div', 'meta-item-val', '📞 ' + emStr));
     metaGrid.appendChild(mEm);
   }
 
-  // Notes
-  if (t.notes) {
-    var mNotes = ce('div');
+  // 6. Notes (if present)
+  if (passport.notes) {
+    var mNotes = ce('div', null);
     mNotes.style.gridColumn = '1 / -1';
     mNotes.appendChild(ce('div', 'meta-item-label', 'Notes'));
-    mNotes.appendChild(ce('div', 'small muted', t.notes));
+    var notesP = ce('div', 'small muted', passport.notes);
+    notesP.style.fontSize = '0.68rem';
+    notesP.style.lineHeight = '1.3';
+    mNotes.appendChild(notesP);
     metaGrid.appendChild(mNotes);
   }
 
@@ -4564,23 +4908,23 @@ function createPassportCard(t, isSelf) {
   var actions = ce('div', 'passport-card-actions');
 
   var copyBtn = ce('button', 'btn btn-secondary tiny', '📋 Copy');
-  copyBtn.title = 'Copy passport information to clipboard for bookings';
+  copyBtn.title = 'Copy passport info to clipboard for bookings';
   copyBtn.addEventListener('click', function () {
-    copyPassportInfo(t, isSelf ? 'my passport' : t.full_name);
+    copyPassportInfo(passport, isSelf ? 'my passport' : dispName);
   });
   actions.appendChild(copyBtn);
 
   var editBtn = ce('button', 'btn btn-secondary tiny', '✏️ Edit');
   editBtn.addEventListener('click', function () {
-    openTravellerEditor(t, isSelf);
+    openTravellerEditor(trav, passport, isSelf);
   });
   actions.appendChild(editBtn);
 
-  if (!isSelf) {
+  if (trav.isCompanion && !trav.isMember) {
     var delBtn = ce('button', 'btn-icon-danger tiny', '🗑️');
     delBtn.title = 'Remove companion';
     delBtn.addEventListener('click', function () {
-      deleteCompanion(t.id, t.full_name);
+      deleteCompanion(trav.id, dispName);
     });
     actions.appendChild(delBtn);
   }
@@ -4589,32 +4933,45 @@ function createPassportCard(t, isSelf) {
   return card;
 }
 
-function openTravellerEditor(traveller, isSelf) {
+function renderTravellers() {
+  renderShare();
+}
+
+function openTravellerEditor(trav, passport, isSelf) {
+  if (typeof isSelf === 'undefined') {
+    isSelf = !trav || (trav && trav.isPrimary);
+  }
+  var pObj = passport || (trav ? getTravellerPassport(trav) : {});
   STATE.editingTraveller = {
     isSelf: isSelf,
-    traveller: traveller || {}
+    traveller: trav || {},
+    passport: pObj
   };
 
   $('#edit-traveller-is-self').value = isSelf ? 'true' : 'false';
-  $('#edit-traveller-id').value = (!isSelf && traveller) ? (traveller.id || '') : '';
+  $('#edit-traveller-id').value = (trav && trav.id) || '';
+  if ($('#edit-traveller-email')) {
+    $('#edit-traveller-email').value = (trav && trav.email) || (pObj && pObj.email) || '';
+  }
 
-  $('#traveller-editor-title').textContent = isSelf ? 'Edit My Passport Details' : (traveller ? 'Edit Traveller Details' : 'Add Accompanying Traveller');
+  var headerName = (trav && trav.name) || (pObj && pObj.full_name) || '';
+  $('#traveller-editor-title').textContent = isSelf ? 'Edit My Passport Details' : (headerName ? ('Edit Details: ' + headerName) : 'Add Accompanying Traveller');
 
-  $('#edit-traveller-name').value = (traveller && traveller.full_name) || '';
-  $('#edit-traveller-passport').value = (traveller && traveller.passport_number) || '';
-  $('#edit-traveller-nationality').value = (traveller && traveller.nationality) || 'Singapore';
-  $('#edit-traveller-dob').value = (traveller && traveller.date_of_birth) || '';
-  $('#edit-traveller-expiry').value = (traveller && traveller.expiry_date) || '';
-  $('#edit-traveller-relationship').value = (traveller && traveller.relationship) || 'Travel Companion';
-  $('#edit-traveller-emergency-name').value = (traveller && traveller.emergency_contact_name) || '';
-  $('#edit-traveller-emergency-phone').value = (traveller && traveller.emergency_contact_phone) || '';
-  $('#edit-traveller-notes').value = (traveller && traveller.notes) || '';
+  $('#edit-traveller-name').value = (pObj && pObj.full_name) || headerName || '';
+  $('#edit-traveller-passport').value = (pObj && pObj.passport_number) || '';
+  $('#edit-traveller-nationality').value = (pObj && pObj.nationality) || 'Singapore';
+  $('#edit-traveller-dob').value = (pObj && pObj.date_of_birth) || '';
+  $('#edit-traveller-expiry').value = (pObj && pObj.expiry_date) || '';
+  $('#edit-traveller-relationship').value = (pObj && pObj.relationship) || (trav && (trav.isPrimary ? 'Owner' : (trav.role || 'Companion'))) || 'Companion';
+  $('#edit-traveller-emergency-name').value = (pObj && pObj.emergency_contact_name) || '';
+  $('#edit-traveller-emergency-phone').value = (pObj && pObj.emergency_contact_phone) || '';
+  $('#edit-traveller-notes').value = (pObj && pObj.notes) || '';
 
   var relGroup = $('#traveller-relationship-group');
   if (relGroup) relGroup.hidden = !!isSelf;
 
   var delBtn = $('#edit-traveller-delete-btn');
-  if (delBtn) delBtn.hidden = isSelf || !traveller || !traveller.id;
+  if (delBtn) delBtn.hidden = isSelf || !trav || (trav && trav.isMember);
 
   $('#traveller-editor-modal').hidden = false;
 }
@@ -4628,6 +4985,7 @@ function saveTravellerEditor() {
   if (!STATE.editingTraveller) return;
   var isSelf = $('#edit-traveller-is-self').value === 'true';
   var id = $('#edit-traveller-id').value;
+  var email = ($('#edit-traveller-email') ? $('#edit-traveller-email').value : '').trim().toLowerCase();
 
   var name = $('#edit-traveller-name').value.trim();
   if (!name) {
@@ -4645,45 +5003,43 @@ function saveTravellerEditor() {
   var notes = $('#edit-traveller-notes').value.trim();
 
   var data = getTravellersData();
+  data.members_passports = data.members_passports || {};
   if (!data.companions) data.companions = [];
 
+  var pObj = {
+    full_name: name,
+    email: email,
+    passport_number: passNo,
+    nationality: nat,
+    date_of_birth: dob,
+    expiry_date: expiry,
+    relationship: rel,
+    emergency_contact_name: emName,
+    emergency_contact_phone: emPhone,
+    notes: notes
+  };
+
   if (isSelf) {
-    data.my_passport = {
-      full_name: name,
-      passport_number: passNo,
-      nationality: nat,
-      date_of_birth: dob,
-      expiry_date: expiry,
-      emergency_contact_name: emName,
-      emergency_contact_phone: emPhone,
-      notes: notes
-    };
-  } else {
-    var compObj = {
-      id: id || ('comp-' + Date.now()),
-      full_name: name,
-      relationship: rel,
-      passport_number: passNo,
-      nationality: nat,
-      date_of_birth: dob,
-      expiry_date: expiry,
-      emergency_contact_name: emName,
-      emergency_contact_phone: emPhone,
-      notes: notes
-    };
+    data.my_passport = Object.assign({}, data.my_passport || {}, pObj);
+  }
+  if (email) {
+    data.members_passports[email] = Object.assign({}, data.members_passports[email] || {}, pObj);
+  }
+  if (!isSelf && !email) {
+    pObj.id = id || ('comp-' + Date.now());
     if (id) {
       var idx = data.companions.findIndex(function (c) { return c.id === id; });
-      if (idx >= 0) data.companions[idx] = compObj;
-      else data.companions.push(compObj);
+      if (idx >= 0) data.companions[idx] = pObj;
+      else data.companions.push(pObj);
     } else {
-      data.companions.push(compObj);
+      data.companions.push(pObj);
     }
   }
 
   STATE.docs.travellers = data;
   saveTravellersDoc();
   closeTravellerEditor();
-  renderTravellers();
+  renderShare();
   showToast('Passport details saved for ' + name + '!');
 }
 
@@ -4698,7 +5054,7 @@ function deleteCompanion(id, name) {
   if ($('#traveller-editor-modal') && !$('#traveller-editor-modal').hidden) {
     closeTravellerEditor();
   }
-  renderTravellers();
+  renderShare();
   showToast('Removed companion.');
 }
 

@@ -145,6 +145,7 @@ global.TripAuth = {
   signIn: function (opts) { return call('signIn', [opts]); },
   signInWithPassword: function (identity, password) { return call('signInWithPassword', [identity, password]); },
   signOut: function () { return read('signOut', [], false); },
+  updateProfile: function (data) { return call('updateProfile', [data]); },
   listTrips: function () { return read('listTrips', [], []); },
   createTrip: function (tripData) { return call('createTrip', [tripData]); },
   openTrip: function (key) { return call('openTrip', [key]); },

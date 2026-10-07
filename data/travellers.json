@@ -10,18 +10,29 @@
     "dietary_notes": "",
     "notes": "Singapore passport holders enter Vietnam visa-free for up to 30 days. Requires 6+ months passport validity upon entry."
   },
-  "companions": [
-    {
-      "id": "comp-1",
-      "full_name": "Accompanying Traveller",
-      "relationship": "Companion",
+  "members_passports": {
+    "kester.neo@gmail.com": {
+      "full_name": "Kester Neo",
+      "email": "kester.neo@gmail.com",
       "passport_number": "",
       "nationality": "Singapore",
       "date_of_birth": "",
       "expiry_date": "",
       "emergency_contact_name": "",
       "emergency_contact_phone": "",
-      "notes": "Requires 6+ months passport validity upon entry."
+      "notes": "Singapore passport holders enter Vietnam visa-free for up to 30 days. Requires 6+ months passport validity upon entry."
+    },
+    "kwan.shuyi@gmail.com": {
+      "full_name": "Kwan Shu Yi",
+      "email": "kwan.shuyi@gmail.com",
+      "passport_number": "",
+      "nationality": "Singapore",
+      "date_of_birth": "",
+      "expiry_date": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "notes": "Singapore passport holders enter Vietnam visa-free for up to 30 days. Requires 6+ months passport validity upon entry."
     }
-  ]
+  },
+  "companions": []
 }

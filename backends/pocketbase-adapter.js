@@ -830,6 +830,30 @@ function shareLink(slug) {
   return global.location.origin + global.location.pathname + '#trip=' + encodeURIComponent(String(slug || ''));
 }
 
+function updateProfile(data) {
+  var p = ST.pb;
+  if (!p || !ST.user || !ST.user.id) return Promise.resolve(false);
+  var payload = {};
+  if (data && data.name !== undefined) payload.name = String(data.name).trim();
+  return p.collection('users').update(ST.user.id, payload, { requestKey: null })
+    .then(function (rec) {
+      setUser(userFrom(rec));
+      return p.collection('trip_members').getFullList({ filter: 'member = ' + quote(ST.user.id), requestKey: null })
+        .then(function (members) {
+          var updates = (members || []).map(function (m) {
+            return p.collection('trip_members').update(m.id, { member_name: rec.name }, { requestKey: null }).catch(function () {});
+          });
+          return Promise.all(updates);
+        }).catch(function () {}).then(function () {
+          emit();
+          return ST.user;
+        });
+    }, function (e) {
+      console.warn('Failed to update user profile in backend:', e);
+      return ST.user;
+    });
+}
+
 /* ------------------------------------------------------------------ export */
 
 global.TripBackends = global.TripBackends || {};
@@ -848,6 +872,7 @@ global.TripBackends.pocketbase = {
   signIn: signIn,
   signInWithPassword: signInWithPassword,
   signOut: signOut,
+  updateProfile: updateProfile,
   listTrips: listTrips,
   createTrip: createTrip,
   openTrip: openTrip,

@@ -132,8 +132,7 @@
           <button class="tab-pill" data-tab="decisions"><span>🗳</span> Decisions <span id="decisions-pill-badge" class="count-badge" hidden>0</span></button>
           <button class="tab-pill" data-tab="packing"><span>🎒</span> Packing</button>
           <button class="tab-pill" data-tab="recommendations"><span>💡</span> Ideas</button>
-          <button class="tab-pill" data-tab="travellers"><span>🛂</span> Travellers</button>
-          <button class="tab-pill" data-tab="share"><span>👥</span> Trip &amp; Share</button>
+          <button class="tab-pill" data-tab="share"><span>👥</span> Team &amp; Passports</button>
         </div>
       </nav>
 
@@ -149,7 +148,7 @@
         <section class="tab-content-panel" id="tab-share" role="tabpanel" hidden></section>
       </div>
 
-      <!-- Mobile Bottom Navigation Bar (Ultra-Compact 8 Items) -->
+      <!-- Mobile Bottom Navigation Bar (Ultra-Compact 7 Items) -->
       <nav id="mobile-nav" class="mobile-nav-bar" aria-label="Mobile Navigation">
         <button class="mobile-nav-item active" data-tab="itinerary">
           <span class="nav-icon">🗓</span>
@@ -174,10 +173,6 @@
         <button class="mobile-nav-item" data-tab="recommendations">
           <span class="nav-icon">💡</span>
           <span class="nav-label">Ideas</span>
-        </button>
-        <button class="mobile-nav-item" data-tab="travellers">
-          <span class="nav-icon">🛂</span>
-          <span class="nav-label">Pass</span>
         </button>
         <button class="mobile-nav-item" data-tab="share">
           <span class="nav-icon">👥</span>
@@ -298,7 +293,16 @@
         <div class="text-center" style="margin-bottom: 14px;">
           <div id="user-modal-avatar-box" class="avatar-box" style="margin: 0 auto 8px;"></div>
           <h3 id="user-modal-name" class="user-display-name" style="margin: 0;">—</h3>
-          <p id="user-modal-email" class="muted small" style="margin: 0 0 8px;">—</p>
+          <p id="user-modal-email" class="muted small" style="margin: 0 0 10px;">—</p>
+          
+          <div style="max-width: 320px; margin: 0 auto 12px; text-align: left;">
+            <label class="muted tiny" style="display: block; margin-bottom: 4px; font-weight: 700;">DISPLAY USERNAME</label>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="user-modal-name-input" class="search-input" placeholder="e.g. Kester" style="flex: 1;" />
+              <button type="button" id="user-modal-save-name-btn" class="btn btn-secondary small">Save</button>
+            </div>
+          </div>
+
           <button id="user-modal-signout-btn" class="btn btn-danger small" style="margin: 0 auto;">Sign Out</button>
         </div>
 
@@ -343,6 +347,17 @@
           <button type="button" id="save-ai-settings-btn" class="btn btn-google w-full" style="justify-content: center; margin-top: 4px;">💾 Save AI Settings</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Expense Item Detail Modal -->
+  <div id="expense-detail-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2 id="expense-detail-modal-title" class="modal-title">Expense Details</h2>
+        <button class="modal-close-btn" id="expense-detail-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" id="expense-detail-modal-body"></div>
     </div>
   </div>
 
@@ -511,6 +526,7 @@
         <form id="traveller-editor-form" onsubmit="return false;">
           <input type="hidden" id="edit-traveller-id">
           <input type="hidden" id="edit-traveller-is-self">
+          <input type="hidden" id="edit-traveller-email">
 
           <div class="form-group">
             <label for="edit-traveller-name" class="form-label">Full Name (as in Passport)</label>
