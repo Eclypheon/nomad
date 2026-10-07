@@ -143,6 +143,7 @@ global.TripAuth = {
   refreshAuthMethods: function () { return read('refresh', [], status()); },
 
   signIn: function () { return call('signIn', []); },
+  signInWithPassword: function (identity, password) { return call('signInWithPassword', [identity, password]); },
   signOut: function () { return read('signOut', [], false); },
   listTrips: function () { return read('listTrips', [], []); },
   openTrip: function (key) { return call('openTrip', [key]); },

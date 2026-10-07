@@ -292,6 +292,18 @@ function signIn() {
     throw friendly(e);
   });
 }
+function signInWithPassword(identity, password) {
+  if (!isConfigured()) return Promise.reject(notConfigured());
+  return pb().then(function (p) {
+    return p.collection('users').authWithPassword(identity, password)
+      .then(function (res) {
+        setUser(userFrom(res && res.record));
+        return res;
+      }, function (e) {
+        throw friendly(e);
+      });
+  });
+}
 function signOut() {
   var p = ST.pb;
   ST.roles = {};
@@ -757,6 +769,7 @@ global.TripBackends.pocketbase = {
       function (e) { ST.error = msg(wireError(e)); emit(); return status(); });
   },
   signIn: signIn,
+  signInWithPassword: signInWithPassword,
   signOut: signOut,
   listTrips: listTrips,
   openTrip: openTrip,

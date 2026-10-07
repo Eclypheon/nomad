@@ -216,7 +216,7 @@ function renderUserArea(user) {
     area.appendChild(chip);
   } else {
     var inBtn = ce('button', 'btn btn-secondary small', 'Sign in');
-    inBtn.addEventListener('click', doSignIn);
+    inBtn.addEventListener('click', openSignInModal);
     area.appendChild(inBtn);
   }
 }
@@ -285,9 +285,35 @@ function selectTrip(tripId) {
 
 /* ------------------------------------------------------------- EVENT BINDINGS */
 
+/* ------------------------------------------------------------- EVENT BINDINGS */
+
 function bindEvents() {
+  // Open Sign-In Modal
   var landBtn = $('#landing-signin-btn');
-  if (landBtn) landBtn.addEventListener('click', doSignIn);
+  if (landBtn) landBtn.addEventListener('click', openSignInModal);
+
+  // Modal Google signin button
+  var modalGoogleBtn = $('#modal-google-signin-btn');
+  if (modalGoogleBtn) modalGoogleBtn.addEventListener('click', doGoogleSignIn);
+
+  // Inline Email/Password form submit
+  var authForm = $('#inline-signin-form');
+  if (authForm) {
+    authForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      doInlineEmailSignIn();
+    });
+  }
+
+  // Close Sign-In Modal
+  var signinClose = $('#signin-modal-close');
+  if (signinClose) signinClose.addEventListener('click', closeSignInModal);
+  var signinModal = $('#signin-modal');
+  if (signinModal) {
+    signinModal.addEventListener('click', function (e) {
+      if (e.target === this) closeSignInModal();
+    });
+  }
 
   var switchBtn = $('#trip-switcher-btn');
   if (switchBtn) switchBtn.addEventListener('click', openTripModal);
@@ -365,12 +391,74 @@ function bindEvents() {
   }
 }
 
-function doSignIn() {
+function openSignInModal() {
+  var modal = $('#signin-modal');
+  if (!modal) return;
+  var errBox = $('#auth-form-error');
+  if (errBox) errBox.hidden = true;
+  var waitCard = $('#oauth-waiting-card');
+  if (waitCard) waitCard.hidden = true;
+  modal.hidden = false;
+}
+
+function closeSignInModal() {
+  var modal = $('#signin-modal');
+  if (modal) modal.hidden = true;
+}
+
+function doGoogleSignIn() {
+  var waitCard = $('#oauth-waiting-card');
+  if (waitCard) waitCard.hidden = false;
+
   TripAuth.signIn().then(function (res) {
-    // Handled via onChange
+    closeSignInModal();
+    showToast('Signed in successfully!');
   }).catch(function (e) {
-    console.error('Sign-in error:', e);
-    alert('Sign-in failed: ' + (e.message || e));
+    if (waitCard) waitCard.hidden = true;
+    var errBox = $('#auth-form-error');
+    if (errBox) {
+      errBox.textContent = 'Google sign-in cancelled or failed: ' + (e.message || e);
+      errBox.hidden = false;
+    }
+  });
+}
+
+function doInlineEmailSignIn() {
+  var emailInput = $('#auth-email-input');
+  var passInput = $('#auth-password-input');
+  var errBox = $('#auth-form-error');
+  var submitBtn = $('#auth-submit-btn');
+
+  var email = emailInput ? emailInput.value.trim() : '';
+  var pass = passInput ? passInput.value : '';
+
+  if (!email || !pass) {
+    if (errBox) {
+      errBox.textContent = 'Please enter both email and password.';
+      errBox.hidden = false;
+    }
+    return;
+  }
+
+  if (errBox) errBox.hidden = true;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in...';
+  }
+
+  TripAuth.signInWithPassword(email, pass).then(function (res) {
+    closeSignInModal();
+    showToast('Welcome back, ' + (res.record.name || res.record.email) + '!');
+  }).catch(function (e) {
+    if (errBox) {
+      errBox.textContent = 'Authentication failed: ' + (e.message || 'Invalid credentials');
+      errBox.hidden = false;
+    }
+  }).finally(function () {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign In';
+    }
   });
 }
 
