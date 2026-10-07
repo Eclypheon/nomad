@@ -166,8 +166,12 @@ function initAuth() {
 function handleAuthChange(st) {
   var landingStatus = $('#landing-status-badge');
   if (landingStatus) {
-    if (st.configured) {
+    if (st.configured && st.ready && !st.error) {
       landingStatus.innerHTML = '<span class="status-dot"></span> Cloud backend connected';
+    } else if (st.error && /Local Network Access|NS_ERROR|network_lna/i.test(st.error)) {
+      landingStatus.innerHTML = '<span class="status-dot" style="background:#f59e0b"></span> Tailscale LNA blocked — <a href="' + (st.backendBase || 'https://alienlab.tailbed832.ts.net:10000') + '/trip/" style="color:var(--primary);text-decoration:underline;">open same-origin /trip/</a>';
+    } else if (st.configured) {
+      landingStatus.innerHTML = '<span class="status-dot" style="background:#f87171"></span> ' + (st.error ? 'Backend connection issue' : 'Checking connection...');
     } else {
       landingStatus.innerHTML = '<span class="status-dot" style="background:#f87171"></span> Offline mode';
     }
@@ -431,7 +435,18 @@ function doGoogleSignIn() {
   }).catch(function (e) {
     if (waitCard) waitCard.hidden = true;
     if (errBox) {
-      errBox.textContent = 'Google sign-in cancelled or failed: ' + (e.message || e);
+      clear(errBox);
+      var m = e.message || e;
+      var p = ce('p', null, 'Google sign-in cancelled or failed: ' + m);
+      errBox.appendChild(p);
+      if (e.code === 'network_lna' || /Local Network Access|NS_ERROR|network_lna/i.test(m)) {
+        var host = (TripAuth.status && TripAuth.status().backendBase) || 'https://alienlab.tailbed832.ts.net:10000';
+        var directLink = ce('a', 'btn btn-secondary small', 'Open Nomad Directly (' + host + '/trip/) →');
+        directLink.href = host + '/trip/';
+        directLink.style.marginTop = '10px';
+        directLink.style.display = 'inline-block';
+        errBox.appendChild(directLink);
+      }
       errBox.hidden = false;
     }
   });

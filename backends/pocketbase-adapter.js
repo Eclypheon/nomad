@@ -114,7 +114,16 @@ function oauthHelpMessage() {
 }
 function wireError(e) {
   var m = msg(e);
-  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) {
+  if (/Failed to fetch|NetworkError|Load failed|network|NS_ERROR_LOCAL_NETWORK_ACCESS_DENIED/i.test(m)) {
+    var isCross = false;
+    try {
+      if (typeof window !== 'undefined' && window.location && BASE) {
+        isCross = window.location.origin !== new URL(BASE).origin;
+      }
+    } catch (ignore) {}
+    if (isCross) {
+      return err('Local Network Access blocked: your browser blocked public github.io from connecting to local Tailscale IP at ' + BASE + '. Open Nomad directly at ' + BASE + '/trip/ or allow local network access in browser settings.', 'network_lna');
+    }
     return err('Could not reach the backend at ' + BASE + ' (' + m + '). Local mode still works: every tab renders from data/*.json.', 'db');
   }
   return e instanceof Error ? e : err(m, 'db');
