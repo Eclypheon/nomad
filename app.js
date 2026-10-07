@@ -182,28 +182,36 @@ function applyDecisionsToSchedule(days) {
   });
 
   // 4. dec-boat: Trang An vs Tam Coc vs Both
-  if (decBoatPick === 'opt-boat-tamcoc-only') {
-    cloned.forEach(function (d) {
-      if (d.items) {
-        d.items.forEach(function (it) {
-          if ((it.what || '').toLowerCase().includes('trang an boat')) {
-            it.what = 'Tam Coc 3 Caves Sampan Boat Tour (Ngô Đồng River)';
-            it.notes = 'Rowed through Ca, Hai, Ba caves amongst rice fields';
-          }
-        });
-      }
-    });
-  } else if (decBoatPick === 'opt-boat-trangan-only') {
-    cloned.forEach(function (d) {
-      if (d.items) {
-        d.items.forEach(function (it) {
-          if ((it.what || '').toLowerCase().includes('tam coc boat') || (it.what || '').toLowerCase().includes('tam coc sampan')) {
-            it.what = 'Tràng An UNESCO World Heritage Boat Route #3';
-            it.notes = '1,000m Dot Cave and scenic karst grottos';
-          }
-        });
-      }
-    });
+  if (decBoatPick === 'opt-trang-an-only' || decBoatPick === 'opt-boat-trangan-only') {
+    var day8 = cloned.find(function (d, i) { return (d.day || i + 1) === 8; });
+    if (day8 && day8.items) {
+      day8.items.forEach(function (it) {
+        var w = (it.what || '').toLowerCase();
+        if (w.includes('tam coc boat') || w.includes('tam coc sampan') || w.includes('sampan')) {
+          it.what = 'Countryside Breakfast & Village Stroll (Tam Coc)';
+          it.type = 'food';
+          it.slot = 'morning';
+          it.cost = 5;
+          it.notes = 'Quiet resort breakfast, pack bags, leisurely stroll before departure';
+          delete it.booking_url;
+        }
+      });
+    }
+  } else if (decBoatPick === 'opt-tam-coc-only' || decBoatPick === 'opt-boat-tamcoc-only') {
+    var day7 = cloned.find(function (d, i) { return (d.day || i + 1) === 7; });
+    if (day7 && day7.items) {
+      day7.items.forEach(function (it) {
+        var w = (it.what || '').toLowerCase();
+        if (w.includes('trang an boat') || w.includes('tràng an boat')) {
+          it.what = 'Bicycle ride to Bích Động Pagoda & Lotus Paddies';
+          it.type = 'activity';
+          it.slot = 'morning';
+          it.cost = 4;
+          it.notes = 'Gentle morning cycle through karst scenery and temple grounds';
+          delete it.booking_url;
+        }
+      });
+    }
   }
 
   // 5. dec-food: Guided Street Food Tour vs Self-Guided Walk
@@ -219,6 +227,91 @@ function applyDecisionsToSchedule(days) {
       });
     }
   }
+
+  // 6. Generic decision schedule_impact handling for structured JSON & AI
+  var allDecs = getDecisions();
+  allDecs.forEach(function (dec) {
+    var pickedOptId = getActivePick(dec);
+    var opt = (dec.options || []).find(function (o) { return o.id === pickedOptId; });
+    if (!opt) return;
+
+    var impacts = opt.schedule_impact || opt.schedule_changes || opt.impact || [];
+    if (!Array.isArray(impacts) && typeof impacts === 'object') {
+      impacts = [impacts];
+    }
+    if (Array.isArray(impacts)) {
+      impacts.forEach(function (imp) {
+        if (!imp || typeof imp !== 'object') return;
+        var dayNum = imp.day || imp.day_num;
+        var targetDay = cloned.find(function (d, i) { return (d.day || i + 1) === dayNum; });
+        if (!targetDay) return;
+        if (!targetDay.items) targetDay.items = [];
+
+        // Support explicit removes list
+        var toRemove = imp.removes || imp.remove || [];
+        if (typeof toRemove === 'string') toRemove = [toRemove];
+        if (Array.isArray(toRemove)) {
+          toRemove.forEach(function (rStr) {
+            var rLow = String(rStr).toLowerCase();
+            targetDay.items = targetDay.items.filter(function (it) {
+              return !((it.what || it.title || '').toLowerCase().includes(rLow));
+            });
+          });
+        }
+
+        // Support explicit adds list
+        var toAdd = imp.adds || imp.add || [];
+        if (toAdd && !Array.isArray(toAdd)) toAdd = [toAdd];
+        if (Array.isArray(toAdd)) {
+          toAdd.forEach(function (aItem) {
+            if (typeof aItem === 'string') aItem = { what: aItem };
+            targetDay.items.push(Object.assign({
+              time: '10:00',
+              what: 'Activity',
+              type: 'activity',
+              slot: 'morning',
+              cost: 0
+            }, aItem));
+          });
+        }
+
+        var action = (imp.action || (imp.target ? 'replace' : '')).toLowerCase();
+        var targetKeyword = (imp.target || imp.replace_what || '').toLowerCase();
+
+        if (action === 'replace' && targetKeyword) {
+          targetDay.items.forEach(function (it) {
+            var w = (it.what || it.title || '').toLowerCase();
+            if (w.includes(targetKeyword)) {
+              if (imp.item) {
+                Object.assign(it, imp.item);
+              } else {
+                if (imp.what) it.what = imp.what;
+                if (imp.type) it.type = imp.type;
+                if (imp.slot) it.slot = imp.slot;
+                if (imp.cost != null) it.cost = imp.cost;
+                if (imp.notes) it.notes = imp.notes;
+              }
+            }
+          });
+        } else if (action === 'remove' && targetKeyword) {
+          targetDay.items = targetDay.items.filter(function (it) {
+            var w = (it.what || it.title || '').toLowerCase();
+            return !w.includes(targetKeyword);
+          });
+        } else if (action === 'add' && (imp.item || imp.what)) {
+          var newItem = imp.item ? Object.assign({}, imp.item) : {
+            time: imp.time || '10:00',
+            what: imp.what,
+            type: imp.type || 'activity',
+            slot: imp.slot || 'morning',
+            cost: imp.cost || 0,
+            notes: imp.notes || ''
+          };
+          targetDay.items.push(newItem);
+        }
+      });
+    }
+  });
 
   return cloned;
 }
@@ -640,15 +733,6 @@ function bindEvents() {
       closeMoreSheet();
       switchTab(this.dataset.tab);
     });
-  });
-
-  // Open trip by ID / link
-  $('#open-trip-id-btn').addEventListener('click', function () {
-    var key = prompt('Enter a Trip ID or Share Link:');
-    if (key && key.trim()) {
-      closeTripModal();
-      selectTrip(key.trim());
-    }
   });
 
   // Swap modal search input
@@ -1120,12 +1204,38 @@ function formatDdMmm(dStr) {
   return s;
 }
 
+function getCleanDestination(t) {
+  if (!t) return 'Nomad Trip';
+  if (t.destination && t.destination.trim()) return t.destination.trim();
+  if (t.city && t.city.trim()) return t.city.trim();
+  var raw = t.title || t.name || '';
+  if (/vietnam/i.test(raw)) return 'Vietnam';
+  if (raw.includes('—')) raw = raw.split('—')[0].trim();
+  if (raw.includes('-')) raw = raw.split('-')[0].trim();
+  if (raw.includes('(')) raw = raw.split('(')[0].trim();
+  return raw || 'Nomad Trip';
+}
+
 function renderTripBanner() {
   var t = STATE.docs.trip || STATE.trip || {};
 
-  var dest = (t.destination || t.city || t.title || t.name || 'Nomad Trip').split('(')[0].trim();
+  var dest = getCleanDestination(t);
   var startStr = t.start_date || t.start || '';
   var endStr = t.end_date || t.end || '';
+
+  // Extract from itinerary days if missing on trip doc
+  if (!startStr || !endStr) {
+    var itiDays = getItineraryDays();
+    if (itiDays && itiDays.length > 0) {
+      if (!startStr && itiDays[0].date) startStr = itiDays[0].date;
+      if (!endStr && itiDays[itiDays.length - 1].date) endStr = itiDays[itiDays.length - 1].date;
+    }
+  }
+
+  // Default fallback for Vietnam trip
+  if (!startStr && /vietnam/i.test(dest)) startStr = '2026-12-24';
+  if (!endStr && /vietnam/i.test(dest)) endStr = '2027-01-01';
+
   var datesStr = '';
   if (startStr && endStr) {
     datesStr = formatDdMmm(startStr) + ' to ' + formatDdMmm(endStr);
@@ -1709,13 +1819,25 @@ function createEventPill(dayNum, itemIdx, it) {
   if (it.time && it.time !== '—') {
     header.appendChild(ce('span', 'glance-event-time', it.time.replace(' (assumed)', '')));
   }
+
+  // Activity Status Toggle Pill (Planned vs Booked)
+  var isBooked = (it.status || '').toLowerCase() === 'booked';
+  var statusBtn = ce('button', 'pill-status-toggle' + (isBooked ? ' is-booked' : ' is-planned'), isBooked ? '✓ Booked' : 'Planned');
+  statusBtn.title = 'Click to toggle Planned / Booked';
+  statusBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    toggleActivityStatus(dayNum, itemIdx, it);
+  });
+  header.appendChild(statusBtn);
+
   header.appendChild(ce('span', 'glance-edit-icon', '✏️'));
   pill.appendChild(header);
 
   var title = ce('div', 'glance-pill-title', it.what || it.title || it.activity || it.name || 'Event');
   pill.appendChild(title);
 
-  if (it.booking_url || (it.refs && it.refs.length > 0)) {
+  // If booked, the booking button disappears!
+  if (!isBooked && (it.booking_url || (it.refs && it.refs.length > 0))) {
     var actions = ce('div', 'glance-pill-actions');
     var bUrl = it.booking_url || it.refs[0];
     var bLabel = it.booking_platform || (bUrl.includes('klook') ? 'Klook ↗' : (bUrl.includes('booking.com') ? 'Booking ↗' : (bUrl.includes('12go') ? '12Go ↗' : 'Book ↗')));
@@ -1734,6 +1856,64 @@ function createEventPill(dayNum, itemIdx, it) {
 
   return pill;
 }
+
+function toggleActivityStatus(dayNum, itemIdx, it) {
+  var current = (it.status || 'planned').toLowerCase();
+  var next = current === 'booked' ? 'planned' : 'booked';
+  it.status = next;
+
+  // Persist into STATE.docs.itinerary
+  var rawIti = STATE.docs.itinerary;
+  if (rawIti) {
+    var rawDays = Array.isArray(rawIti) ? rawIti : (rawIti.days || []);
+    var targetDay = rawDays.find(function (d, i) { return (d.day || i + 1) === dayNum; });
+    if (targetDay && targetDay.items && targetDay.items[itemIdx]) {
+      targetDay.items[itemIdx].status = next;
+    }
+  }
+  saveItineraryDoc();
+
+  // If this activity involves an overnight stay/accommodation, sync with stays tab!
+  var what = (it.what || it.title || '').toLowerCase();
+  var isStayActivity = (it.type === 'stay') || /hotel|resort|homestay|hostel|sleeper bus|overnight/i.test(what);
+  if (isStayActivity) {
+    syncActivityStayStatus(what, next);
+  }
+
+  showToast(next === 'booked' ? '✓ Marked as Booked!' : 'Marked as Planned');
+  renderItinerary();
+}
+
+function syncActivityStayStatus(activityWhat, nextStatus) {
+  var stays = getAccommodations();
+  var route = getPlannedRoute();
+  var changed = false;
+
+  route.forEach(function (leg) {
+    var hName = (leg.hotelName || '').toLowerCase();
+    if (hName && (activityWhat.includes(hName.slice(0, 8)) || hName.includes(activityWhat.slice(0, 8)))) {
+      leg.status = nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1);
+      changed = true;
+      if (leg.stayId) {
+        var s = stays.find(function (item) { return item.id === leg.stayId; });
+        if (s) s.status = nextStatus;
+      }
+    }
+  });
+
+  stays.forEach(function (s) {
+    var sName = (s.name || s.hotel || '').toLowerCase();
+    if (sName && (activityWhat.includes(sName.slice(0, 8)) || sName.includes(activityWhat.slice(0, 8)))) {
+      s.status = nextStatus;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    saveAccommodationDoc();
+  }
+}
+
 
 /* ------------------------------------------------------------- ITEM EDITOR */
 
@@ -1949,6 +2129,15 @@ function renderItineraryDeepDive(root, days) {
         var c = num(ev.cost);
         if (c != null && c > 0) top.appendChild(ce('span', 'badge badge-good', sgd(c)));
 
+        var isBooked = (ev.status || '').toLowerCase() === 'booked';
+        var statusBtn = ce('button', 'pill-status-toggle' + (isBooked ? ' is-booked' : ' is-planned'), isBooked ? '✓ Booked' : 'Planned');
+        statusBtn.title = 'Click to toggle Planned / Booked';
+        statusBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleActivityStatus(dayNum, evIdx, ev);
+        });
+        top.appendChild(statusBtn);
+
         var removeBtn = ce('button', 'btn-icon-danger', '✕');
         removeBtn.title = 'Remove from itinerary';
         removeBtn.addEventListener('click', function () {
@@ -1981,7 +2170,8 @@ function renderItineraryDeepDive(root, days) {
         linkBox.style.gap = '8px';
         linkBox.style.flexWrap = 'wrap';
 
-        if (bUrl) {
+        // If booked, the booking button disappears!
+        if (!isBooked && bUrl) {
           var platName = ev.booking_platform || (bUrl.includes('klook') ? 'Klook' : (bUrl.includes('booking.com') ? 'Booking.com' : (bUrl.includes('12go') ? '12Go' : (bUrl.includes('airbnb') ? 'Airbnb' : (bUrl.includes('google.com/travel/flights') ? 'Google Flights' : 'Direct Booking')))));
           var bookLink = ce('a', 'btn btn-secondary tiny', '🎟 Book on ' + platName + ' ↗');
           bookLink.href = bUrl;
@@ -2274,6 +2464,29 @@ function getPlannedRoute() {
     };
   }
 
+  // Apply generic accommodation_impact from active decisions
+  var allDecs = getDecisions();
+  allDecs.forEach(function (dec) {
+    var pickedOptId = getActivePick(dec);
+    var opt = (dec.options || []).find(function (o) { return o.id === pickedOptId; });
+    if (!opt) return;
+
+    var accImpacts = opt.accommodation_impact || opt.stay_impact || [];
+    if (Array.isArray(accImpacts)) {
+      accImpacts.forEach(function (ai) {
+        if (!ai || typeof ai !== 'object') return;
+        var leg = route.find(function (l) { return l.id === ai.leg_id || l.nights === ai.nights; });
+        if (leg) {
+          if (ai.stay_id || ai.stayId) leg.stayId = ai.stay_id || ai.stayId;
+          if (ai.hotel_name || ai.hotelName) leg.hotelName = ai.hotel_name || ai.hotelName;
+          if (ai.rate) leg.rate = ai.rate;
+          if (ai.status) leg.status = ai.status;
+          if (ai.notes) leg.notes = ai.notes;
+        }
+      });
+    }
+  });
+
   var stays = getAccommodations();
   route.forEach(function (leg) {
     if (leg.stayId) {
@@ -2324,30 +2537,69 @@ function getStayNightId(s) {
   return 'other';
 }
 
-function createStayStatusToggle(status, onSelect) {
-  var wrap = ce('div', 'stay-status-toggle');
-  var cur = (status || 'planned').toLowerCase();
-  if (cur.includes('book')) cur = 'booked';
-  else if (cur.includes('plan')) cur = 'planned';
-  else if (cur.includes('wish')) cur = 'wishlist';
+function toggleLegStatus(leg) {
+  var isBooked = (leg.status || '').toLowerCase().includes('book');
+  var nextStatus = isBooked ? 'Planned' : 'Booked';
 
-  var statuses = [
-    { key: 'planned', label: 'Planned' },
-    { key: 'booked', label: 'Booked' },
-    { key: 'wishlist', label: 'Wishlist' }
-  ];
+  var route = getPlannedRoute();
+  if (!STATE.docs.accommodation) STATE.docs.accommodation = {};
+  if (!Array.isArray(STATE.docs.accommodation.route)) {
+    STATE.docs.accommodation.route = JSON.parse(JSON.stringify(route));
+  }
+  var targetLeg = STATE.docs.accommodation.route.find(function (l) { return l.id === leg.id; });
+  if (targetLeg) {
+    targetLeg.status = nextStatus;
+  }
+  leg.status = nextStatus;
 
-  statuses.forEach(function (st) {
-    var isActive = (cur === st.key);
-    var btn = ce('button', 'stay-status-btn' + (isActive ? ' active' : '') + ' status-' + st.key, st.label);
-    btn.type = 'button';
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      onSelect(st.key);
+  var stays = getAccommodations();
+  if (leg.stayId) {
+    var s = stays.find(function (item) { return item.id === leg.stayId; });
+    if (s) {
+      s.status = nextStatus.toLowerCase();
+      if (nextStatus === 'Booked') {
+        var nId = getStayNightId(s);
+        stays.forEach(function (other) {
+          if (other.id !== s.id && getStayNightId(other) === nId) {
+            other.status = 'wishlist';
+          }
+        });
+      }
+    }
+  }
+
+  saveAccommodationDoc();
+  syncLegStayToItinerary(leg.hotelName || leg.city, nextStatus.toLowerCase());
+  renderAccommodation();
+  showToast(leg.nights + ': Marked as ' + nextStatus + '!');
+}
+
+function syncLegStayToItinerary(searchName, nextStatus) {
+  if (!searchName) return;
+  var iti = STATE.docs.itinerary;
+  if (!iti) return;
+  var days = Array.isArray(iti) ? iti : (iti.days || []);
+  var sLow = searchName.toLowerCase();
+  var changed = false;
+
+  days.forEach(function (d) {
+    (d.items || []).forEach(function (it) {
+      var wLow = (it.what || it.title || '').toLowerCase();
+      var isMatch = false;
+      if (sLow.includes('sleeper bus') && wLow.includes('sleeper bus')) isMatch = true;
+      else if ((sLow.includes('flight') || sLow.includes('noi bai')) && (wLow.includes('flight') || wLow.includes('noi bai') || wLow.includes('airport'))) isMatch = true;
+      else if (sLow.length >= 5 && (wLow.includes(sLow.slice(0, 8)) || sLow.includes(wLow.slice(0, 8)))) isMatch = true;
+
+      if (isMatch) {
+        it.status = nextStatus;
+        changed = true;
+      }
     });
-    wrap.appendChild(btn);
   });
-  return wrap;
+
+  if (changed) {
+    saveItineraryDoc();
+  }
 }
 
 function setStayStatus(stayId, newStatus) {
@@ -2355,29 +2607,70 @@ function setStayStatus(stayId, newStatus) {
   var target = stays.find(function (s) { return s.id === stayId; });
   if (!target) return;
 
+  var nightId = getStayNightId(target);
   if (newStatus === 'booked') {
-    var nightId = getStayNightId(target);
     stays.forEach(function (s) {
-      if (s.id !== target.id && getStayNightId(s) === nightId && (s.status || '').toLowerCase() === 'booked') {
+      if (s.id !== target.id && getStayNightId(s) === nightId) {
         s.status = 'wishlist';
       }
     });
   }
   target.status = newStatus;
+
+  // Also update route leg
+  var route = getPlannedRoute();
+  if (!STATE.docs.accommodation) STATE.docs.accommodation = {};
+  if (!Array.isArray(STATE.docs.accommodation.route)) {
+    STATE.docs.accommodation.route = JSON.parse(JSON.stringify(route));
+  }
+  var leg = STATE.docs.accommodation.route.find(function (l) {
+    return l.stayId === target.id || l.id === nightId;
+  });
+  if (leg) {
+    leg.stayId = target.id;
+    leg.hotelName = target.name || target.hotel;
+    leg.status = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+  }
+
   saveAccommodationDoc();
+  syncLegStayToItinerary(target.name || target.hotel, newStatus);
   renderAccommodation();
   showToast('Status updated: ' + (target.name || 'Stay') + ' → ' + newStatus.toUpperCase());
 }
 
-function swapToStay(newStayId, previousBookedStayId) {
+function swapToStay(newStayId, previousStayId) {
   var stays = getAccommodations();
   var newStay = stays.find(function (s) { return s.id === newStayId; });
-  var oldStay = stays.find(function (s) { return s.id === previousBookedStayId; });
+  var oldStay = stays.find(function (s) { return s.id === previousStayId; });
   if (oldStay) oldStay.status = 'wishlist';
-  if (newStay) newStay.status = 'booked';
+  if (newStay) {
+    newStay.status = (oldStay && (oldStay.status || '').toLowerCase() === 'booked') ? 'booked' : 'planned';
+  }
+
+  var route = getPlannedRoute();
+  if (!STATE.docs.accommodation) STATE.docs.accommodation = {};
+  if (!Array.isArray(STATE.docs.accommodation.route)) {
+    STATE.docs.accommodation.route = JSON.parse(JSON.stringify(route));
+  }
+  var nightId = newStay ? getStayNightId(newStay) : '';
+  var leg = STATE.docs.accommodation.route.find(function (l) {
+    return (oldStay && l.stayId === oldStay.id) || (nightId && l.id === nightId);
+  });
+  if (leg && newStay) {
+    leg.stayId = newStay.id;
+    leg.hotelName = newStay.name || newStay.hotel;
+    leg.status = newStay.status.charAt(0).toUpperCase() + newStay.status.slice(1);
+    if (newStay.price_per_night) {
+      leg.rate = new Intl.NumberFormat().format(newStay.price_per_night) + ' ' + (newStay.currency || 'VND') + ' / night';
+    }
+  }
+
   saveAccommodationDoc();
+  if (newStay) {
+    syncLegStayToItinerary(newStay.name || newStay.hotel, newStay.status);
+  }
   renderAccommodation();
-  showToast('Swapped booking to: ' + (newStay ? newStay.name : 'New Stay'));
+  showToast('Swapped to: ' + (newStay ? newStay.name : 'New Stay'));
 }
 
 function renderAccommodation() {
@@ -2487,21 +2780,19 @@ function renderAccommodationRouteTable(root, stays) {
   });
   tbody.appendChild(trStay);
 
-  // Row 3: Status (Toggleable Buttons)
+  // Row 3: Status (Toggleable Buttons: Planned / Booked)
   var trStatus = ce('tr', 'stay-route-tr glance-tr');
   trStatus.appendChild(ce('td', 'glance-dimension-cell', '📌 Status'));
   route.forEach(function (leg) {
     var td = ce('td', 'glance-col-day-cell');
-    if (leg.stayId) {
-      var curStay = stays.find(function (s) { return s.id === leg.stayId; });
-      var curStatus = (curStay && curStay.status) || leg.status || 'planned';
-      td.appendChild(createStayStatusToggle(curStatus, function (newSt) {
-        setStayStatus(leg.stayId, newSt);
-      }));
-    } else {
-      var bCls = leg.status.includes('Planned') ? 'badge' : 'badge-good';
-      td.appendChild(ce('span', 'badge ' + bCls, leg.status));
-    }
+    var isBooked = (leg.status || '').toLowerCase().includes('book');
+    var statusBtn = ce('button', 'route-status-toggle' + (isBooked ? ' is-booked' : ' is-planned'), isBooked ? '✓ Booked' : 'Planned');
+    statusBtn.title = 'Click to toggle Planned / Booked';
+    statusBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggleLegStatus(leg);
+    });
+    td.appendChild(statusBtn);
     trStatus.appendChild(td);
   });
   tbody.appendChild(trStatus);
@@ -2544,7 +2835,7 @@ function renderAccommodationRouteTable(root, stays) {
   root.appendChild(switchNotice);
 }
 
-function renderStayCard(s, isAlternative, bookedStayId) {
+function renderStayCard(s, isAlternative, activeStayId) {
   var card = ce('div', 'stay-card');
   var top = ce('div', 'stay-card-header');
   top.appendChild(ce('div', 'stay-name', s.name || s.hotel || 'Stay'));
@@ -2555,19 +2846,25 @@ function renderStayCard(s, isAlternative, bookedStayId) {
   actionsBox.style.gap = '6px';
   actionsBox.style.flexWrap = 'wrap';
 
-  if (isAlternative && bookedStayId) {
+  if (isAlternative) {
     var swapBtn = ce('button', 'btn-swap-stay', '⇄ Swap');
-    swapBtn.title = 'Swap this option into active booked lodging';
+    swapBtn.title = 'Swap this option into active lodging for this night';
     swapBtn.addEventListener('click', function (e) {
       e.stopPropagation();
-      swapToStay(s.id, bookedStayId);
+      swapToStay(s.id, activeStayId);
     });
     actionsBox.appendChild(swapBtn);
+    actionsBox.appendChild(ce('span', 'badge', 'Wishlist'));
+  } else {
+    var isBooked = (s.status || '').toLowerCase() === 'booked';
+    var statusBtn = ce('button', 'route-status-toggle' + (isBooked ? ' is-booked' : ' is-planned'), isBooked ? '✓ Booked' : 'Planned');
+    statusBtn.title = 'Click to toggle Planned / Booked';
+    statusBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setStayStatus(s.id, isBooked ? 'planned' : 'booked');
+    });
+    actionsBox.appendChild(statusBtn);
   }
-
-  actionsBox.appendChild(createStayStatusToggle(s.status || 'wishlist', function (newSt) {
-    setStayStatus(s.id, newSt);
-  }));
 
   top.appendChild(actionsBox);
   card.appendChild(top);
@@ -2629,89 +2926,105 @@ function renderStayCard(s, isAlternative, bookedStayId) {
 
 function renderAccommodationDirectory(root, stays) {
   var toolbar = ce('div', 'card-panel');
-  toolbar.style.padding = '8px 12px';
-  toolbar.style.marginBottom = '12px';
+  toolbar.style.padding = '10px 12px';
+  toolbar.style.marginBottom = '14px';
 
-  // Sort & Group Mode Toggle
-  var sortRow = ce('div', null);
-  sortRow.style.display = 'flex';
-  sortRow.style.alignItems = 'center';
-  sortRow.style.justifyContent = 'space-between';
-  sortRow.style.gap = '8px';
-  sortRow.style.flexWrap = 'wrap';
-  sortRow.style.marginBottom = '8px';
+  // Row 1: Filter by Night Pills
+  var nightRow = ce('div', 'filter-pills-row');
+  nightRow.style.marginBottom = '8px';
+  var nightOptions = [
+    { id: 'all', label: 'All Nights' },
+    { id: 'night-1', label: 'Night 1' },
+    { id: 'night-2', label: 'Night 2' },
+    { id: 'night-3', label: 'Night 3' },
+    { id: 'night-4', label: 'Night 4' },
+    { id: 'night-5', label: 'Night 5' },
+    { id: 'nights-6-7', label: 'Nights 6–7' },
+    { id: 'night-8', label: 'Night 8' }
+  ];
+  if (!STATE.stayNightFilter) STATE.stayNightFilter = 'all';
 
-  var sortLabel = ce('span', 'muted small', 'Directory Grouping:');
-  sortRow.appendChild(sortLabel);
-
-  var sortGroup = ce('div', 'view-toggle-group');
-  var byNightBtn = ce('button', 'view-toggle-btn' + (STATE.staySortMode === 'night' ? ' active' : ''), '🗓️ By Night');
-  var byLocBtn = ce('button', 'view-toggle-btn' + (STATE.staySortMode === 'location' ? ' active' : ''), '📍 By Location');
-
-  byNightBtn.addEventListener('click', function () {
-    STATE.staySortMode = 'night';
-    renderAccommodation();
-  });
-  byLocBtn.addEventListener('click', function () {
-    STATE.staySortMode = 'location';
-    renderAccommodation();
-  });
-
-  sortGroup.appendChild(byNightBtn);
-  sortGroup.appendChild(byLocBtn);
-  sortRow.appendChild(sortGroup);
-  toolbar.appendChild(sortRow);
-
-  // Location filter pills
-  var areas = ['all', 'Hanoi', 'Ha Giang', 'Ninh Binh'];
-  var filterBar = ce('div', 'filter-pills-row');
-  areas.forEach(function (area) {
-    var pill = ce('button', 'filter-pill' + (STATE.stayArea === area ? ' active' : ''), area === 'all' ? 'All Stays' : area);
+  nightOptions.forEach(function (opt) {
+    var pill = ce('button', 'filter-pill' + (STATE.stayNightFilter === opt.id ? ' active' : ''), opt.label);
     pill.addEventListener('click', function () {
-      STATE.stayArea = area;
+      STATE.stayNightFilter = opt.id;
       renderAccommodation();
     });
-    filterBar.appendChild(pill);
+    nightRow.appendChild(pill);
   });
-  toolbar.appendChild(filterBar);
+  toolbar.appendChild(nightRow);
+
+  // Row 2: Filter by Location Pills
+  var locRow = ce('div', 'filter-pills-row');
+  var locOptions = ['all', 'Hanoi', 'Ha Giang', 'Tam Coc'];
+  if (!STATE.stayArea) STATE.stayArea = 'all';
+
+  locOptions.forEach(function (loc) {
+    var pill = ce('button', 'filter-pill' + (STATE.stayArea === loc ? ' active' : ''), loc === 'all' ? 'All Locations' : loc);
+    pill.addEventListener('click', function () {
+      STATE.stayArea = loc;
+      renderAccommodation();
+    });
+    locRow.appendChild(pill);
+  });
+  toolbar.appendChild(locRow);
   root.appendChild(toolbar);
 
-  if (STATE.staySortMode === 'night') {
-    var hasAny = false;
+  // Render by Night Group with collapsible alternatives when booked
+  var hasAny = false;
+  NIGHT_GROUPS.forEach(function (ng) {
+    if (STATE.stayNightFilter !== 'all' && STATE.stayNightFilter !== ng.id) {
+      return;
+    }
 
-    NIGHT_GROUPS.forEach(function (ng) {
-      var groupStays = stays.filter(function (s) {
-        return getStayNightId(s) === ng.id;
+    var groupStays = stays.filter(function (s) {
+      return getStayNightId(s) === ng.id;
+    });
+
+    if (STATE.stayArea !== 'all') {
+      groupStays = groupStays.filter(function (s) {
+        var a = ((s.area || s.location || '') + ' ' + (s.name || '')).toLowerCase();
+        return a.includes(STATE.stayArea.toLowerCase());
       });
+    }
 
-      if (STATE.stayArea !== 'all') {
-        groupStays = groupStays.filter(function (s) {
-          var a = (s.area || s.location || '').toLowerCase();
-          return a.includes(STATE.stayArea.toLowerCase());
-        });
+    if (groupStays.length === 0) return;
+    hasAny = true;
+
+    var sec = ce('div', 'card-panel');
+    sec.style.marginBottom = '14px';
+
+    var h = ce('h3', null, ng.label);
+    h.style.marginBottom = '10px';
+    sec.appendChild(h);
+
+    var bookedStay = groupStays.find(function (s) {
+      return (s.status || '').toLowerCase() === 'booked';
+    });
+    var plannedStay = groupStays.find(function (s) {
+      return (s.status || '').toLowerCase() === 'planned';
+    });
+    var activeStay = bookedStay || plannedStay;
+
+    if (!activeStay) {
+      var route = getPlannedRoute();
+      var leg = route.find(function (l) { return l.id === ng.id; });
+      if (leg && leg.stayId) {
+        activeStay = groupStays.find(function (s) { return s.id === leg.stayId; });
       }
+    }
+    if (!activeStay && groupStays.length > 0) {
+      activeStay = groupStays[0];
+      activeStay.status = 'planned';
+    }
 
-      if (groupStays.length === 0) return;
-      hasAny = true;
+    if (activeStay) {
+      var isBooked = (activeStay.status || '').toLowerCase() === 'booked';
+      var alternatives = groupStays.filter(function (s) { return s.id !== activeStay.id; });
 
-      var sec = ce('div', 'card-panel');
-      sec.style.marginBottom = '14px';
-
-      var h = ce('h3', null, ng.label);
-      h.style.marginBottom = '10px';
-      sec.appendChild(h);
-
-      var bookedStay = groupStays.find(function (s) {
-        return (s.status || '').toLowerCase() === 'booked';
-      });
-
-      if (bookedStay) {
-        // Booked stay is shown prominently
-        sec.appendChild(renderStayCard(bookedStay, false, null));
-
-        var alternatives = groupStays.filter(function (s) {
-          return s.id !== bookedStay.id;
-        });
+      if (isBooked) {
+        // Booked stay shown prominently; alternatives collapsed
+        sec.appendChild(renderStayCard(activeStay, false, null));
 
         if (alternatives.length > 0) {
           var isExpanded = !!STATE.expandedNightGroups[ng.id];
@@ -2727,44 +3040,27 @@ function renderAccommodationDirectory(root, stays) {
             var altGrid = ce('div', 'stay-grid');
             altGrid.style.marginTop = '10px';
             alternatives.forEach(function (alt) {
-              altGrid.appendChild(renderStayCard(alt, true, bookedStay.id));
+              altGrid.appendChild(renderStayCard(alt, true, activeStay.id));
             });
             sec.appendChild(altGrid);
           }
         }
       } else {
-        // No stay is booked yet: show all options
+        // Planned stay shown first, followed by alternatives with Swap button
         var grid = ce('div', 'stay-grid');
-        groupStays.forEach(function (s) {
-          grid.appendChild(renderStayCard(s, false, null));
+        grid.appendChild(renderStayCard(activeStay, false, null));
+        alternatives.forEach(function (alt) {
+          grid.appendChild(renderStayCard(alt, true, activeStay.id));
         });
         sec.appendChild(grid);
       }
-
-      root.appendChild(sec);
-    });
-
-    if (!hasAny) {
-      root.appendChild(ce('p', 'muted small text-center', 'No stays matching this filter.'));
     }
 
-  } else {
-    // Group by Location
-    var locGrid = ce('div', 'stay-grid');
-    var count = 0;
+    root.appendChild(sec);
+  });
 
-    stays.forEach(function (s) {
-      var a = (s.area || s.location || '').toLowerCase();
-      if (STATE.stayArea !== 'all' && !a.includes(STATE.stayArea.toLowerCase())) return;
-      count++;
-      locGrid.appendChild(renderStayCard(s, false, null));
-    });
-
-    if (count === 0) {
-      root.appendChild(ce('p', 'muted small text-center', 'No stays matching this filter.'));
-    } else {
-      root.appendChild(locGrid);
-    }
+  if (!hasAny) {
+    root.appendChild(ce('p', 'muted small text-center', 'No stays matching these night and location filters.'));
   }
 }
 
@@ -3077,8 +3373,96 @@ function renderDecisions() {
 }
 
 /* ==========================================================================
-   5. PACKING TAB (Exact 6 Categories, Interactive + / - / Edit)
+   5. PACKING TAB (Multi-Traveller Checklists & Exact Categories)
    ========================================================================== */
+
+function getTripTravellersList() {
+  var list = [];
+  var seen = {};
+
+  var tData = getTravellersData();
+  var myName = (tData.my_passport && tData.my_passport.full_name) || (TripAuth.status().user && (TripAuth.status().user.name || TripAuth.status().user.email)) || 'Kester';
+  var myId = 'traveller-primary';
+  list.push({
+    id: myId,
+    name: myName,
+    isPrimary: true
+  });
+  seen[myName.toLowerCase()] = true;
+
+  if (Array.isArray(tData.companions)) {
+    tData.companions.forEach(function (c, idx) {
+      var cName = c.full_name || ('Companion ' + (idx + 1));
+      if (!seen[cName.toLowerCase()]) {
+        seen[cName.toLowerCase()] = true;
+        list.push({
+          id: c.id || ('comp-' + idx),
+          name: cName,
+          isCompanion: true
+        });
+      }
+    });
+  }
+
+  // Also include team members if any
+  if (Array.isArray(STATE.members)) {
+    STATE.members.forEach(function (m, idx) {
+      var mName = m.name || (m.invited_email ? m.invited_email.split('@')[0] : (m.email ? m.email.split('@')[0] : ''));
+      if (mName && !seen[mName.toLowerCase()]) {
+        seen[mName.toLowerCase()] = true;
+        list.push({
+          id: m.id || ('member-' + idx),
+          name: mName,
+          isMember: true
+        });
+      }
+    });
+  }
+
+  return list;
+}
+
+function getTravellerPackingState(travellerId) {
+  var doc = STATE.docs.packing;
+  if (doc && doc.traveller_checks && doc.traveller_checks[travellerId]) {
+    return doc.traveller_checks[travellerId];
+  }
+  // Fallback to localStorage
+  var lsKey = LS_PACKING_PREFIX + (STATE.activeTripId || 'default') + '_' + travellerId;
+  var saved = localStorage.getItem(lsKey);
+  if (saved) {
+    try { return JSON.parse(saved); } catch (e) {}
+  }
+  // Legacy fallback for primary traveller
+  if (travellerId === 'traveller-primary') {
+    var oldKey = LS_PACKING_PREFIX + (STATE.activeTripId || 'default');
+    var oldSaved = localStorage.getItem(oldKey);
+    if (oldSaved) {
+      try { return JSON.parse(oldSaved); } catch (e) {}
+    }
+  }
+  return {};
+}
+
+function setTravellerPackingState(travellerId, checkedState) {
+  var doc = STATE.docs.packing;
+  if (!doc || Array.isArray(doc)) {
+    var categories = Array.isArray(doc) ? doc : (doc && doc.categories ? doc.categories : []);
+    STATE.docs.packing = {
+      categories: categories,
+      traveller_checks: {}
+    };
+    doc = STATE.docs.packing;
+  }
+  if (!doc.traveller_checks) doc.traveller_checks = {};
+  doc.traveller_checks[travellerId] = checkedState;
+
+  var lsKey = LS_PACKING_PREFIX + (STATE.activeTripId || 'default') + '_' + travellerId;
+  localStorage.setItem(lsKey, JSON.stringify(checkedState));
+
+  savePackingDoc();
+}
+
 function renderPacking() {
   var root = $('#tab-packing');
   clear(root);
@@ -3095,8 +3479,51 @@ function renderPacking() {
     return;
   }
 
-  var lsKey = LS_PACKING_PREFIX + (STATE.activeTripId || 'default');
-  var checkedState = JSON.parse(localStorage.getItem(lsKey) || '{}');
+  var travellers = getTripTravellersList();
+  if (!STATE.activePackingTravellerId || !travellers.some(function (t) { return t.id === STATE.activePackingTravellerId; })) {
+    STATE.activePackingTravellerId = travellers[0] ? travellers[0].id : 'traveller-primary';
+  }
+
+  // 1. Traveller Checklist Selector Bar
+  var travBar = ce('div', 'packing-traveller-bar');
+  var travBarLabel = ce('span', 'muted tiny', 'Traveller Checklist:');
+  travBarLabel.style.fontWeight = '700';
+  travBarLabel.style.marginRight = '4px';
+  travBar.appendChild(travBarLabel);
+
+  var totalAllItems = 0;
+  cats.forEach(function (cat) {
+    totalAllItems += (cat.items || []).length;
+  });
+
+  travellers.forEach(function (trav) {
+    var travState = getTravellerPackingState(trav.id);
+    var packedCount = 0;
+    cats.forEach(function (cat) {
+      var catKey = cat.category || cat.name || 'items';
+      (cat.items || []).forEach(function (it) {
+        var itemText = typeof it === 'string' ? it : (it.item || it.name || '');
+        var itemId = catKey + '_' + itemText;
+        if (travState[itemId]) packedCount++;
+      });
+    });
+
+    var isActive = (trav.id === STATE.activePackingTravellerId);
+    var shortName = (trav.name || 'Traveller').split(' ')[0];
+    var pillText = '👤 ' + shortName + ' (' + packedCount + '/' + totalAllItems + ')';
+
+    var pill = ce('button', 'filter-pill' + (isActive ? ' active' : ''), pillText);
+    pill.title = 'View and edit ' + (trav.name || 'traveller') + '\'s checklist';
+    pill.addEventListener('click', function () {
+      STATE.activePackingTravellerId = trav.id;
+      renderPacking();
+    });
+    travBar.appendChild(pill);
+  });
+  root.appendChild(travBar);
+
+  var currentTrav = travellers.find(function (t) { return t.id === STATE.activePackingTravellerId; }) || travellers[0] || { name: 'Traveller' };
+  var checkedState = getTravellerPackingState(STATE.activePackingTravellerId);
 
   cats.forEach(function (cat) {
     var catKey = cat.category || cat.name || 'items';
@@ -3155,7 +3582,7 @@ function renderPacking() {
       box.addEventListener('click', function (e) {
         e.stopPropagation();
         checkedState[itemId] = !checkedState[itemId];
-        localStorage.setItem(lsKey, JSON.stringify(checkedState));
+        setTravellerPackingState(STATE.activePackingTravellerId, checkedState);
         renderPacking();
       });
       row.appendChild(box);
@@ -3165,7 +3592,7 @@ function renderPacking() {
       textWrap.style.minWidth = '0';
       textWrap.addEventListener('click', function () {
         checkedState[itemId] = !checkedState[itemId];
-        localStorage.setItem(lsKey, JSON.stringify(checkedState));
+        setTravellerPackingState(STATE.activePackingTravellerId, checkedState);
         renderPacking();
       });
 
@@ -3198,7 +3625,7 @@ function renderPacking() {
 
           var newId = catKey + '_' + updated.trim();
           if (wasDone) checkedState[newId] = true;
-          localStorage.setItem(lsKey, JSON.stringify(checkedState));
+          setTravellerPackingState(STATE.activePackingTravellerId, checkedState);
 
           savePackingDoc();
           renderPacking();
@@ -3217,7 +3644,7 @@ function renderPacking() {
         if (confirm('Delete "' + itemText + '"?')) {
           cat.items.splice(idx, 1);
           delete checkedState[itemId];
-          localStorage.setItem(lsKey, JSON.stringify(checkedState));
+          setTravellerPackingState(STATE.activePackingTravellerId, checkedState);
           savePackingDoc();
           renderPacking();
           showToast('Deleted item');
@@ -3557,6 +3984,73 @@ function saveTravellersDoc() {
   }
 }
 
+function getImmigrationAdvisory(dest, customReq) {
+  if (customReq) {
+    if (typeof customReq === 'string') {
+      return {
+        title: (dest ? dest + ' ' : '') + 'Immigration & Entry Requirements',
+        text: customReq
+      };
+    }
+    if (typeof customReq === 'object') {
+      return {
+        title: customReq.title || ((dest ? dest + ' ' : '') + 'Immigration & Entry Advisory'),
+        text: customReq.text || customReq.description || customReq.notes || ''
+      };
+    }
+  }
+
+  var d = (dest || '').toLowerCase();
+  if (d.includes('vietnam')) {
+    return {
+      title: 'Vietnam Immigration & Visa-Free Advisory',
+      text: 'Singapore and ASEAN passport holders enjoy visa-free entry to Vietnam for up to 30 days. Other passport holders may require an eVisa (available online for up to 90 days). Immigration strictly requires a minimum of 6 months passport validity upon entry date. Verify all travellers have sufficient validity and return tickets before departing.'
+    };
+  }
+  if (d.includes('japan')) {
+    return {
+      title: 'Japan Immigration & Entry Advisory',
+      text: 'Singapore and visa-waiver passport holders enjoy visa-free entry to Japan for up to 90 days for tourism. Passports must be valid for the duration of stay (6+ months validity strongly recommended). Travellers are encouraged to complete the Visit Japan Web digital customs/immigration declaration before departure.'
+    };
+  }
+  if (d.includes('thailand')) {
+    return {
+      title: 'Thailand Immigration & Entry Advisory',
+      text: 'Singapore and visa-exempt nationalities enjoy visa-free entry for up to 60 days. Minimum 6 months passport validity required upon date of entry. Proof of onward travel and sufficient funds may be requested by immigration authorities.'
+    };
+  }
+  if (d.includes('korea')) {
+    return {
+      title: 'South Korea Immigration & K-ETA Advisory',
+      text: 'Singapore passport holders enjoy visa-free entry for up to 90 days (K-ETA currently temporarily exempted or easily obtained online for eligible nationals). Ensure at least 6 months passport validity upon entry.'
+    };
+  }
+  if (d.includes('taiwan')) {
+    return {
+      title: 'Taiwan Immigration & Entry Advisory',
+      text: 'Singapore passport holders enjoy visa-free entry for up to 30 days. Passport must be valid for at least 6 months upon entry date. Online arrival card can be completed within 30 days prior to landing.'
+    };
+  }
+  if (d.includes('indonesia') || d.includes('bali')) {
+    return {
+      title: 'Indonesia Immigration & Entry Advisory',
+      text: 'ASEAN passport holders enjoy visa-free entry for up to 30 days; other nationalities can purchase an Electronic Visa on Arrival (e-VoA). Passport must have at least 6 months remaining validity. Electronic Customs Declaration (e-CD) must be completed online within 3 days prior to arrival.'
+    };
+  }
+  if (d.includes('malaysia')) {
+    return {
+      title: 'Malaysia Immigration & MDAC Advisory',
+      text: 'Singapore passport holders enter visa-free. All foreign travellers (except Malaysian permanent residents and Singapore citizens entering via land checkpoints) must submit the Malaysia Digital Arrival Card (MDAC) within 3 days prior to arrival. Passport must be valid for at least 6 months.'
+    };
+  }
+
+  // Fallback for custom or international destination
+  return {
+    title: (dest ? dest + ' ' : 'International ') + 'Immigration & Travel Advisory',
+    text: 'Standard international travel regulations require passports to have at least 6 months of validity beyond your planned return date. Verify visa requirements, digital arrival declarations, or return flight prerequisites for ' + (dest || 'your destination') + ' prior to departure.'
+  };
+}
+
 function renderTravellers() {
   var root = $('#tab-travellers');
   clear(root);
@@ -3589,13 +4083,18 @@ function renderTravellers() {
   header.appendChild(actionsBox);
   container.appendChild(header);
 
-  // Immigration Advisory Card
+  // Dynamic Immigration Advisory Card
+  var t = STATE.docs.trip || STATE.trip || {};
+  var dest = getCleanDestination(t);
+  var customReq = (data && data.entry_requirements) || (t && t.entry_requirements) || null;
+  var adv = getImmigrationAdvisory(dest, customReq);
+
   var noticeCard = ce('div', 'passport-notice-card');
   var noticeIcon = ce('div', 'notice-icon', 'ℹ️');
   noticeCard.appendChild(noticeIcon);
   var noticeContent = ce('div');
-  noticeContent.appendChild(ce('div', 'notice-title', 'Vietnam Immigration & Visa-Free Advisory'));
-  noticeContent.appendChild(ce('p', 'notice-text', 'Singapore passport holders enjoy visa-free entry to Vietnam for up to 30 days. Immigration strictly requires a minimum of 6 months passport validity upon entry date. Verify all travellers have sufficient validity before travelling.'));
+  noticeContent.appendChild(ce('div', 'notice-title', adv.title));
+  noticeContent.appendChild(ce('p', 'notice-text', adv.text));
   noticeCard.appendChild(noticeContent);
   container.appendChild(noticeCard);
 
@@ -4399,6 +4898,9 @@ function executeAICompletion(messages, onStatus) {
   } else if (provider === 'groq') {
     endpoint = 'https://api.groq.com/openai/v1/chat/completions';
     model = customModel || 'llama-3.3-70b-versatile';
+  } else if (provider === 'deepseek') {
+    endpoint = 'https://api.deepseek.com/chat/completions';
+    model = customModel || 'deepseek-chat';
   } else if (provider === 'custom') {
     endpoint = customEndpoint || 'http://localhost:11434/v1/chat/completions';
     model = customModel || 'default';
@@ -4559,10 +5061,21 @@ function startAiTripGeneration() {
     '    {\n' +
     '      "id": "dec-1",\n' +
     '      "title": "Decision title",\n' +
+    '      "question": "Decision question or trade-off",\n' +
     '      "status": "open",\n' +
     '      "options": [\n' +
-    '        { "id": "opt-1", "name": "Option A", "cost_delta": 0, "summary": "Pros/cons" },\n' +
-    '        { "id": "opt-2", "name": "Option B", "cost_delta": -50, "summary": "Pros/cons" }\n' +
+    '        {\n' +
+    '          "id": "opt-1",\n' +
+    '          "label": "Option Title",\n' +
+    '          "cost_delta": 0,\n' +
+    '          "summary": "Pros and tradeoffs",\n' +
+    '          "schedule_impact": [\n' +
+    '            { "day": 2, "action": "replace", "target": "old activity", "what": "New Activity Title", "type": "activity", "slot": "morning", "cost": 15 }\n' +
+    '          ],\n' +
+    '          "accommodation_impact": [\n' +
+    '            { "leg_id": "leg-1", "hotel_name": "Alternative Hotel", "rate": "85 SGD", "stay_id": "acc-1" }\n' +
+    '          ]\n' +
+    '        }\n' +
     '      ]\n' +
     '    }\n' +
     '  ],\n' +
