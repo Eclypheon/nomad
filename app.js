@@ -795,6 +795,22 @@ function renderUserArea(user) {
   clear(area);
 
   if (user) {
+    var aiBtn = ce('button', 'header-icon-btn');
+    aiBtn.id = 'header-ai-plan-btn';
+    aiBtn.setAttribute('title', 'AI Trip Planner');
+    aiBtn.setAttribute('aria-label', 'AI Trip Planner');
+    aiBtn.innerHTML = '<svg class="header-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>' +
+      '<path d="M5 3v4"/>' +
+      '<path d="M19 17v4"/>' +
+      '<path d="M3 5h4"/>' +
+      '<path d="M17 19h4"/>' +
+      '</svg>';
+    aiBtn.addEventListener('click', function () {
+      openAiGeneratorModal();
+    });
+    area.appendChild(aiBtn);
+
     var chip = ce('button', 'user-chip');
     chip.setAttribute('aria-label', 'User account');
     var avatar = ce('div', 'avatar-circle');
@@ -1839,16 +1855,31 @@ function renderItinerary() {
     return;
   }
 
-  // Header Bar with Mode Switcher
-  var modeBar = ce('div', 'view-mode-bar');
-  var titleBox = ce('div');
-  titleBox.appendChild(ce('h2', null, 'Trip Itinerary'));
-  titleBox.appendChild(ce('div', 'muted small', days.length + ' Days · Pre-planned with AI · Swappable activities'));
+  // Header Bar with Title, PDF Export Floppy Icon, and View Switcher
+  var modeBar = ce('div', 'view-mode-bar itin-header-bar');
+
+  var titleBox = ce('div', 'itin-header-left');
+  var title = ce('h2', 'itin-header-title', 'Trip Itinerary');
+  titleBox.appendChild(title);
+
+  var pdfBtn = ce('button', 'itin-icon-btn');
+  pdfBtn.id = 'itin-export-pdf-btn';
+  pdfBtn.setAttribute('title', 'Export / View PDF');
+  pdfBtn.setAttribute('aria-label', 'Export / View PDF');
+  pdfBtn.innerHTML = '<svg class="itin-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>' +
+    '<polyline points="17 21 17 13 7 13 7 21"/>' +
+    '<polyline points="7 3 7 8 15 8"/>' +
+    '</svg>';
+  pdfBtn.addEventListener('click', function () {
+    openPdfPreview();
+  });
+  titleBox.appendChild(pdfBtn);
   modeBar.appendChild(titleBox);
 
   var toggleGroup = ce('div', 'view-toggle-group');
-  var glanceBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'glance' ? ' active' : ''), '📊 Full Trip Table (At a Glance)');
-  var deepBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'deep-dive' ? ' active' : ''), '🔍 Day Deep-Dive');
+  var glanceBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'glance' ? ' active' : ''), '📊 Full Trip Table');
+  var deepBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'deep-dive' ? ' active' : ''), '🔍 Day Deep Dive');
 
   glanceBtn.addEventListener('click', function () {
     STATE.itineraryViewMode = 'glance';
@@ -1873,40 +1904,7 @@ function renderItinerary() {
 }
 
 function renderItineraryGlanceTable(root, days) {
-  // Table Toolbar
-  var toolbar = ce('div', 'table-toolbar');
-
-  var leftTools = ce('div', 'table-toolbar-left');
-  var orientBtn = ce('button', 'btn btn-secondary small');
-  if (STATE.tableOrientation === 'flipped') {
-    orientBtn.innerHTML = '↔️ Layout: <strong>Days Across</strong> (Tap for Rows)';
-  } else {
-    orientBtn.innerHTML = '↕️ Layout: <strong>Days Down</strong> (Tap for Columns)';
-  }
-  orientBtn.addEventListener('click', function () {
-    STATE.tableOrientation = (STATE.tableOrientation === 'flipped') ? 'standard' : 'flipped';
-    renderItinerary();
-  });
-  leftTools.appendChild(orientBtn);
-  toolbar.appendChild(leftTools);
-
-  var rightTools = ce('div', 'table-toolbar-right');
-  var aiPlanBtn = ce('button', 'btn btn-secondary small', '✨ AI Plan');
-  aiPlanBtn.addEventListener('click', function () {
-    openAiGeneratorModal();
-  });
-  rightTools.appendChild(aiPlanBtn);
-
-  var pdfBtn = ce('button', 'btn btn-google small', '📄 Export / View PDF');
-  pdfBtn.addEventListener('click', function () {
-    openPdfPreview();
-  });
-  rightTools.appendChild(pdfBtn);
-  toolbar.appendChild(rightTools);
-
-  root.appendChild(toolbar);
-
-  // Table Container
+  // Table Container (directly below header to save space)
   var container = ce('div', 'glance-table-container');
   var table = ce('table', 'glance-table' + (STATE.tableOrientation === 'flipped' ? ' flipped' : ''));
 
@@ -1999,11 +1997,9 @@ function renderFlippedMatrix(table, days) {
   trBase.appendChild(ce('th', 'glance-th glance-dimension-cell', '📍 Route & Focus'));
   daySlots.forEach(function (ds) {
     var th = ce('th', 'glance-th glance-col-day-th glance-focus-cell');
-    var focusText = ds.day.title ? ds.day.title.split('—')[0].trim() : (ds.day.base || '');
-    var pill = ce('div', null);
-    pill.style.fontSize = '0.72rem';
-    pill.style.color = 'var(--fg-muted)';
-    pill.style.fontWeight = '500';
+    var focusText = (ds.day.route ? ds.day.route + (ds.day.title ? ': ' + ds.day.title : '') : (ds.day.title || ds.day.base || '—')).trim();
+    var pill = ce('div', 'glance-focus-text');
+    pill.style.whiteSpace = 'normal';
     pill.textContent = focusText || '—';
     th.appendChild(pill);
     trBase.appendChild(th);
