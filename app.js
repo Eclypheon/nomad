@@ -1,6 +1,7 @@
 /* ==========================================================================
-   Nomad — Reactive Travel Planner & Trip Companion
-   Collaborative, Mobile-First, Cloud-Synced via PocketBase
+   Nomad — Collaborative Reactive Travel Planner & Trip Companion
+   Mobile-First, AI-Planned Itinerary, Swappable Ideas & Stays,
+   Dynamic Decisions & Budget Headroom, PocketBase Cloud Sync
    ========================================================================== */
 
 (function () {
@@ -14,7 +15,11 @@ var LS_PACKING_PREFIX = 'nomad.packing.v1.';
 var STATE = {
   activeTab: 'itinerary',
   activeDay: null,          /* null = all days, or day number (1..N) */
-  recFilter: 'all',
+  recCategory: 'all',
+  recArea: 'all',
+  recSearch: '',
+  stayArea: 'all',
+  expenseCategory: 'all',
   activeTripId: null,
   trips: [],
   trip: null,               /* active trip record */
@@ -23,7 +28,8 @@ var STATE = {
   role: 'member',
   canEdit: false,
   picks: {},
-  loading: true
+  loading: false,
+  swapTargetDay: null       /* day object when swap modal is open */
 };
 
 /* DOM Helpers */
@@ -50,6 +56,81 @@ function money(n, cur) {
 }
 function sgd(n) { return money(n, 'S$'); }
 
+/* Toast Notifications */
+function showToast(msg) {
+  var container = $('#toast-container');
+  if (!container) return;
+  var t = ce('div', 'toast', msg);
+  container.appendChild(t);
+  setTimeout(function () {
+    t.style.opacity = '0';
+    t.style.transition = 'opacity 0.3s';
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+  }, 2800);
+}
+
+/* Loading Helpers */
+function showLoading(msg) {
+  var el = $('#loading-state');
+  if (!el) return;
+  if (msg) {
+    var p = el.querySelector('p');
+    if (p) p.textContent = msg;
+  }
+  el.hidden = false;
+  el.style.display = 'flex';
+}
+function hideLoading() {
+  var el = $('#loading-state');
+  if (!el) return;
+  el.hidden = true;
+  el.style.display = 'none';
+}
+
+/* ----------------------------------------------------------- SAFE ACCESSORS */
+
+function getItineraryDays() {
+  var d = STATE.docs.itinerary;
+  if (!d) return [];
+  if (Array.isArray(d)) return d;
+  return d.days || d.itinerary || [];
+}
+
+function getAccommodations() {
+  var d = STATE.docs.accommodation;
+  if (!d) return [];
+  if (Array.isArray(d)) return d;
+  return d.stays || d.accommodation || d.hotels || [];
+}
+
+function getExpensesPlanned() {
+  var d = STATE.docs.expenses;
+  if (!d) return [];
+  if (Array.isArray(d)) return d;
+  return d.planned || d.items || [];
+}
+
+function getRecommendations() {
+  var d = STATE.docs.recommendations;
+  if (!d) return [];
+  if (Array.isArray(d)) return d;
+  return d.recommendations || d.items || [];
+}
+
+function getDecisions() {
+  var d = STATE.docs.decisions;
+  if (!d) return [];
+  if (Array.isArray(d)) return d;
+  return d.decisions || [];
+}
+
+function getPackingCategories() {
+  var d = STATE.docs.packing;
+  if (!d) return [];
+  if (Array.isArray(d)) return d;
+  return d.categories || d.packing || [];
+}
+
 /* ---------------------------------------------------------------- LIFECYCLE */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -58,11 +139,23 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function initAuth() {
+  showLoading('Connecting to Nomad...');
+
+  // Fallback watchdog: never let the screen hang for > 2.5s
+  var watchdog = setTimeout(function () {
+    if (!STATE.trip) {
+      hideLoading();
+      if (!TripAuth.status().user) renderLandingView();
+    }
+  }, 2500);
+
   TripAuth.onChange(function (st) {
+    clearTimeout(watchdog);
     handleAuthChange(st);
   });
 
   TripAuth.init().catch(function (e) {
+    clearTimeout(watchdog);
     console.warn('Auth init failed:', e);
     renderLandingView();
   });
@@ -72,30 +165,32 @@ function handleAuthChange(st) {
   var landingStatus = $('#landing-status-badge');
   if (landingStatus) {
     if (st.configured) {
-      landingStatus.innerHTML = '<span class="status-dot"></span> Connected to cloud backend';
+      landingStatus.innerHTML = '<span class="status-dot"></span> Cloud backend connected';
     } else {
-      landingStatus.innerHTML = '<span class="status-dot" style="background:#f87171"></span> Offline / No backend';
+      landingStatus.innerHTML = '<span class="status-dot" style="background:#f87171"></span> Offline mode';
     }
   }
 
   if (st.user) {
-    // User is logged in
     $('#landing-view').hidden = true;
     $('#trip-view').hidden = false;
     $('#trip-switcher-btn').hidden = false;
     renderUserArea(st.user);
     loadUserTrips();
   } else {
-    // User is logged out: NEVER show private trip info
     STATE.activeTripId = null;
     STATE.trip = null;
     STATE.docs = {};
-    $('#trip-view').hidden = true;
-    $('#trip-switcher-btn').hidden = true;
-    $('#landing-view').hidden = false;
-    $('#loading-state').hidden = true;
-    renderUserArea(null);
+    renderLandingView();
   }
+}
+
+function renderLandingView() {
+  hideLoading();
+  $('#trip-view').hidden = true;
+  $('#trip-switcher-btn').hidden = true;
+  $('#landing-view').hidden = false;
+  renderUserArea(null);
 }
 
 function renderUserArea(user) {
@@ -129,7 +224,7 @@ function renderUserArea(user) {
 /* ------------------------------------------------------------ TRIP LOADING */
 
 function loadUserTrips() {
-  $('#loading-state').hidden = false;
+  showLoading('Loading your trips...');
   TripAuth.listTrips().then(function (trips) {
     STATE.trips = trips || [];
     var savedId = localStorage.getItem(LS_ACTIVE_TRIP);
@@ -152,20 +247,19 @@ function loadUserTrips() {
     if (target) {
       selectTrip(target);
     } else {
-      // User has no trips yet
-      $('#loading-state').hidden = true;
+      hideLoading();
       renderEmptyTripsView();
     }
   }).catch(function (e) {
     console.error('Failed to list trips:', e);
-    $('#loading-state').hidden = true;
+    hideLoading();
   });
 }
 
 function selectTrip(tripId) {
   STATE.activeTripId = tripId;
   localStorage.setItem(LS_ACTIVE_TRIP, tripId);
-  $('#loading-state').hidden = false;
+  showLoading('Opening adventure...');
 
   TripAuth.openTrip(tripId).then(function (res) {
     STATE.trip = res.trip;
@@ -179,12 +273,12 @@ function selectTrip(tripId) {
       STATE.picks = picks || {};
     }).catch(function () { STATE.picks = {}; });
   }).then(function () {
-    $('#loading-state').hidden = true;
+    hideLoading();
     renderTripBanner();
     renderCurrentTab();
   }).catch(function (e) {
     console.error('Failed to open trip:', e);
-    $('#loading-state').hidden = true;
+    hideLoading();
     alert('Could not load trip: ' + (e.message || e));
   });
 }
@@ -192,11 +286,9 @@ function selectTrip(tripId) {
 /* ------------------------------------------------------------- EVENT BINDINGS */
 
 function bindEvents() {
-  // Sign in button on landing page
   var landBtn = $('#landing-signin-btn');
   if (landBtn) landBtn.addEventListener('click', doSignIn);
 
-  // Trip Switcher modal open
   var switchBtn = $('#trip-switcher-btn');
   if (switchBtn) switchBtn.addEventListener('click', openTripModal);
 
@@ -204,6 +296,8 @@ function bindEvents() {
   $('#modal-trip-close').addEventListener('click', closeTripModal);
   $('#user-modal-close').addEventListener('click', closeUserModal);
   $('#more-sheet-close').addEventListener('click', closeMoreSheet);
+  var swapClose = $('#swap-modal-close');
+  if (swapClose) swapClose.addEventListener('click', closeSwapModal);
 
   $('#trip-modal').addEventListener('click', function (e) {
     if (e.target === this) closeTripModal();
@@ -214,21 +308,27 @@ function bindEvents() {
   $('#mobile-more-sheet').addEventListener('click', function (e) {
     if (e.target === this) closeMoreSheet();
   });
+  var swapModal = $('#swap-idea-modal');
+  if (swapModal) {
+    swapModal.addEventListener('click', function (e) {
+      if (e.target === this) closeSwapModal();
+    });
+  }
 
-  // Sign out in user modal
+  // Sign out
   $('#user-modal-signout-btn').addEventListener('click', function () {
     closeUserModal();
     doSignOut();
   });
 
-  // Desktop tab navigation
+  // Desktop tabs
   $$('.tab-pill').forEach(function (btn) {
     btn.addEventListener('click', function () {
       switchTab(this.dataset.tab);
     });
   });
 
-  // Mobile bottom navigation
+  // Mobile bottom nav
   $$('.mobile-nav-item').forEach(function (btn) {
     btn.addEventListener('click', function () {
       if (this.dataset.tab === 'more') {
@@ -247,7 +347,7 @@ function bindEvents() {
     });
   });
 
-  // Open by Key / Link prompt
+  // Open trip by ID / link
   $('#open-trip-id-btn').addEventListener('click', function () {
     var key = prompt('Enter a Trip ID or Share Link:');
     if (key && key.trim()) {
@@ -255,6 +355,14 @@ function bindEvents() {
       selectTrip(key.trim());
     }
   });
+
+  // Swap modal search input
+  var swapSearch = $('#swap-search-input');
+  if (swapSearch) {
+    swapSearch.addEventListener('input', function () {
+      renderSwapIdeasList(this.value.trim().toLowerCase());
+    });
+  }
 }
 
 function doSignIn() {
@@ -276,12 +384,10 @@ function switchTab(tabName) {
   if (!TABS.includes(tabName)) return;
   STATE.activeTab = tabName;
 
-  // Sync Desktop tabs
   $$('.tab-pill').forEach(function (btn) {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
 
-  // Sync Mobile bottom bar
   $$('.mobile-nav-item').forEach(function (btn) {
     if (btn.dataset.tab === 'more') {
       btn.classList.toggle('active', ['packing', 'recommendations', 'share'].includes(tabName));
@@ -290,7 +396,6 @@ function switchTab(tabName) {
     }
   });
 
-  // Sync Tab panels
   $$('.tab-content-panel').forEach(function (panel) {
     if (panel.id === 'tab-' + tabName) {
       panel.hidden = false;
@@ -303,6 +408,54 @@ function switchTab(tabName) {
 
   renderCurrentTab();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ------------------------------------------------- DECISIONS & BUDGET MATH */
+
+function getActivePick(decision) {
+  var dId = decision.id;
+  if (STATE.picks[dId] && STATE.picks[dId].option_id) {
+    return STATE.picks[dId].option_id;
+  }
+  return decision.picked_option_id || decision.primary_option_id || ((decision.options && decision.options[0]) ? decision.options[0].id : null);
+}
+
+function calculateDecisionsDelta() {
+  var decs = getDecisions();
+  var delta = 0;
+  decs.forEach(function (d) {
+    var pickedOptId = getActivePick(d);
+    var opt = (d.options || []).find(function (o) { return o.id === pickedOptId; });
+    if (opt && opt.cost_delta_sgd != null) {
+      delta += num(opt.cost_delta_sgd) || 0;
+    }
+  });
+  return delta;
+}
+
+function calculateBudget() {
+  var t = STATE.docs.trip || STATE.trip || {};
+  var cap = num(t.budget_per_person || t.budget || 1500);
+
+  var items = getExpensesPlanned();
+  var base = 0;
+  items.forEach(function (it) {
+    var c = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd || it.cost));
+    if (c != null) base += c;
+  });
+  if (base === 0) base = 978; // Standard baseline if uncalculated
+
+  var delta = calculateDecisionsDelta();
+  var netPlanned = Math.max(0, base + delta);
+  var headroom = cap != null ? Math.max(0, cap - netPlanned) : null;
+
+  return {
+    cap: cap,
+    base: base,
+    delta: delta,
+    net: netPlanned,
+    headroom: headroom
+  };
 }
 
 /* ------------------------------------------------------------- BANNER & MODALS */
@@ -335,19 +488,16 @@ function renderTripBanner() {
   });
 
   // Budget
-  var budgetCap = num(t.budget_per_person || t.budget || 1500);
-  var planned = calculatePlannedSpend();
-  var headroom = budgetCap != null && planned != null ? Math.max(0, budgetCap - planned) : null;
+  var b = calculateBudget();
+  $('#budget-headroom-val').textContent = b.headroom != null ? sgd(b.headroom) : '—';
+  $('#budget-spent-lbl').textContent = 'Planned: ' + sgd(b.net) + (b.delta !== 0 ? ' (' + (b.delta > 0 ? '+' : '') + sgd(b.delta) + ')' : '');
+  $('#budget-total-lbl').textContent = 'Cap: ' + (b.cap != null ? sgd(b.cap) : '—');
 
-  $('#budget-headroom-val').textContent = headroom != null ? sgd(headroom) : '—';
-  $('#budget-spent-lbl').textContent = 'Planned: ' + (planned != null ? sgd(planned) : '—');
-  $('#budget-total-lbl').textContent = 'Cap: ' + (budgetCap != null ? sgd(budgetCap) : '—');
-
-  var pct = (budgetCap && planned) ? Math.min(100, Math.round((planned / budgetCap) * 100)) : 0;
+  var pct = (b.cap && b.net) ? Math.min(100, Math.round((b.net / b.cap) * 100)) : 0;
   $('#budget-progress-fill').style.width = pct + '%';
 
   // Decisions count badge
-  var decs = STATE.docs.decisions || [];
+  var decs = getDecisions();
   var decBadge = $('#decisions-pill-badge');
   if (decs.length > 0) {
     decBadge.textContent = decs.length;
@@ -355,18 +505,6 @@ function renderTripBanner() {
   } else {
     decBadge.hidden = true;
   }
-}
-
-function calculatePlannedSpend() {
-  var expenses = STATE.docs.expenses;
-  if (!expenses) return null;
-  var items = expenses.planned || expenses.items || [];
-  var total = 0;
-  items.forEach(function (it) {
-    var c = num(it.cost_sgd || it.amount_sgd || it.cost || it.amount);
-    if (c != null) total += c;
-  });
-  return total > 0 ? total : 978; // Fallback to planned SGD if not calculated
 }
 
 function openTripModal() {
@@ -439,14 +577,14 @@ function renderCurrentTab() {
   }
 }
 
-/* 1. ITINERARY TAB */
+/* ==========================================================================
+   1. ITINERARY TAB (AI-Planned, Day-by-Day, Swappable Ideas)
+   ========================================================================== */
 function renderItinerary() {
   var root = $('#tab-itinerary');
   clear(root);
 
-  var itin = STATE.docs.itinerary;
-  var days = (itin && (itin.days || itin.itinerary)) || [];
-
+  var days = getItineraryDays();
   if (!days.length) {
     root.appendChild(renderEmpty('No itinerary entries recorded for this trip.'));
     return;
@@ -456,212 +594,535 @@ function renderItinerary() {
   var scroller = ce('div', 'day-scroller');
   var allChip = ce('button', 'day-chip' + (STATE.activeDay === null ? ' active' : ''));
   allChip.appendChild(ce('span', 'day-chip-title', 'All Days'));
-  allChip.appendChild(ce('span', 'day-chip-date', days.length + ' days'));
-  allChip.addEventListener('click', function () {
-    STATE.activeDay = null;
-    renderItinerary();
-  });
+  allChip.appendChild(ce('span', 'day-chip-sub', days.length + ' days'));
+  allChip.addEventListener('click', function () { STATE.activeDay = null; renderItinerary(); });
   scroller.appendChild(allChip);
 
   days.forEach(function (d, i) {
     var dayNum = d.day || (i + 1);
     var chip = ce('button', 'day-chip' + (STATE.activeDay === dayNum ? ' active' : ''));
     chip.appendChild(ce('span', 'day-chip-title', 'Day ' + dayNum));
-    chip.appendChild(ce('span', 'day-chip-date', (d.date || '').slice(5)));
-    chip.addEventListener('click', function () {
-      STATE.activeDay = dayNum;
-      renderItinerary();
-    });
+    chip.appendChild(ce('span', 'day-chip-sub', d.base || d.date || ''));
+    chip.addEventListener('click', function () { STATE.activeDay = dayNum; renderItinerary(); });
     scroller.appendChild(chip);
   });
   root.appendChild(scroller);
 
-  // Timeline list
+  // Timeline of Days
   var timeline = ce('div', 'timeline');
-  var visibleDays = STATE.activeDay === null ? days : days.filter(function (d, idx) { return (d.day || idx + 1) === STATE.activeDay; });
+  days.forEach(function (d, dayIdx) {
+    var dayNum = d.day || (dayIdx + 1);
+    if (STATE.activeDay !== null && STATE.activeDay !== dayNum) return;
 
-  visibleDays.forEach(function (d) {
-    var dayCard = ce('div', 'card-panel');
-    var header = ce('div', 'item-top');
-    header.appendChild(ce('h2', null, 'Day ' + (d.day || '') + ' · ' + (d.title || d.base || 'Explore')));
-    if (d.date) header.appendChild(ce('span', 'badge', d.date));
+    var dayCard = ce('div', 'day-card');
+
+    // Header
+    var header = ce('div', 'day-card-header');
+    var titleRow = ce('div', 'item-top');
+    var titleLeft = ce('div');
+    titleLeft.appendChild(ce('span', 'day-badge', 'DAY ' + dayNum));
+    titleLeft.appendChild(ce('span', 'ai-plan-badge', '✨ AI Suggested'));
+    titleRow.appendChild(titleLeft);
+
+    if (d.date) titleRow.appendChild(ce('span', 'muted small', '🗓 ' + d.date));
+    header.appendChild(titleRow);
+
+    var h2 = ce('h2', 'day-title', d.title || (d.base ? 'Exploring ' + d.base : 'Day ' + dayNum));
+    header.appendChild(h2);
+
+    // Actions on Day: Add / Swap Idea
+    var actRow = ce('div', 'day-header-actions');
+    var addBtn = ce('button', 'btn-swap', '➕ Add / Swap Idea');
+    addBtn.addEventListener('click', function () {
+      openSwapModal(d);
+    });
+    actRow.appendChild(addBtn);
+    if (d.base) actRow.appendChild(ce('span', 'badge', '📍 ' + d.base));
+    header.appendChild(actRow);
+
     dayCard.appendChild(header);
 
-    if (d.summary) dayCard.appendChild(ce('p', 'muted', d.summary));
+    // Transit banner if present
+    if (d.transit) {
+      var tBox = ce('div', 'transit-box');
+      tBox.appendChild(ce('div', 'transit-box-title', '🚆 Transit & Movement'));
+      tBox.appendChild(ce('div', null, d.transit));
+      dayCard.appendChild(tBox);
+    }
 
-    var events = d.events || d.activities || d.schedule || [];
-    if (events.length > 0) {
+    // Lodging for the night
+    if (d.lodging) {
+      var lBox = ce('div', 'day-lodging-card');
+      var lLeft = ce('div');
+      lLeft.appendChild(ce('div', 'small muted', '🏨 Night Lodging'));
+      lLeft.appendChild(ce('div', 'day-lodging-title', d.lodging));
+      lBox.appendChild(lLeft);
+      var switchStayBtn = ce('button', 'btn btn-secondary small', 'View Stays');
+      switchStayBtn.addEventListener('click', function () { switchTab('accommodation'); });
+      lBox.appendChild(switchStayBtn);
+      dayCard.appendChild(lBox);
+    }
+
+    // Activities / Scheduled Items
+    var items = d.items || d.events || d.activities || [];
+    if (items.length > 0) {
       var evList = ce('div', 'timeline');
-      events.forEach(function (ev) {
+      items.forEach(function (ev, evIdx) {
         var it = ce('div', 'timeline-item');
         var top = ce('div', 'item-top');
         if (ev.time) top.appendChild(ce('span', 'time-tag', ev.time));
-        if (ev.cost_sgd) top.appendChild(ce('span', 'badge', sgd(ev.cost_sgd)));
+        var c = num(ev.cost);
+        if (c != null && c > 0) top.appendChild(ce('span', 'badge badge-good', sgd(c)));
+
+        // Remove item button
+        var removeBtn = ce('button', 'btn-icon-danger', '✕');
+        removeBtn.title = 'Remove from itinerary';
+        removeBtn.addEventListener('click', function () {
+          if (confirm('Remove "' + (ev.what || ev.title || 'this item') + '" from Day ' + dayNum + '?')) {
+            items.splice(evIdx, 1);
+            saveItineraryDoc();
+            renderItinerary();
+            showToast('Item removed from Day ' + dayNum);
+          }
+        });
+        top.appendChild(removeBtn);
         it.appendChild(top);
 
-        it.appendChild(ce('div', 'item-title', ev.title || ev.activity || 'Activity'));
-
-        var meta = [];
-        if (ev.location) meta.push('📍 ' + ev.location);
-        if (ev.category) meta.push('🏷 ' + ev.category);
-        if (meta.length) it.appendChild(ce('div', 'item-meta', meta.join(' · ')));
+        var titleText = ev.what || ev.title || ev.activity || ev.name || 'Activity';
+        it.appendChild(ce('div', 'item-title', titleText));
 
         if (ev.notes) it.appendChild(ce('p', 'small muted', ev.notes));
+
+        if (ev.refs && ev.refs.length) {
+          var links = ce('div', 'small muted');
+          ev.refs.forEach(function (r) {
+            var a = ce('a', 'muted', '🔗 Reference');
+            a.href = r;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.style.marginRight = '8px';
+            links.appendChild(a);
+          });
+          it.appendChild(links);
+        }
+
         evList.appendChild(it);
       });
       dayCard.appendChild(evList);
     }
+
     timeline.appendChild(dayCard);
   });
 
   root.appendChild(timeline);
 }
 
-/* 2. ACCOMMODATION TAB */
+function saveItineraryDoc() {
+  if (!STATE.activeTripId) return;
+  TripAuth.saveDocs(STATE.activeTripId, { itinerary: STATE.docs.itinerary }).catch(function (e) {
+    console.warn('Failed to save itinerary update:', e);
+  });
+}
+
+/* ==========================================================================
+   SWAP / ADD IDEA MODAL
+   ========================================================================== */
+function openSwapModal(day) {
+  STATE.swapTargetDay = day;
+  $('#swap-modal-title').textContent = 'Add Idea to Day ' + (day.day || '');
+  $('#swap-modal-subtitle').textContent = 'Base: ' + (day.base || 'All') + ' · Pick a curated spot or experience';
+
+  // Populate categories
+  var catRow = $('#swap-category-pills');
+  clear(catRow);
+  var cats = ['All', 'food', 'coffee', 'culture', 'nature', 'nightlife'];
+  var activeCat = 'All';
+
+  function renderPills() {
+    clear(catRow);
+    cats.forEach(function (c) {
+      var pill = ce('button', 'filter-pill' + (activeCat === c ? ' active' : ''), c.toUpperCase());
+      pill.addEventListener('click', function () {
+        activeCat = c;
+        renderPills();
+        renderSwapIdeasList('', activeCat === 'All' ? null : activeCat);
+      });
+      catRow.appendChild(pill);
+    });
+  }
+  renderPills();
+
+  renderSwapIdeasList('', null);
+  $('#swap-idea-modal').hidden = false;
+}
+function closeSwapModal() {
+  $('#swap-idea-modal').hidden = true;
+  STATE.swapTargetDay = null;
+}
+
+function renderSwapIdeasList(filterText, filterCategory) {
+  var list = $('#swap-ideas-list');
+  clear(list);
+
+  var recs = getRecommendations();
+  var targetDay = STATE.swapTargetDay;
+  var baseCity = targetDay ? (targetDay.base || '').toLowerCase() : '';
+
+  var filtered = recs.filter(function (r) {
+    if (filterCategory && (r.category || '').toLowerCase() !== filterCategory.toLowerCase()) return false;
+    if (filterText) {
+      var blob = ((r.title || '') + ' ' + (r.why || '') + ' ' + (r.area || '')).toLowerCase();
+      if (!blob.includes(filterText)) return false;
+    }
+    return true;
+  });
+
+  // Sort spots matching current day's base city first
+  filtered.sort(function (a, b) {
+    var aMatch = baseCity && (a.area || '').toLowerCase().includes(baseCity);
+    var bMatch = baseCity && (b.area || '').toLowerCase().includes(baseCity);
+    if (aMatch && !bMatch) return -1;
+    if (!aMatch && bMatch) return 1;
+    return 0;
+  });
+
+  if (!filtered.length) {
+    list.appendChild(ce('p', 'muted small text-center', 'No matching ideas found.'));
+    return;
+  }
+
+  filtered.slice(0, 30).forEach(function (r) {
+    var card = ce('div', 'swap-idea-card');
+    var info = ce('div', 'swap-idea-info');
+
+    var title = ce('div', 'swap-idea-title', r.title || r.name || 'Spot');
+    info.appendChild(title);
+
+    var meta = [];
+    if (r.area) meta.push('📍 ' + r.area);
+    if (r.category) meta.push('🏷 ' + r.category);
+    if (r.cost_estimate) meta.push('💰 ' + r.cost_estimate);
+    info.appendChild(ce('div', 'swap-idea-meta', meta.join(' · ')));
+
+    if (r.why) info.appendChild(ce('div', 'swap-idea-why', r.why));
+    card.appendChild(info);
+
+    var insertBtn = ce('button', 'btn btn-secondary small', '+ Insert');
+    insertBtn.addEventListener('click', function () {
+      if (!targetDay.items) targetDay.items = [];
+      targetDay.items.push({
+        what: r.title || r.name,
+        notes: (r.why || '') + (r.cost_estimate ? ' (' + r.cost_estimate + ')' : ''),
+        time: '~flexible',
+        cost: 0,
+        currency: 'SGD',
+        refs: r.source_url ? [r.source_url] : []
+      });
+      saveItineraryDoc();
+      closeSwapModal();
+      renderItinerary();
+      showToast('Inserted "' + (r.title || r.name) + '" into Day ' + (targetDay.day || ''));
+    });
+    card.appendChild(insertBtn);
+
+    list.appendChild(card);
+  });
+}
+
+/* ==========================================================================
+   2. ACCOMMODATION TAB (Curated Stays, Base Filters, Night Rates)
+   ========================================================================== */
 function renderAccommodation() {
   var root = $('#tab-accommodation');
   clear(root);
 
-  var acc = STATE.docs.accommodation;
-  var items = (acc && (acc.stays || acc.accommodation || acc.hotels)) || [];
-
-  if (!items.length) {
+  var stays = getAccommodations();
+  if (!stays.length) {
     root.appendChild(renderEmpty('No lodging or accommodation records found.'));
     return;
   }
 
+  // Extract unique areas
+  var areas = ['all'];
+  stays.forEach(function (s) {
+    var a = s.area || s.location || '';
+    var baseWord = a.split('(')[0].split(',')[0].trim();
+    if (baseWord && !areas.includes(baseWord)) areas.push(baseWord);
+  });
+
+  // Area filter pills
+  var filterBar = ce('div', 'filter-pills-row');
+  areas.forEach(function (area) {
+    var pill = ce('button', 'filter-pill' + (STATE.stayArea === area ? ' active' : ''), area === 'all' ? 'All Stays' : area);
+    pill.addEventListener('click', function () {
+      STATE.stayArea = area;
+      renderAccommodation();
+    });
+    filterBar.appendChild(pill);
+  });
+  root.appendChild(filterBar);
+
   var grid = ce('div', 'stay-grid');
-  items.forEach(function (s) {
+  var count = 0;
+
+  stays.forEach(function (s) {
+    var a = (s.area || s.location || '').toLowerCase();
+    if (STATE.stayArea !== 'all' && !a.includes(STATE.stayArea.toLowerCase())) return;
+    count++;
+
     var card = ce('div', 'stay-card');
     var top = ce('div', 'stay-card-header');
     top.appendChild(ce('div', 'stay-name', s.name || s.hotel || 'Stay'));
+
     var status = s.status || 'planning';
-    var badgeCls = status === 'booked' ? 'badge-good' : (status === 'reserved' ? 'badge-warn' : '');
+    var badgeCls = status === 'booked' ? 'badge-good' : (status === 'wishlist' ? 'badge-warn' : '');
     top.appendChild(ce('span', 'badge ' + badgeCls, status.toUpperCase()));
     card.appendChild(top);
 
-    var dates = (s.check_in || s.start || '') + ' → ' + (s.check_out || s.end || '');
+    var checkin = s.checkin || s.check_in || '';
+    var checkout = s.checkout || s.check_out || '';
+    var dates = (checkin && checkout) ? (checkin + ' → ' + checkout) : '';
     if (s.nights) dates += ' (' + s.nights + ' night' + (s.nights > 1 ? 's' : '') + ')';
-    card.appendChild(ce('div', 'stay-dates', '🗓 ' + dates));
+    if (dates) card.appendChild(ce('div', 'stay-dates', '🗓 ' + dates));
 
     var details = ce('div', 'stay-details muted');
-    if (s.location || s.base) details.appendChild(ce('div', null, '📍 ' + (s.location || s.base)));
-    if (s.room || s.room_type) details.appendChild(ce('div', null, '🛏 ' + (s.room || s.room_type)));
+    if (s.area || s.location) details.appendChild(ce('div', null, '📍 ' + (s.area || s.location)));
     if (s.notes) details.appendChild(ce('p', 'small', s.notes));
     card.appendChild(details);
 
     var priceLine = ce('div', 'stay-price-line');
-    var cost = num(s.cost_sgd || s.price_sgd || s.sgd);
-    priceLine.appendChild(ce('span', 'muted small', 'Cost / night'));
-    priceLine.appendChild(ce('span', null, cost != null ? sgd(cost) : 'Included'));
+    var rateStr = '';
+    if (s.price_per_night) {
+      rateStr = new Intl.NumberFormat().format(s.price_per_night) + ' ' + (s.currency || 'VND') + ' / night';
+    } else if (s.cost_sgd) {
+      rateStr = sgd(s.cost_sgd) + ' / night';
+    } else {
+      rateStr = 'Check booking';
+    }
+    priceLine.appendChild(ce('span', 'muted small', 'Estimated Rate'));
+    priceLine.appendChild(ce('span', null, rateStr));
     card.appendChild(priceLine);
+
+    // External link
+    if (s.link || s.source_url) {
+      var linkRow = ce('div', 'stay-price-line');
+      var aTag = ce('a', 'muted small', 'Open Booking / Listing ↗');
+      aTag.href = s.link || s.source_url;
+      aTag.target = '_blank';
+      aTag.rel = 'noopener';
+      linkRow.appendChild(aTag);
+      card.appendChild(linkRow);
+    }
 
     grid.appendChild(card);
   });
 
+  if (count === 0) {
+    grid.appendChild(ce('p', 'muted small text-center', 'No stays matching this filter.'));
+  }
+
   root.appendChild(grid);
 }
 
-/* 3. EXPENSES TAB */
+/* ==========================================================================
+   3. EXPENSES TAB (Budget Ceiling, Headroom, Active Decision Adjustments)
+   ========================================================================== */
 function renderExpenses() {
   var root = $('#tab-expenses');
   clear(root);
 
-  var exp = STATE.docs.expenses;
-  var planned = calculatePlannedSpend();
-  var cap = num((STATE.docs.trip || {}).budget_per_person || 1500);
-  var headroom = Math.max(0, cap - planned);
+  var b = calculateBudget();
+  var plannedItems = getExpensesPlanned();
 
+  // Top Summary Metric Cards
   var stats = ce('div', 'stats-row');
+
   var b1 = ce('div', 'stat-box');
   b1.appendChild(ce('div', 'stat-box-title', 'Budget Cap'));
-  b1.appendChild(ce('div', 'stat-box-num', sgd(cap)));
+  b1.appendChild(ce('div', 'stat-box-num', sgd(b.cap)));
   stats.appendChild(b1);
 
   var b2 = ce('div', 'stat-box');
-  b2.appendChild(ce('div', 'stat-box-title', 'Committed Spend'));
-  b2.appendChild(ce('div', 'stat-box-num', sgd(planned)));
+  b2.appendChild(ce('div', 'stat-box-title', 'Net Planned Spend'));
+  b2.appendChild(ce('div', 'stat-box-num', sgd(b.net)));
   stats.appendChild(b2);
 
   var b3 = ce('div', 'stat-box');
   b3.appendChild(ce('div', 'stat-box-title', 'Remaining Headroom'));
-  b3.appendChild(ce('div', 'stat-box-num', sgd(headroom)));
+  b3.appendChild(ce('div', 'stat-box-num', sgd(b.headroom)));
   stats.appendChild(b3);
+
   root.appendChild(stats);
 
-  var card = ce('div', 'card-panel');
-  card.appendChild(ce('h2', null, 'Itemized Planning Expenses'));
+  // Active Decision Deltas Summary Card
+  var decs = getDecisions();
+  var activeAdjustments = [];
+  decs.forEach(function (d) {
+    var pickedOptId = getActivePick(d);
+    var opt = (d.options || []).find(function (o) { return o.id === pickedOptId; });
+    if (opt && opt.cost_delta_sgd != null && opt.cost_delta_sgd !== 0) {
+      activeAdjustments.push({
+        decision: d.title || d.question,
+        choice: opt.label,
+        delta: opt.cost_delta_sgd
+      });
+    }
+  });
 
-  var items = (exp && (exp.planned || exp.items)) || [];
-  if (items.length > 0) {
-    var list = ce('div', 'timeline');
-    items.forEach(function (it) {
+  if (activeAdjustments.length > 0) {
+    var adjCard = ce('div', 'card-panel');
+    adjCard.appendChild(ce('h3', null, 'Active Decision Budget Adjustments'));
+    adjCard.appendChild(ce('p', 'muted small', 'Your choices in the Decisions tab dynamically adjust the committed budget:'));
+
+    var adjTable = ce('div', 'timeline');
+    activeAdjustments.forEach(function (adj) {
       var row = ce('div', 'timeline-item');
       var top = ce('div', 'item-top');
-      top.appendChild(ce('div', 'item-title', it.item || it.name || it.category));
-      top.appendChild(ce('span', 'badge badge-good', sgd(num(it.cost_sgd || it.amount_sgd))));
+      top.appendChild(ce('div', 'item-title', adj.decision));
+      var sign = adj.delta > 0 ? '+' : '';
+      var badgeCls = adj.delta < 0 ? 'badge-good' : 'badge-warn';
+      top.appendChild(ce('span', 'badge ' + badgeCls, sign + sgd(adj.delta)));
+      row.appendChild(top);
+      row.appendChild(ce('p', 'small muted', 'Selected: ' + adj.choice));
+      adjTable.appendChild(row);
+    });
+    adjCard.appendChild(adjTable);
+    root.appendChild(adjCard);
+  }
+
+  // Category breakdown
+  var catTotals = {};
+  var totalValid = 0;
+  plannedItems.forEach(function (it) {
+    var c = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
+    if (c != null) {
+      var cat = it.category || 'other';
+      catTotals[cat] = (catTotals[cat] || 0) + c;
+      totalValid += c;
+    }
+  });
+
+  var catCard = ce('div', 'card-panel');
+  catCard.appendChild(ce('h3', null, 'Spend Breakdown by Category'));
+  var catBoxes = ce('div', 'category-bars-box');
+  Object.keys(catTotals).forEach(function (cat) {
+    var amt = catTotals[cat];
+    var pct = totalValid > 0 ? Math.round((amt / totalValid) * 100) : 0;
+    var bar = ce('div', 'cat-bar-item');
+    var h = ce('div', 'cat-bar-header');
+    h.appendChild(ce('span', null, cat.toUpperCase() + ' (' + pct + '%)'));
+    h.appendChild(ce('span', 'muted', sgd(amt)));
+    bar.appendChild(h);
+
+    var track = ce('div', 'cat-bar-track');
+    var fill = ce('div', 'cat-bar-fill');
+    fill.style.width = pct + '%';
+    fill.style.background = cat === 'accommodation' ? '#38bdf8' : (cat === 'activities' ? '#34d399' : '#818cf8');
+    track.appendChild(fill);
+    bar.appendChild(track);
+    catBoxes.appendChild(bar);
+  });
+  catCard.appendChild(catBoxes);
+  root.appendChild(catCard);
+
+  // Itemized Expenses
+  var listCard = ce('div', 'card-panel');
+  listCard.appendChild(ce('h3', null, 'Itemized Planning Records'));
+
+  if (plannedItems.length > 0) {
+    var list = ce('div', 'timeline');
+    plannedItems.forEach(function (it) {
+      var row = ce('div', 'timeline-item');
+      var top = ce('div', 'item-top');
+      top.appendChild(ce('div', 'item-title', it.description || it.item || it.name || it.category));
+
+      var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
+      top.appendChild(ce('span', 'badge', cost != null ? sgd(cost) : String(it.amount || '—')));
       row.appendChild(top);
 
       var meta = [];
       if (it.category) meta.push(it.category);
-      if (it.notes) meta.push(it.notes);
+      if (it.paid_by) meta.push('paid: ' + it.paid_by);
+      if (it.status) meta.push(it.status);
       row.appendChild(ce('div', 'item-meta', meta.join(' · ')));
+
+      if (it.notes) row.appendChild(ce('p', 'small muted', it.notes));
       list.appendChild(row);
     });
-    card.appendChild(list);
+    listCard.appendChild(list);
   } else {
-    card.appendChild(ce('p', 'muted', 'No expense items itemized.'));
+    listCard.appendChild(ce('p', 'muted', 'No expense items listed.'));
   }
-  root.appendChild(card);
+
+  root.appendChild(listCard);
 }
 
-/* 4. DECISIONS TAB */
+/* ==========================================================================
+   4. DECISIONS TAB (Interactive Choices with Budget & Itinerary Impact)
+   ========================================================================== */
 function renderDecisions() {
   var root = $('#tab-decisions');
   clear(root);
 
-  var decs = STATE.docs.decisions || [];
+  var decs = getDecisions();
   if (!decs.length) {
     root.appendChild(renderEmpty('No group decisions open for this trip.'));
     return;
   }
 
+  var intro = ce('div', 'card-panel');
+  intro.appendChild(ce('h2', null, 'Group Decisions & Itinerary Pivots'));
+  intro.appendChild(ce('p', 'muted small', 'Toggling choices here instantly updates your budget headroom, adjusts committed spend, and updates affected itinerary legs.'));
+  root.appendChild(intro);
+
   var list = ce('div', 'decisions-list');
   decs.forEach(function (d) {
-    var picked = STATE.picks[d.id] ? STATE.picks[d.id].option_id : d.primary_option_id;
-    var card = ce('div', 'decision-card' + (picked ? ' resolved' : ''));
+    var pickedOptId = getActivePick(d);
+    var card = ce('div', 'decision-card' + (pickedOptId ? ' resolved' : ''));
 
     var header = ce('div', 'decision-header');
     header.appendChild(ce('h2', null, d.title || 'Decision'));
-    if (picked) header.appendChild(ce('span', 'badge badge-good', 'RESOLVED'));
+    if (pickedOptId) header.appendChild(ce('span', 'badge badge-good', 'RESOLVED'));
     card.appendChild(header);
 
     if (d.question) card.appendChild(ce('div', 'decision-question', d.question));
 
     var optGrid = ce('div', 'options-grid');
     (d.options || []).forEach(function (opt) {
-      var isPicked = picked === opt.id;
+      var isPicked = pickedOptId === opt.id;
       var box = ce('div', 'option-box' + (isPicked ? ' picked' : ''));
 
       var lbl = ce('div', 'option-label');
       lbl.appendChild(ce('span', null, opt.label || 'Option'));
       if (opt.cost_delta_sgd != null) {
         var sign = opt.cost_delta_sgd > 0 ? '+' : '';
-        lbl.appendChild(ce('span', 'badge', sign + sgd(opt.cost_delta_sgd)));
+        var badgeCls = opt.cost_delta_sgd < 0 ? 'badge-good' : (opt.cost_delta_sgd > 0 ? 'badge-warn' : '');
+        lbl.appendChild(ce('span', 'badge ' + badgeCls, sign + sgd(opt.cost_delta_sgd)));
       }
       box.appendChild(lbl);
 
       if (opt.summary) box.appendChild(ce('div', 'option-summary', opt.summary));
       if (opt.tradeoffs) box.appendChild(ce('p', 'small muted', '⚡ Tradeoffs: ' + opt.tradeoffs));
 
+      // Changes & Itinerary Impact
+      if (opt.changes && opt.changes.length > 0) {
+        var impBox = ce('div', 'decision-impact-box');
+        impBox.appendChild(ce('div', 'decision-impact-title', 'Impact on Plan:'));
+        var ul = ce('ul', 'decision-impact-list');
+        opt.changes.forEach(function (ch) {
+          ul.appendChild(ce('li', null, ch));
+        });
+        impBox.appendChild(ul);
+        box.appendChild(impBox);
+      }
+
       box.addEventListener('click', function () {
-        if (!STATE.canEdit) {
-          alert('You need editor permissions to record picks.');
-          return;
-        }
         STATE.picks[d.id] = { option_id: opt.id, at: Date.now() };
         TripAuth.savePick(STATE.activeTripId, d.id, opt.id, d).catch(console.warn);
+
+        renderTripBanner();
         renderDecisions();
+        showToast('Choice updated: ' + (opt.label ? opt.label.slice(0, 35) + '...' : 'Saved'));
       });
 
       optGrid.appendChild(box);
@@ -673,14 +1134,14 @@ function renderDecisions() {
   root.appendChild(list);
 }
 
-/* 5. PACKING TAB */
+/* ==========================================================================
+   5. PACKING TAB (Checklist with Persistence)
+   ========================================================================== */
 function renderPacking() {
   var root = $('#tab-packing');
   clear(root);
 
-  var packing = STATE.docs.packing || {};
-  var cats = packing.categories || packing.packing || [];
-
+  var cats = getPackingCategories();
   if (!cats.length) {
     root.appendChild(renderEmpty('No packing checklist configured.'));
     return;
@@ -695,13 +1156,14 @@ function renderPacking() {
 
     var list = ce('div', 'checklist');
     (cat.items || []).forEach(function (it, idx) {
+      var itemText = typeof it === 'string' ? it : (it.item || it.name || '');
       var itemId = (cat.category || '') + '_' + idx;
       var isDone = !!checkedState[itemId];
 
       var row = ce('div', 'check-item' + (isDone ? ' done' : ''));
       var box = ce('div', 'check-box', isDone ? '✓' : '');
       row.appendChild(box);
-      row.appendChild(ce('span', 'check-text', it.item || it));
+      row.appendChild(ce('span', 'check-text', itemText));
 
       row.addEventListener('click', function () {
         checkedState[itemId] = !checkedState[itemId];
@@ -715,36 +1177,137 @@ function renderPacking() {
   });
 }
 
-/* 6. IDEAS / RECOMMENDATIONS TAB */
+/* ==========================================================================
+   6. IDEAS / RECOMMENDATIONS TAB (Curated Pool, Filter & Add to Day)
+   ========================================================================== */
 function renderRecommendations() {
   var root = $('#tab-recommendations');
   clear(root);
 
-  var recs = (STATE.docs.recommendations && (STATE.docs.recommendations.recommendations || STATE.docs.recommendations)) || [];
+  var recs = getRecommendations();
   if (!recs.length) {
     root.appendChild(renderEmpty('No recommendations collected yet.'));
     return;
   }
 
-  var grid = ce('div', 'stay-grid');
-  recs.forEach(function (r) {
-    var card = ce('div', 'stay-card');
-    card.appendChild(ce('div', 'stay-name', r.name || r.title || 'Spot'));
-    if (r.area || r.location) card.appendChild(ce('div', 'stay-dates', '📍 ' + (r.area || r.location)));
-    if (r.notes || r.description) card.appendChild(ce('p', 'small muted', r.notes || r.description));
-    if (r.tags) card.appendChild(ce('span', 'badge', Array.isArray(r.tags) ? r.tags.join(', ') : r.tags));
-    grid.appendChild(card);
+  var days = getItineraryDays();
+
+  // Search input
+  var searchBar = ce('div', 'card-panel');
+  var searchInp = ce('input', 'search-input');
+  searchInp.placeholder = 'Search spots, foods, cafes, or views...';
+  searchInp.value = STATE.recSearch;
+  searchInp.addEventListener('input', function () {
+    STATE.recSearch = this.value.trim().toLowerCase();
+    renderRecList(recs, days, listContainer);
   });
-  root.appendChild(grid);
+  searchBar.appendChild(searchInp);
+
+  // Category filter pills
+  var catRow = ce('div', 'filter-pills-row');
+  var cats = ['all', 'food', 'coffee', 'culture', 'nature', 'nightlife'];
+  cats.forEach(function (c) {
+    var pill = ce('button', 'filter-pill' + (STATE.recCategory === c ? ' active' : ''), c.toUpperCase());
+    pill.addEventListener('click', function () {
+      STATE.recCategory = c;
+      renderRecommendations();
+    });
+    catRow.appendChild(pill);
+  });
+  searchBar.appendChild(catRow);
+  root.appendChild(searchBar);
+
+  var listContainer = ce('div', 'stay-grid');
+  renderRecList(recs, days, listContainer);
+  root.appendChild(listContainer);
 }
 
-/* 7. SHARE & MEMBERS TAB */
+function renderRecList(recs, days, container) {
+  clear(container);
+
+  var filtered = recs.filter(function (r) {
+    if (STATE.recCategory !== 'all' && (r.category || '').toLowerCase() !== STATE.recCategory.toLowerCase()) return false;
+    if (STATE.recSearch) {
+      var blob = ((r.title || '') + ' ' + (r.why || '') + ' ' + (r.area || '')).toLowerCase();
+      if (!blob.includes(STATE.recSearch)) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    container.appendChild(ce('p', 'muted small text-center', 'No ideas match your filter.'));
+    return;
+  }
+
+  filtered.forEach(function (r) {
+    var card = ce('div', 'stay-card');
+    card.appendChild(ce('div', 'stay-name', r.title || r.name || 'Spot'));
+
+    var meta = [];
+    if (r.area) meta.push('📍 ' + r.area);
+    if (r.category) meta.push('🏷 ' + r.category);
+    if (r.cost_estimate) meta.push('💰 ' + r.cost_estimate);
+    card.appendChild(ce('div', 'stay-dates', meta.join(' · ')));
+
+    if (r.why) card.appendChild(ce('p', 'small muted', r.why));
+
+    // Link
+    if (r.source_url) {
+      var a = ce('a', 'small muted', 'Open Guide / Source ↗');
+      a.href = r.source_url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.style.display = 'block';
+      a.style.marginBottom = '8px';
+      card.appendChild(a);
+    }
+
+    // Interactive "Add to Itinerary Day" dropdown control
+    if (days.length > 0) {
+      var addControl = ce('div', 'add-to-day-control');
+      var sel = ce('select', 'day-select-input');
+      days.forEach(function (d, idx) {
+        var opt = ce('option', null, 'Day ' + (d.day || idx + 1) + ' (' + (d.base || '') + ')');
+        opt.value = idx;
+        sel.appendChild(opt);
+      });
+      addControl.appendChild(sel);
+
+      var btn = ce('button', 'btn-swap', '+ Add to Day');
+      btn.addEventListener('click', function () {
+        var dayIdx = parseInt(sel.value, 10);
+        var targetDay = days[dayIdx];
+        if (targetDay) {
+          if (!targetDay.items) targetDay.items = [];
+          targetDay.items.push({
+            what: r.title || r.name,
+            notes: (r.why || '') + (r.cost_estimate ? ' (' + r.cost_estimate + ')' : ''),
+            time: '~flexible',
+            cost: 0,
+            currency: 'SGD',
+            refs: r.source_url ? [r.source_url] : []
+          });
+          saveItineraryDoc();
+          showToast('Added "' + (r.title || r.name) + '" to Day ' + (targetDay.day || (dayIdx + 1)));
+        }
+      });
+      addControl.appendChild(btn);
+      card.appendChild(addControl);
+    }
+
+    container.appendChild(card);
+  });
+}
+
+/* ==========================================================================
+   7. SHARE & MEMBERS TAB
+   ========================================================================== */
 function renderShare() {
   var root = $('#tab-share');
   clear(root);
 
   var card = ce('div', 'card-panel');
-  card.appendChild(ce('h2', null, 'Collaborators & Sharing'));
+  card.appendChild(ce('h2', null, 'Collaborators & Trip Access'));
   card.appendChild(ce('p', 'muted small', 'Everyone invited to this trip can view schedules, vote on decisions, and track expenses.'));
 
   // Member roster
@@ -764,9 +1327,7 @@ function renderShare() {
     var inviteBox = ce('div', 'card-panel');
     inviteBox.style.marginTop = '20px';
     inviteBox.appendChild(ce('h3', null, 'Invite a Traveller'));
-    var inp = ce('input', 'btn-secondary');
-    inp.style.width = '100%';
-    inp.style.padding = '10px';
+    var inp = ce('input', 'search-input');
     inp.style.marginBottom = '10px';
     inp.placeholder = 'traveller@example.com';
 
@@ -774,7 +1335,7 @@ function renderShare() {
     btn.addEventListener('click', function () {
       if (!inp.value || !inp.value.includes('@')) return alert('Please enter a valid email.');
       TripAuth.invite(STATE.activeTripId, inp.value.trim()).then(function () {
-        alert('Invitation recorded!');
+        showToast('Invitation sent!');
         inp.value = '';
         selectTrip(STATE.activeTripId);
       }).catch(function (e) { alert('Invite failed: ' + (e.message || e)); });
@@ -795,7 +1356,6 @@ function renderEmpty(msg) {
 
 function renderEmptyTripsView() {
   var root = $('#app-main');
-  // If the user has zero trips, present a clear welcome card
   var box = ce('div', 'wrap center-state');
   box.appendChild(ce('h2', null, 'Welcome to Nomad!'));
   box.appendChild(ce('p', 'muted', 'You are signed in, but no trips have been created or shared with your email yet.'));

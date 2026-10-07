@@ -253,6 +253,29 @@
     </div>
   </div>
 
+  <!-- 4. Swap / Add Idea to Itinerary Modal -->
+  <div id="swap-idea-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="swap-modal-title">Add Idea to Day</h2>
+          <p class="muted small" id="swap-modal-subtitle">Pick a curated spot or activity to insert</p>
+        </div>
+        <button class="modal-close-btn" id="swap-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="swap-filters">
+          <input type="text" id="swap-search-input" class="search-input" placeholder="Search ideas (e.g. phở, cafe, hike)...">
+          <div id="swap-category-pills" class="filter-pills-row"></div>
+        </div>
+        <div id="swap-ideas-list" class="swap-ideas-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
   <!-- Scripts -->
   <script src="pocketbase-config.js"></script>
   <script src="backends/vendor/pocketbase.umd.js"></script>

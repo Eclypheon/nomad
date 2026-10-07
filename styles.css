@@ -77,6 +77,9 @@
 
 /* Base Reset */
 *, *::before, *::after { box-sizing: border-box; }
+[hidden], .center-state[hidden], .view-panel[hidden], .modal-backdrop[hidden], [hidden="until-found"] {
+  display: none !important;
+}
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
   margin: 0;
@@ -903,3 +906,236 @@ p { margin: 0 0 10px; }
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==================== INTERACTIVE ENHANCEMENTS ==================== */
+
+/* Search Inputs */
+.search-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card-subtle);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.search-input:focus { border-color: var(--border-focus); }
+
+/* Filter Pills Row */
+.filter-pills-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.filter-pills-row::-webkit-scrollbar { display: none; }
+.filter-pill {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--fg-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.filter-pill:hover { border-color: var(--primary); color: var(--fg); }
+.filter-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-fg);
+  font-weight: 600;
+}
+
+/* AI Plan Tag */
+.ai-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(129, 140, 248, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Day Actions & Buttons */
+.day-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.btn-swap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-swap:hover {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.btn-icon-danger {
+  background: transparent;
+  border: none;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s;
+}
+.btn-icon-danger:hover { color: var(--bad); }
+
+/* Transit Banner */
+.transit-box {
+  background: rgba(15, 23, 42, 0.6);
+  border-left: 3px solid var(--accent-emerald);
+  padding: 10px 14px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  margin-bottom: 14px;
+  font-size: 0.84rem;
+}
+.transit-box-title { font-weight: 600; color: var(--accent-emerald); margin-bottom: 2px; }
+
+/* Day Lodging Card inside Itinerary */
+.day-lodging-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card-subtle);
+  border: 1px dashed var(--border);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+  font-size: 0.85rem;
+}
+.day-lodging-title { font-weight: 600; color: var(--fg); }
+
+/* Swap Ideas Modal List */
+.swap-filters { margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+.swap-ideas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.swap-idea-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: border-color 0.15s;
+}
+.swap-idea-card:hover { border-color: var(--primary); }
+.swap-idea-info { flex: 1; }
+.swap-idea-title { font-weight: 600; font-size: 0.92rem; margin-bottom: 4px; }
+.swap-idea-meta { font-size: 0.78rem; color: var(--fg-muted); margin-bottom: 6px; }
+.swap-idea-why { font-size: 0.82rem; color: var(--fg-muted); line-height: 1.4; }
+
+/* Add-To-Day Dropdown in Ideas Tab */
+.add-to-day-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.day-select-input {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  outline: none;
+}
+
+/* Decision Impact & Changes Callout */
+.decision-impact-box {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+}
+.decision-impact-title { font-size: 0.8rem; font-weight: 700; color: var(--accent-amber); margin-bottom: 4px; }
+.decision-impact-list { margin: 0; padding-left: 18px; font-size: 0.8rem; color: var(--fg-muted); }
+.decision-impact-list li { margin-bottom: 3px; }
+
+/* Category Progress Breakdown in Expenses */
+.category-bars-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+}
+.cat-bar-item { display: flex; flex-direction: column; gap: 4px; }
+.cat-bar-header { display: flex; justify-content: space-between; font-size: 0.82rem; }
+.cat-bar-track { height: 6px; border-radius: var(--radius-pill); background: var(--bg-card-subtle); overflow: hidden; }
+.cat-bar-fill { height: 100%; border-radius: var(--radius-pill); }
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  bottom: calc(var(--nav-bottom-height) + 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+  max-width: 90vw;
+}
+@media (min-width: 769px) {
+  .toast-container { bottom: 24px; }
+}
+.toast {
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1px solid var(--border-focus);
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  animation: toastIn 0.25s ease-out;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
