@@ -4718,6 +4718,26 @@ function getTravellerPassport(trav) {
   data.members_passports = data.members_passports || {};
   var email = (trav.email || '').toLowerCase();
 
+  // 1. Check member record from backend (tied to user account in PocketBase!)
+  if (trav.passport && trav.passport.passport_number) {
+    return Object.assign({ full_name: trav.name, email: email }, trav.passport);
+  }
+  var memberObj = Array.isArray(STATE.members) ? STATE.members.find(function (m) {
+    var mEm = (m.email || m.invited_email || m.member_email || '').toLowerCase();
+    var mUid = m.user_id || m.member || '';
+    return (trav.user_id && mUid === trav.user_id) || (email && mEm === email);
+  }) : null;
+  if (memberObj && memberObj.passport && memberObj.passport.passport_number) {
+    return Object.assign({ full_name: trav.name, email: email }, memberObj.passport);
+  }
+
+  // 2. Check current authenticated user record
+  var curUser = (TripAuth.status && TripAuth.status().user) || STATE.user || null;
+  if (trav.isPrimary && curUser && curUser.passport && curUser.passport.passport_number) {
+    return Object.assign({ full_name: trav.name, email: email }, curUser.passport);
+  }
+
+  // 3. Check trip_docs members_passports
   if (email && data.members_passports[email]) {
     return Object.assign({ full_name: trav.name, email: email }, data.members_passports[email]);
   }
@@ -5019,11 +5039,27 @@ function saveTravellerEditor() {
     notes: notes
   };
 
-  if (isSelf) {
+  var curUser = (TripAuth.status && TripAuth.status().user) || STATE.user || null;
+  var myEmail = (curUser && curUser.email) ? curUser.email.toLowerCase() : '';
+  var isCurrentUser = isSelf || (email && myEmail && email === myEmail);
+
+  if (isCurrentUser) {
     data.my_passport = Object.assign({}, data.my_passport || {}, pObj);
+    if (curUser) curUser.passport = pObj;
+    // Tie passport permanently to user account across all trips in PocketBase!
+    if (TripAuth.updateProfile) {
+      TripAuth.updateProfile({ passport: pObj }).catch(console.warn);
+    }
   }
   if (email) {
     data.members_passports[email] = Object.assign({}, data.members_passports[email] || {}, pObj);
+    if (Array.isArray(STATE.members)) {
+      var mem = STATE.members.find(function (m) {
+        var mEm = (m.email || m.invited_email || m.member_email || '').toLowerCase();
+        return mEm === email;
+      });
+      if (mem) mem.passport = pObj;
+    }
   }
   if (!isSelf && !email) {
     pObj.id = id || ('comp-' + Date.now());

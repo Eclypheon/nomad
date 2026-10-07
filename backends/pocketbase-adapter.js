@@ -157,7 +157,8 @@ function userFrom(record) {
     id: record.id,
     email: String(record.email || ''),
     name: String(record.name || ''),
-    avatar: String(record.avatar || '')
+    avatar: String(record.avatar || ''),
+    passport: record.passport || null
   };
 }
 function setUser(u) {
@@ -412,6 +413,7 @@ function mapMember(rec) {
     invited_email: String(rec.member_email || ''),
     name: String(rec.member_name || ''),
     avatar: String(rec.member_avatar || ''),
+    passport: rec.passport || null,
     /* PocketBase has no per-membership status: a trip_members row IS access.
        Invitations are separate rows and are surfaced as kind:'invite'. */
     status: 'active'
@@ -461,6 +463,22 @@ function openTrip(key) {
         var docs = docMap(all[0]);
         docs.trip = tripDoc(trip);
         var members = (all[1] || []).map(mapMember);
+
+        // Populate and sync persistent passport details across all trip members
+        docs.travellers = docs.travellers || { members_passports: {}, companions: [] };
+        docs.travellers.members_passports = docs.travellers.members_passports || {};
+        members.forEach(function (m) {
+          var em = (m.invited_email || '').toLowerCase();
+          if (em && m.passport) {
+            docs.travellers.members_passports[em] = Object.assign({}, docs.travellers.members_passports[em] || {}, m.passport);
+          }
+        });
+        if (ST.user && ST.user.email && ST.user.passport) {
+          var myEm = ST.user.email.toLowerCase();
+          docs.travellers.members_passports[myEm] = Object.assign({}, docs.travellers.members_passports[myEm] || {}, ST.user.passport);
+          if (!docs.travellers.my_passport) docs.travellers.my_passport = ST.user.passport;
+        }
+
         var mine = members.filter(function (m) { return ST.user && m.user_id === ST.user.id; })[0] || null;
         var role = (ST.user && trip.owner === ST.user.id) ? 'owner' : (mine ? mine.role : 'member');
         /* pending invitations are only visible to the owner; an invite whose
@@ -501,14 +519,25 @@ function createTrip(tripData) {
     cols.owner = ST.user.id;
     if (tripData.currency) cols.currency = tripData.currency;
     return p.collection('trips').create(cols, { requestKey: null }).then(function (rec) {
-      return p.collection('trip_members').create({
+      var memPayload = {
         trip: rec.id,
         member: ST.user.id,
         role: 'owner',
         member_email: ST.user.email || '',
         member_name: ST.user.name || ''
-      }, { requestKey: null }).then(function () {
+      };
+      if (ST.user && ST.user.passport) {
+        memPayload.passport = ST.user.passport;
+      }
+      return p.collection('trip_members').create(memPayload, { requestKey: null }).then(function () {
         ST.roles[rec.id] = 'owner';
+        if (tripData.docs) {
+          return saveDocs(rec.id, tripData.docs).then(function () {
+            return mapTrip(rec);
+          }, function () {
+            return mapTrip(rec);
+          });
+        }
         return mapTrip(rec);
       }, function () {
         ST.roles[rec.id] = 'owner';
@@ -532,13 +561,17 @@ function joinTrip(tripId) {
           return true;
         }, function (apiErr) {
           console.warn('[Nomad] /api/nomad/join call failed, falling back to direct create:', apiErr);
-          return p.collection('trip_members').create({
+          var joinPayload = {
             trip: k,
             member: ST.user.id,
             role: 'member',
             member_email: ST.user.email || '',
             member_name: ST.user.name || ''
-          }, { requestKey: null }).then(function () { return true; });
+          };
+          if (ST.user && ST.user.passport) {
+            joinPayload.passport = ST.user.passport;
+          }
+          return p.collection('trip_members').create(joinPayload, { requestKey: null }).then(function () { return true; });
         });
       });
   }).then(function () { return openTrip(k); }, function (e) { throw friendly(e); });
@@ -835,13 +868,17 @@ function updateProfile(data) {
   if (!p || !ST.user || !ST.user.id) return Promise.resolve(false);
   var payload = {};
   if (data && data.name !== undefined) payload.name = String(data.name).trim();
+  if (data && data.passport !== undefined) payload.passport = data.passport;
+
   return p.collection('users').update(ST.user.id, payload, { requestKey: null })
     .then(function (rec) {
       setUser(userFrom(rec));
       return p.collection('trip_members').getFullList({ filter: 'member = ' + quote(ST.user.id), requestKey: null })
         .then(function (members) {
           var updates = (members || []).map(function (m) {
-            return p.collection('trip_members').update(m.id, { member_name: rec.name }, { requestKey: null }).catch(function () {});
+            var mPayload = { member_name: rec.name };
+            if (data && data.passport !== undefined) mPayload.passport = data.passport;
+            return p.collection('trip_members').update(m.id, mPayload, { requestKey: null }).catch(function () {});
           });
           return Promise.all(updates);
         }).catch(function () {}).then(function () {
