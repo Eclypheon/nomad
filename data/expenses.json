@@ -26,7 +26,9 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 59,
-      "linked_type": "accommodation"
+      "linked_type": "accommodation",
+      "linked_title": "Peridot Grand Hotel & Spa (acc-003)",
+      "linked_id": "acc-003"
     },
     {
       "id": "exp-a2",
@@ -46,7 +48,9 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 26,
-      "linked_type": "accommodation"
+      "linked_type": "accommodation",
+      "linked_title": "Yen Bien Luxury Hotel (acc-015)",
+      "linked_id": "acc-015"
     },
     {
       "id": "exp-a3",
@@ -67,7 +71,9 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 58,
-      "linked_type": "accommodation"
+      "linked_type": "accommodation",
+      "linked_title": "Tam Coc Garden Resort (acc-010)",
+      "linked_id": "acc-010"
     },
     {
       "id": "exp-a4",
@@ -87,7 +93,9 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 70,
-      "linked_type": "accommodation"
+      "linked_type": "accommodation",
+      "linked_title": "La Siesta Premium Hang Be (acc-009)",
+      "linked_id": "acc-009"
     },
     {
       "id": "exp-t1",
@@ -109,7 +117,9 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 269,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Ha Giang Easy Rider Loop Tour",
+      "linked_decision_id": "dec-loop"
     },
     {
       "id": "exp-t2",
@@ -129,7 +139,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 37,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Tip easy-rider driver (Ha Giang loop finish)"
     },
     {
       "id": "exp-t3",
@@ -149,7 +160,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 20,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Old Quarter Guided Street-Food Walking Tour"
     },
     {
       "id": "exp-t4",
@@ -168,7 +180,9 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 12,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Trang An Boat Trip (Route 3)",
+      "linked_decision_id": "dec-ninh-binh-route"
     },
     {
       "id": "exp-t5",
@@ -188,7 +202,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 7,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Hang Mua (Mua Cave) 500-step climb"
     },
     {
       "id": "exp-t6",
@@ -208,7 +223,9 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 11,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Tam Coc Boat Trip",
+      "linked_decision_id": "dec-tam-coc-boat"
     },
     {
       "id": "exp-t7",
@@ -227,7 +244,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 2,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Cycle to Bich Dong Pagoda + Thai Vi Temple"
     },
     {
       "id": "exp-t8",
@@ -247,7 +265,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 2,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Hoa Lo Prison ('the Hanoi Hilton')"
     },
     {
       "id": "exp-t9",
@@ -267,7 +286,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 2,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Temple of Literature (Van Mieu)"
     },
     {
       "id": "exp-t10",
@@ -287,7 +307,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 30,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "60-min blind massage (Omamori Spa)"
     },
     {
       "id": "exp-t11",
@@ -307,7 +328,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 5,
-      "linked_type": "activity"
+      "linked_type": "activity",
+      "linked_title": "Dong Van Old Quarter & Morning Market Walk"
     },
     {
       "id": "exp-f1",
@@ -412,7 +434,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 14,
-      "linked_type": "custom"
+      "linked_type": "activity",
+      "linked_title": "Noi Bai Airport Transfers (Grab/Car)"
     },
     {
       "id": "exp-x2",
@@ -432,7 +455,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 17,
-      "linked_type": "custom"
+      "linked_type": "activity",
+      "linked_title": "Hanoi -> Ha Giang Overnight Sleeper Bus"
     },
     {
       "id": "exp-x3",
@@ -452,7 +476,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 22,
-      "linked_type": "custom"
+      "linked_type": "activity",
+      "linked_title": "Limousine Van: Ha Giang -> Hanoi"
     },
     {
       "id": "exp-x4",
@@ -472,7 +497,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 17,
-      "linked_type": "custom"
+      "linked_type": "activity",
+      "linked_title": "Limousine Van: Hanoi -> Tam Coc"
     },
     {
       "id": "exp-x5",
@@ -492,7 +518,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": 7,
-      "linked_type": "custom"
+      "linked_type": "activity",
+      "linked_title": "Ninh Binh -> Hanoi Train (Soft Seat)"
     },
     {
       "id": "exp-x6",
@@ -645,7 +672,8 @@
       "is_paid": false,
       "paid_users": {},
       "cost_sgd": "SGD 450-700 (excluded from the S$1,500/person cap)",
-      "linked_type": "custom"
+      "linked_type": "activity",
+      "linked_title": "International Flights: SIN <-> HAN Return"
     }
   ],
   "actuals": []

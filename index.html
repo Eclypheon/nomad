@@ -436,8 +436,12 @@
         <input type="hidden" id="packing-modal-cat-key" value="" />
         <input type="hidden" id="packing-modal-item-idx" value="" />
         <div>
-          <label class="form-label small">Item Title *</label>
-          <input type="text" id="packing-modal-name" class="search-input" placeholder="e.g. Universal travel adapter" required />
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <label class="form-label small" style="margin: 0;">Item Title *</label>
+            <span id="packing-name-counter" class="muted tiny">0/40</span>
+          </div>
+          <input type="text" id="packing-modal-name" class="search-input" maxlength="40" placeholder="e.g. Universal travel adapter" required />
+          <span class="muted tiny" style="display: block; margin-top: 2px;">Keep titles concise (max 40 characters). Put extra details in notes below.</span>
         </div>
         <div>
           <label class="form-label small">Details & Packing Notes (Optional)</label>

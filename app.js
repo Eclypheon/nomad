@@ -60,7 +60,13 @@ function $$(sel, root) { return Array.prototype.slice.call((root || document).qu
 function ce(tag, cls, text) {
   var el = document.createElement(tag);
   if (cls) el.className = cls;
-  if (text != null && text !== '') el.textContent = String(text);
+  if (text != null && text !== '') {
+    if (typeof text === 'string' && /<[a-z][\s\S]*>/i.test(text)) {
+      el.innerHTML = text;
+    } else {
+      el.textContent = String(text);
+    }
+  }
   return el;
 }
 function clear(node) { while (node && node.firstChild) node.removeChild(node.firstChild); }
@@ -77,6 +83,36 @@ function money(n, cur) {
   return cur ? cur + ' ' + s : s;
 }
 function sgd(n) { return money(n, 'S$'); }
+
+var VND_PER_SGD = 20285;
+function parseVndCostToSgd(costEstimate, existingCostSgd) {
+  var numVal = typeof existingCostSgd === 'number' ? existingCostSgd : num(existingCostSgd);
+  if (numVal != null && numVal >= 0 && numVal <= 1000) {
+    return numVal;
+  }
+  if (!costEstimate) return (numVal != null && numVal > 1000) ? Math.round(numVal / VND_PER_SGD) : 0;
+
+  var str = String(costEstimate).toLowerCase();
+  if (str.includes('free') || str.includes('included') || str.includes('n/a') || str.includes('risk avoidance')) {
+    return 0;
+  }
+  if (str.includes('us$') || str.includes('usd')) {
+    var uMatch = str.match(/(?:us\$|usd)\s*(\d+(?:\.\d+)?)/);
+    if (uMatch) return Math.round(parseFloat(uMatch[1]) * 1.35);
+  }
+  var numMatches = str.match(/\b\d{1,3}(?:,\d{3})+\b|\b\d{4,9}\b/g);
+  if (numMatches && numMatches.length > 0) {
+    var firstVal = parseFloat(numMatches[0].replace(/,/g, ''));
+    if (firstVal > 1000) {
+      return Math.max(1, Math.round(firstVal / VND_PER_SGD));
+    }
+    return firstVal;
+  }
+  if (numVal != null && numVal > 1000) {
+    return Math.max(1, Math.round(numVal / VND_PER_SGD));
+  }
+  return 0;
+}
 
 /* Toast Notifications */
 function showToast(msg) {
@@ -595,8 +631,12 @@ function getExpensesPlanned() {
 function getRecommendations() {
   var d = STATE.docs.recommendations;
   if (!d) return [];
-  if (Array.isArray(d)) return d;
-  return d.recommendations || d.items || [];
+  var list = Array.isArray(d) ? d : (d.recommendations || d.items || []);
+  list.forEach(function (r) {
+    r.cost_sgd = parseVndCostToSgd(r.cost_estimate, r.cost_sgd);
+    if (!r.duration) r.duration = '1-2h';
+  });
+  return list;
 }
 
 function getDecisions() {
@@ -3602,18 +3642,41 @@ function getExpenseDayShort(it) {
 
 function getExpenseLinkInfo(it) {
   if (!it) return null;
+
+  // 1. Explicit link tags
   if (it.linked_type === 'decision' || it.linked_decision_id) {
     return { type: 'decision', title: it.linked_title || 'Linked Group Decision' };
-  }
-  if (it.linked_type === 'activity' || it.linked_activity_id) {
-    return { type: 'activity', title: it.linked_title || it.description || 'Linked Itinerary Activity' };
   }
   if (it.linked_type === 'accommodation') {
     return { type: 'accommodation', title: it.linked_title || it.description || 'Linked Accommodation' };
   }
-  if (it.linked_type === 'custom') return null;
+  if (it.linked_type === 'activity' || it.linked_activity_id) {
+    return { type: 'activity', title: it.linked_title || it.description || 'Linked Itinerary Activity' };
+  }
+  if (it.linked_type === 'transport') {
+    return { type: 'transport', title: it.linked_title || it.description || 'Linked Itinerary Transit' };
+  }
 
-  // Auto-detect if matched to an activity in itinerary
+  var expDesc = (it.description || '').toLowerCase();
+  var expCat = (it.category || '').toLowerCase();
+
+  // 2. Check accommodation matches
+  if (expCat === 'accommodation' || expDesc.includes('hotel') || expDesc.includes('homestay') || expDesc.includes('resort') || /acc-\d+/.test(expDesc)) {
+    var accs = getAccommodations();
+    var accMatch = accs.find(function (acc) {
+      var aId = (acc.id || '').toLowerCase();
+      var aName = (acc.name || acc.hotel || '').toLowerCase();
+      return (aId && expDesc.includes(aId)) || (aName && (expDesc.includes(aName.slice(0, 10)) || aName.includes(expDesc.slice(0, 10))));
+    });
+    if (accMatch) {
+      return { type: 'accommodation', title: accMatch.name || accMatch.hotel || it.linked_title || 'Linked Accommodation' };
+    }
+    if (expCat === 'accommodation') {
+      return { type: 'accommodation', title: it.linked_title || it.description };
+    }
+  }
+
+  // 3. Auto-detect if matched to an activity or transit in itinerary
   var days = getItineraryDays();
   for (var i = 0; i < days.length; i++) {
     var d = days[i];
@@ -3621,23 +3684,64 @@ function getExpenseLinkInfo(it) {
     for (var j = 0; j < acts.length; j++) {
       var a = acts[j];
       var aTitle = (a.what || a.title || '').toLowerCase();
-      var expDesc = (it.description || '').toLowerCase();
-      if (aTitle && expDesc && (expDesc.includes(aTitle.slice(0, 15)) || aTitle.includes(expDesc.slice(0, 15)))) {
+      if (!aTitle) continue;
+
+      // Direct substring match
+      if (expDesc.includes(aTitle.slice(0, 15)) || aTitle.includes(expDesc.slice(0, 15))) {
         return { type: 'activity', title: a.what || a.title, day: d.day, actIdx: j };
+      }
+
+      // Keyword based domain matching
+      var keywords = [
+        ['sleeper bus', 'sleeper bus'],
+        ['limousine', 'limousine'],
+        ['train', 'railway'],
+        ['train', 'train'],
+        ['airport transfer', 'noi bai'],
+        ['airport', 'airport'],
+        ['trang an', 'trang an'],
+        ['tam coc boat', 'tam coc boat'],
+        ['hang mua', 'hang mua'],
+        ['massage', 'massage'],
+        ['hoa lo', 'hoa lo'],
+        ['literature', 'literature'],
+        ['van mieu', 'van mieu'],
+        ['street-food', 'street-food'],
+        ['street food', 'street food'],
+        ['easy rider', 'easy rider'],
+        ['easy-rider', 'easy-rider'],
+        ['flight', 'flight'],
+        ['changi', 'changi'],
+        ['bicycle', 'cycle']
+      ];
+      for (var k = 0; k < keywords.length; k++) {
+        var pair = keywords[k];
+        if (expDesc.includes(pair[0]) && aTitle.includes(pair[1])) {
+          return { type: 'activity', title: a.what || a.title, day: d.day, actIdx: j };
+        }
+      }
+    }
+
+    // Transit detail matching on day
+    var tDetail = d.transit || '';
+    if (tDetail && typeof tDetail === 'string') {
+      var tLow = tDetail.toLowerCase();
+      if ((expDesc.includes('airport') || expDesc.includes('noi bai')) && (tLow.includes('noi bai') || tLow.includes('changi'))) {
+        return { type: 'activity', title: 'Airport Transfers (Day ' + d.day + ')', day: d.day };
       }
     }
   }
 
-  // Auto-detect if matched to a decision
+  // 4. Auto-detect if matched to a decision
   var decs = getDecisions();
-  for (var k = 0; k < decs.length; k++) {
-    var dec = decs[k];
+  for (var m = 0; m < decs.length; m++) {
+    var dec = decs[m];
     var decTitle = (dec.title || '').toLowerCase();
-    var expDesc2 = (it.description || '').toLowerCase();
-    if (decTitle && expDesc2 && (expDesc2.includes(decTitle.slice(0, 12)) || decTitle.includes(expDesc2.slice(0, 12)))) {
+    if (decTitle && (expDesc.includes(decTitle.slice(0, 12)) || decTitle.includes(expDesc.slice(0, 12)))) {
       return { type: 'decision', title: dec.title, decId: dec.id };
     }
   }
+
   return null;
 }
 
@@ -3892,9 +3996,27 @@ function openExpenseDetailModal(it) {
     linkBanner.style.padding = '10px 12px';
     linkBanner.style.marginBottom = '4px';
 
-    var linkHead = ce('div', 'small', '🔗 Linked to ' + (linkInfo.type === 'decision' ? 'Decision: ' : 'Activity: ') + '<strong>' + escapeHtml(linkInfo.title) + '</strong>');
+    var typeLabel = linkInfo.type === 'decision' ? 'Decision: ' : (linkInfo.type === 'accommodation' ? 'Accommodation: ' : 'Activity / Transit: ');
+    var linkHead = ce('div', 'small');
+    linkHead.innerHTML = '🔗 Linked to ' + typeLabel + '<strong>' + escapeHtml(linkInfo.title) + '</strong>';
     linkBanner.appendChild(linkHead);
-    var linkNote = ce('p', 'tiny muted', 'This expense is synced with the ' + (linkInfo.type === 'decision' ? 'Decisions' : 'Itinerary') + ' tab. You can freely edit its dollar amount here. To modify its description, schedule, or remove it, please use the ' + (linkInfo.type === 'decision' ? 'Decisions' : 'Itinerary') + ' tab.');
+
+    var noteText = '';
+    var targetTabName = 'Itinerary';
+    var targetTabKey = 'itinerary';
+    if (linkInfo.type === 'decision') {
+      targetTabName = 'Decisions';
+      targetTabKey = 'decisions';
+      noteText = 'This expense is synced with the Decisions tab. You can freely edit its dollar amount here. To modify your decision choice, please use the Decisions tab.';
+    } else if (linkInfo.type === 'accommodation') {
+      targetTabName = 'Stays';
+      targetTabKey = 'accommodation';
+      noteText = 'This expense is synced with the Stays tab. You can freely edit its dollar amount here. To modify hotel details, please use the Stays tab.';
+    } else {
+      noteText = 'This expense is synced with the Itinerary tab. You can freely edit its dollar amount here. To modify its schedule or remove it, please use the Itinerary tab.';
+    }
+
+    var linkNote = ce('p', 'tiny muted', noteText);
     linkNote.style.margin = '4px 0 0 0';
     linkBanner.appendChild(linkNote);
     actionsBox.appendChild(linkBanner);
@@ -3910,11 +4032,10 @@ function openExpenseDetailModal(it) {
     };
     btnRow.appendChild(editAmtBtn);
 
-    var navBtn = ce('button', 'btn btn-secondary small', 'Go to ' + (linkInfo.type === 'decision' ? 'Decisions' : 'Itinerary') + ' →');
+    var navBtn = ce('button', 'btn btn-secondary small', 'Go to ' + targetTabName + ' →');
     navBtn.onclick = function () {
       modal.hidden = true;
-      STATE.activeTab = (linkInfo.type === 'decision' ? 'decisions' : 'itinerary');
-      renderActiveTab();
+      switchTab(targetTabKey);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
     btnRow.appendChild(navBtn);
@@ -4457,14 +4578,33 @@ function openPackingItemModal(cat, it, idx, catKey) {
   if (!modal) return;
 
   var isEdit = (idx >= 0 && it != null);
-  var itemText = isEdit ? (typeof it === 'string' ? it : (it.item || it.name || '')) : '';
+  var rawTitle = isEdit ? (typeof it === 'string' ? it : (it.item || it.name || '')) : '';
+  var itemText = rawTitle.slice(0, 40);
   var itemNotes = isEdit ? (typeof it === 'string' ? '' : (it.notes || '')) : '';
-  var oldItemId = isEdit ? (catKey + '_' + itemText) : '';
+  if (rawTitle.length > 40) {
+    var overflow = rawTitle.slice(40).trim();
+    if (!itemNotes.includes(overflow)) {
+      itemNotes = (overflow + (itemNotes ? ' · ' + itemNotes : '')).trim();
+    }
+  }
+  var oldItemId = isEdit ? (catKey + '_' + rawTitle) : '';
 
   $('#packing-modal-title').textContent = isEdit ? 'Edit Packing Item' : 'Add Item to ' + (cat.name || cat.category || 'List');
   $('#packing-modal-cat-key').value = catKey;
   $('#packing-modal-item-idx').value = String(idx);
-  $('#packing-modal-name').value = itemText;
+
+  var nameInput = $('#packing-modal-name');
+  var counterEl = $('#packing-name-counter');
+  if (nameInput) {
+    nameInput.maxLength = 40;
+    nameInput.value = itemText;
+    var updateCounter = function () {
+      if (counterEl) counterEl.textContent = nameInput.value.length + '/40';
+    };
+    nameInput.oninput = updateCounter;
+    updateCounter();
+  }
+
   $('#packing-modal-notes').value = itemNotes;
 
   $('#packing-modal-cancel-btn').onclick = function () { modal.hidden = true; };
@@ -4473,7 +4613,7 @@ function openPackingItemModal(cat, it, idx, catKey) {
   var form = $('#packing-item-form');
   form.onsubmit = function (e) {
     e.preventDefault();
-    var newName = $('#packing-modal-name').value.trim();
+    var newName = $('#packing-modal-name').value.trim().slice(0, 40);
     var newNotes = $('#packing-modal-notes').value.trim();
     if (!newName) return;
 
@@ -4484,7 +4624,7 @@ function openPackingItemModal(cat, it, idx, catKey) {
       cat.items[idx] = newItemObj;
 
       // Migrate checked states for all travellers if title changed
-      if (newName !== itemText && oldItemId) {
+      if (newName !== rawTitle && oldItemId) {
         var newId = catKey + '_' + newName;
         var pDoc = STATE.docs.packing;
         if (pDoc && pDoc.traveller_checks) {
@@ -4509,7 +4649,6 @@ function openPackingItemModal(cat, it, idx, catKey) {
 
   modal.hidden = false;
   setTimeout(function () {
-    var nameInput = $('#packing-modal-name');
     if (nameInput) nameInput.focus();
   }, 50);
 }
@@ -4615,10 +4754,18 @@ function renderPacking() {
 
     var list = ce('div', 'checklist');
     (cat.items || []).forEach(function (it, idx) {
-      var itemText = typeof it === 'string' ? it : (it.item || it.name || '');
+      var rawTitle = typeof it === 'string' ? it : (it.item || it.name || '');
       var itemNotes = typeof it === 'string' ? '' : (it.notes || '');
-      var itemId = catKey + '_' + itemText;
-      var isDone = !!checkedState[itemId];
+      var itemText = rawTitle;
+      if (itemText.length > 40) {
+        var extra = itemText.slice(40).trim();
+        itemText = itemText.slice(0, 40).trim();
+        if (extra && !itemNotes.includes(extra)) {
+          itemNotes = (extra + (itemNotes ? ' · ' + itemNotes : '')).trim();
+        }
+      }
+      var itemId = catKey + '_' + (typeof it === 'string' ? it : (it.item || it.name || ''));
+      var isDone = !!checkedState[itemId] || !!checkedState[catKey + '_' + itemText];
 
       var row = ce('div', 'packing-compact-row' + (isDone ? ' done' : ''));
 
@@ -4791,13 +4938,14 @@ function openAddIdeaToDayModal(idea, optPreselectDay) {
   var body = $('#add-idea-modal-body');
   clear(body);
 
-  var ideaCost = Number(idea.cost_sgd != null ? idea.cost_sgd : (num(idea.cost_estimate) || 0));
+  var ideaCost = parseVndCostToSgd(idea.cost_estimate, idea.cost_sgd);
   var duration = idea.duration || '1-2h';
   var areaStr = idea.area || idea.location || 'Curated Spot';
 
   if (titleEl) titleEl.textContent = 'Add "' + (idea.title || idea.name) + '" to Day';
   if (subEl) {
-    subEl.textContent = '📍 ' + areaStr + ' · ⏱ Duration: ' + duration + ' · 💰 Fixed Cost: ' + sgd(ideaCost);
+    var costDisplay = (ideaCost > 0 ? sgd(ideaCost) : 'Free') + (idea.cost_estimate && !idea.cost_estimate.toLowerCase().includes('free') ? ' (' + escapeHtml(idea.cost_estimate) + ')' : '');
+    subEl.innerHTML = '📍 ' + escapeHtml(areaStr) + ' · ⏱ Duration: ' + escapeHtml(duration) + ' · 💰 Cost: ' + costDisplay;
   }
 
   var closeBtn = $('#add-idea-modal-close');
@@ -4829,7 +4977,8 @@ function openAddIdeaToDayModal(idea, optPreselectDay) {
 
   // 1. Location & Day Selector
   var daySelectSection = ce('div', null);
-  var dayHead = ce('div', 'small', '<strong>1. Select Itinerary Day</strong> <span class="muted tiny">(Location-matched)</span>');
+  var dayHead = ce('div', 'small');
+  dayHead.innerHTML = '<strong>1. Select Itinerary Day</strong> <span class="muted tiny">(Location-matched)</span>';
   dayHead.style.marginBottom = '6px';
   daySelectSection.appendChild(dayHead);
 
@@ -4839,7 +4988,8 @@ function openAddIdeaToDayModal(idea, optPreselectDay) {
 
   // 2. Day Schedule Preview Box
   var previewSection = ce('div', null);
-  var previewHead = ce('div', 'small', '<strong>2. Day Schedule & Planned Activities</strong>');
+  var previewHead = ce('div', 'small');
+  previewHead.innerHTML = '<strong>2. Day Schedule & Planned Activities</strong>';
   previewHead.style.marginBottom = '4px';
   previewSection.appendChild(previewHead);
 
@@ -4849,7 +4999,8 @@ function openAddIdeaToDayModal(idea, optPreselectDay) {
 
   // 3. Scheduling Mode Tabs & Controls
   var modeSection = ce('div', null);
-  var modeHead = ce('div', 'small', '<strong>3. Choose Schedule Placement</strong>');
+  var modeHead = ce('div', 'small');
+  modeHead.innerHTML = '<strong>3. Choose Schedule Placement</strong>';
   modeHead.style.marginBottom = '4px';
   modeSection.appendChild(modeHead);
 
@@ -5161,7 +5312,7 @@ function executeAddIdeaToDay(idea, dayNum, chosenTime, actionType, replaceActInd
   }
   if (!realDay.items) realDay.items = [];
 
-  var newCost = Number(idea.cost_sgd != null ? idea.cost_sgd : (num(idea.cost_estimate) || 0));
+  var newCost = parseVndCostToSgd(idea.cost_estimate, idea.cost_sgd);
   var newAct = {
     time: chosenTime || '~flexible',
     what: idea.title || idea.name,
@@ -5292,8 +5443,13 @@ function renderRecList(recs, days, container) {
     var meta = [];
     if (r.area) meta.push('📍 ' + r.area);
     if (r.category) meta.push('🏷 ' + r.category);
-    var costNum = Number(r.cost_sgd != null ? r.cost_sgd : (num(r.cost_estimate) || 0));
-    meta.push('💰 ' + sgd(costNum));
+    var costNum = parseVndCostToSgd(r.cost_estimate, r.cost_sgd);
+    r.cost_sgd = costNum;
+    var costLabel = costNum > 0 ? sgd(costNum) : 'Free';
+    if (r.cost_estimate && !r.cost_estimate.toLowerCase().includes('free') && !r.cost_estimate.toLowerCase().includes('n/a')) {
+      costLabel += ' (' + r.cost_estimate + ')';
+    }
+    meta.push('💰 ' + costLabel);
     if (r.duration) meta.push('⏱ ' + r.duration);
     card.appendChild(ce('div', 'stay-dates', meta.join(' · ')));
 
@@ -6637,12 +6793,12 @@ function startAiTripGeneration() {
     '  ],\n' +
     '  "packing": {\n' +
     '    "categories": [\n' +
-    '      { "id": "cat-clothings", "name": "Clothings", "items": [{ "id": "p-1", "name": "Item", "checked": false }] },\n' +
-    '      { "id": "cat-footwear", "name": "Footwear", "items": [{ "id": "p-2", "name": "Item", "checked": false }] },\n' +
-    '      { "id": "cat-electronics", "name": "Electronics", "items": [{ "id": "p-3", "name": "Item", "checked": false }] },\n' +
-    '      { "id": "cat-documents", "name": "Documents", "items": [{ "id": "p-4", "name": "Passport", "checked": false }, { "id": "p-5", "name": "Ballpoint pen (for arrival cards)", "checked": false }] },\n' +
-    '      { "id": "cat-toiletries", "name": "Toiletries", "items": [{ "id": "p-6", "name": "Item", "checked": false }] },\n' +
-    '      { "id": "cat-medicine", "name": "Medicine", "items": [{ "id": "p-7", "name": "Item", "checked": false }] }\n' +
+    '      { "id": "cat-clothings", "name": "Clothings", "items": [{ "id": "p-1", "name": "Brief title (max 40 chars)", "notes": "Full details / specs", "checked": false }] },\n' +
+    '      { "id": "cat-footwear", "name": "Footwear", "items": [{ "id": "p-2", "name": "Brief title (max 40 chars)", "notes": "Details", "checked": false }] },\n' +
+    '      { "id": "cat-electronics", "name": "Electronics", "items": [{ "id": "p-3", "name": "Brief title (max 40 chars)", "notes": "Details", "checked": false }] },\n' +
+    '      { "id": "cat-documents", "name": "Documents", "items": [{ "id": "p-4", "name": "Original Passport", "notes": "6+ months validity", "checked": false }, { "id": "p-5", "name": "Ballpoint pen", "notes": "For arrival cards", "checked": false }] },\n' +
+    '      { "id": "cat-toiletries", "name": "Toiletries", "items": [{ "id": "p-6", "name": "Brief title (max 40 chars)", "notes": "Details", "checked": false }] },\n' +
+    '      { "id": "cat-medicine", "name": "Medicine", "items": [{ "id": "p-7", "name": "Brief title (max 40 chars)", "notes": "Details", "checked": false }] }\n' +
     '    ]\n' +
     '  },\n' +
     '  "recommendations": [\n' +
@@ -6656,7 +6812,9 @@ function startAiTripGeneration() {
     "- Target Budget: " + budget + " " + curr + "\n" +
     "- Travel Style: " + vibe + "\n" +
     (promptNotes ? ("- Specific Preferences: " + promptNotes + "\n") : "") +
-    "\nEnsure every day has rich morning, afternoon, evening, and night activities with explicit 'type' and 'slot' fields. Include stays with 'status', budget breakdown, fork decisions, 6 packing categories (Clothings, Footwear, Electronics, Documents including ballpoint pen, Toiletries, Medicine), and top recommendations.";
+    "\nCRITICAL RULES:\n" +
+    "1. PACKING TITLES: Every packing item 'name' or 'item' MUST be strictly at most 40 characters (e.g. 'Warm mid-layer fleece'). Put all extra notes, quantities, or explanations in the 'notes' field.\n" +
+    "2. Ensure every day has rich morning, afternoon, evening, and night activities with explicit 'type' and 'slot' fields. Include stays with 'status', budget breakdown, fork decisions, 6 packing categories (Clothings, Footwear, Electronics, Documents including ballpoint pen, Toiletries, Medicine), and top recommendations.";
 
   var messages = [
     { role: 'system', content: systemPrompt },

@@ -13,8 +13,8 @@
           "notes": "Essential outer barrier against wind chill on the motorbike"
         },
         {
-          "item": "Warm mid-layer (compact down jacket or fleece)",
-          "notes": "Crucial for high altitude passes (Đồng Văn, Mã Pí Lèng)"
+          "item": "Warm mid-layer (fleece / down)",
+          "notes": "Compact down jacket or fleece. Crucial for high altitude passes (Đồng Văn, Mã Pí Lèng)"
         },
         {
           "item": "3-4x Quick-dry t-shirts / base layers",
@@ -33,8 +33,8 @@
           "notes": "For homestay dinners and temples in Hanoi/Ninh Binh"
         },
         {
-          "item": "5-6x Underwear & 5-6x moisture-wicking socks",
-          "notes": "Include 2 thick warm pairs for loop nights"
+          "item": "5-6x Underwear & moisture socks",
+          "notes": "5-6x moisture-wicking socks. Include 2 thick warm pairs for loop nights"
         },
         {
           "item": "Comfortable modest sleepwear",
@@ -59,8 +59,8 @@
       "name": "Footwear",
       "items": [
         {
-          "item": "Closed walking shoes / trail sneakers with grip",
-          "notes": "For 500 stone steps at Hang Mua, Old Quarter pavement, boat wharves"
+          "item": "Walking shoes / trail sneakers",
+          "notes": "With good grip for 500 stone steps at Hang Mua, Old Quarter pavement, boat wharves. For 500 stone steps at Hang Mua, Old Quarter pavement, boat wharves"
         },
         {
           "item": "Comfortable sandals or slip-ons",
@@ -81,8 +81,8 @@
           "notes": "Main camera, Grab ride-hailing, maps, and offline tickets"
         },
         {
-          "item": "2x High-capacity power banks (<=20,000mAh)",
-          "notes": "Must carry in cabin baggage only per airline rules"
+          "item": "2x Power banks (<=20,000mAh)",
+          "notes": "High-capacity power banks. Must carry in cabin baggage only per airline rules"
         },
         {
           "item": "Universal travel adapter x2",
@@ -107,16 +107,16 @@
       "name": "Documents & Essentials",
       "items": [
         {
-          "item": "Original Passports (6+ months validity upon entry)",
-          "notes": "Singapore passport holders enter visa-free for up to 30 days"
+          "item": "Original Passports (6+ mo valid)",
+          "notes": "Must have 6+ months validity upon entry. Singapore passport holders enter visa-free for up to 30 days"
         },
         {
           "item": "Ballpoint Pen (blue or black ink)",
           "notes": "Essential for filling arrival / customs declaration cards on planes and at immigration"
         },
         {
-          "item": "Return flight tickets & accommodation vouchers",
-          "notes": "Keep printed paper copy + offline PDF on phone"
+          "item": "Return flights & hotel vouchers",
+          "notes": "Return flight tickets & accommodation vouchers. Keep printed paper copy + offline PDF on phone"
         },
         {
           "item": "Travel insurance policy certificate",
@@ -157,16 +157,16 @@
           "notes": "Homestays on the loop may not supply large towels"
         },
         {
-          "item": "Pocket tissues & wet wipes / hand sanitizer",
-          "notes": "Public restrooms in rural areas rarely have toilet paper"
+          "item": "Pocket tissues & wet wipes",
+          "notes": "Pocket tissues, wet wipes & hand sanitizer. Public restrooms in rural areas rarely have toilet paper"
         },
         {
           "item": "Earplugs (2 pairs) & eye mask",
           "notes": "Essential for sleeper bus and shared stilt-house rooms"
         },
         {
-          "item": "Travel shampoo / soap / body wash (<100ml)",
-          "notes": "Meets Scoot cabin liquid limits"
+          "item": "Travel shampoo & body wash",
+          "notes": "Travel shampoo / soap / body wash (<100ml). Meets Scoot cabin liquid limits"
         }
       ]
     },
@@ -183,20 +183,20 @@
           "notes": "Pain relief, fever, and muscle soreness from riding"
         },
         {
-          "item": "Loperamide (Imodium) & activated charcoal",
-          "notes": "Anti-diarrhoeal medication for street food adjustments"
+          "item": "Loperamide & activated charcoal",
+          "notes": "Loperamide (Imodium) & activated charcoal. Anti-diarrhoeal medication for street food adjustments"
         },
         {
-          "item": "Oral Rehydration Salts (ORS electrolyte sachets)",
-          "notes": "Rapid hydration after long active travel days"
+          "item": "Oral Rehydration Salts (ORS)",
+          "notes": "ORS electrolyte sachets for rapid hydration. Rapid hydration after long active travel days"
         },
         {
-          "item": "First aid mini-kit: Antiseptic cream & assorted band-aids",
-          "notes": "Cuts, scrapes, and blister plasters for walking shoes"
+          "item": "First aid mini-kit & band-aids",
+          "notes": "Antiseptic cream & assorted band-aids for cuts, scrapes, and blisters. Cuts, scrapes, and blister plasters for walking shoes"
         },
         {
-          "item": "Personal prescription medication + doctor's memo",
-          "notes": "Packed in cabin bag in original pharmacy boxes"
+          "item": "Personal prescription meds",
+          "notes": "Personal prescription medication + doctor's memo. Packed in cabin bag in original pharmacy boxes"
         }
       ]
     }
