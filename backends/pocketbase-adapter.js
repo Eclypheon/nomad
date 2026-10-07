@@ -472,6 +472,50 @@ function openTrip(key) {
   });
 }
 
+function createTrip(tripData) {
+  if (!tripData) return Promise.reject(err('No trip given.', 'bad_request'));
+  return pb().then(function (p) {
+    if (!ST.user) throw err('You must be signed in to create a trip.', 'auth');
+    var cols = tripColumns(tripData);
+    cols.title = cols.title || tripData.title || tripData.name || 'New Trip';
+    cols.owner = ST.user.id;
+    if (tripData.currency) cols.currency = tripData.currency;
+    return p.collection('trips').create(cols, { requestKey: null }).then(function (rec) {
+      return p.collection('trip_members').create({
+        trip: rec.id,
+        member: ST.user.id,
+        role: 'owner',
+        member_email: ST.user.email || '',
+        member_name: ST.user.name || ''
+      }, { requestKey: null }).then(function () {
+        ST.roles[rec.id] = 'owner';
+        return mapTrip(rec);
+      }, function () {
+        ST.roles[rec.id] = 'owner';
+        return mapTrip(rec);
+      });
+    });
+  }).then(function (r) { return r; }, function (e) { throw friendly(e); });
+}
+
+function joinTrip(tripId) {
+  var k = keyFrom(tripId);
+  if (!k) return Promise.reject(err('No trip given.', 'bad_request'));
+  return pb().then(function (p) {
+    if (!ST.user) throw err('You must be signed in to join a trip.', 'auth');
+    return p.collection('trip_members').getFirstListItem('trip = ' + quote(k) + ' && member = ' + quote(ST.user.id), { requestKey: null })
+      .then(function () { return true; }, function () {
+        return p.collection('trip_members').create({
+          trip: k,
+          member: ST.user.id,
+          role: 'member',
+          member_email: ST.user.email || '',
+          member_name: ST.user.name || ''
+        }, { requestKey: null }).then(function () { return true; });
+      });
+  }).then(function () { return openTrip(k); }, function (e) { throw friendly(e); });
+}
+
 /* --------------------------------------------------- members & invitations */
 
 function invite(tripId, email, role) {
@@ -777,7 +821,9 @@ global.TripBackends.pocketbase = {
   signInWithPassword: signInWithPassword,
   signOut: signOut,
   listTrips: listTrips,
+  createTrip: createTrip,
   openTrip: openTrip,
+  joinTrip: joinTrip,
   pendingInvites: pendingInvites,
   acceptInvite: acceptInvite,
   invite: invite,

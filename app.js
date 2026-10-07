@@ -408,18 +408,36 @@ function loadUserTrips() {
     var savedId = localStorage.getItem(LS_ACTIVE_TRIP);
     var target = null;
 
-    // Check URL hash for direct trip link: #trip=<id>
-    var hashMatch = window.location.hash.match(/trip=([^&]+)/);
+    // Check query params & hash for direct trip / join link: ?trip=<id> or #trip=<id>
+    var urlParams = new URLSearchParams(window.location.search);
+    var queryTripId = urlParams.get('trip') || urlParams.get('join');
+    var hashMatch = window.location.hash.match(/(?:trip|join)=([^&]+)/);
     var hashTripId = hashMatch ? decodeURIComponent(hashMatch[1]) : null;
+    var incomingTripId = queryTripId || hashTripId || sessionStorage.getItem('nomad_pending_join');
+    if (sessionStorage.getItem('nomad_pending_join')) {
+      sessionStorage.removeItem('nomad_pending_join');
+    }
 
-    if (hashTripId && trips.some(function (t) { return t.id === hashTripId; })) {
-      target = hashTripId;
+    if (incomingTripId) {
+      if (trips.some(function (t) { return t.id === incomingTripId; })) {
+        target = incomingTripId;
+      } else {
+        // Attempt to join the trip automatically
+        return TripAuth.joinTrip(incomingTripId).then(function () {
+          showToast('🎉 Joined trip successfully!');
+          return TripAuth.listTrips().then(function (updatedTrips) {
+            STATE.trips = updatedTrips || [];
+            selectTrip(incomingTripId);
+          });
+        }).catch(function (e) {
+          console.warn('Auto-join failed, opening trip directly:', e);
+          selectTrip(incomingTripId);
+        });
+      }
     } else if (savedId && trips.some(function (t) { return t.id === savedId; })) {
       target = savedId;
     } else if (trips.length > 0) {
       target = trips[0].id;
-    } else if (hashTripId) {
-      target = hashTripId;
     }
 
     if (target) {
@@ -640,6 +658,233 @@ function bindEvents() {
       renderSwapIdeasList(this.value.trim().toLowerCase());
     });
   }
+
+  // 1. Switch Trip Modal actions
+  var newTripToggleBtn = $('#create-new-trip-toggle-btn');
+  if (newTripToggleBtn) {
+    newTripToggleBtn.addEventListener('click', function () {
+      var box = $('#new-trip-form-box');
+      if (!box) return;
+      box.hidden = !box.hidden;
+      if (!box.hidden) {
+        var startInp = $('#new-trip-start-input');
+        var endInp = $('#new-trip-end-input');
+        if (startInp && !startInp.value) {
+          var d1 = new Date(); d1.setDate(d1.getDate() + 7);
+          startInp.value = d1.toISOString().slice(0, 10);
+        }
+        if (endInp && !endInp.value) {
+          var d2 = new Date(); d2.setDate(d2.getDate() + 14);
+          endInp.value = d2.toISOString().slice(0, 10);
+        }
+        var destInp = $('#new-trip-dest-input');
+        if (destInp) destInp.focus();
+      }
+    });
+  }
+
+  var cancelNewTripBtn = $('#cancel-create-trip-btn');
+  if (cancelNewTripBtn) {
+    cancelNewTripBtn.addEventListener('click', function () {
+      var box = $('#new-trip-form-box');
+      if (box) box.hidden = true;
+    });
+  }
+
+  var submitNewTripBtn = $('#submit-create-trip-btn');
+  if (submitNewTripBtn) {
+    submitNewTripBtn.addEventListener('click', function () {
+      var dest = ($('#new-trip-dest-input').value || '').trim();
+      if (!dest) {
+        alert('Please enter a destination or trip title.');
+        return;
+      }
+      var sDate = $('#new-trip-start-input').value;
+      var eDate = $('#new-trip-end-input').value;
+      var budget = parseFloat($('#new-trip-budget-input').value) || 2000;
+      var curr = $('#new-trip-curr-select').value || 'SGD';
+
+      closeTripModal();
+      createBlankTrip(dest, sDate, eDate, budget, curr).then(function () {
+        if (confirm('✨ Trip template created for ' + dest + '!\n\nWould you like AI to automatically plan the complete itinerary and lodging now?')) {
+          openAiGeneratorModal(dest, sDate, eDate, budget, curr);
+        }
+      });
+    });
+  }
+
+  var copyInviteBtn = $('#copy-active-invite-btn');
+  if (copyInviteBtn) {
+    copyInviteBtn.addEventListener('click', function () {
+      copyTripInviteLink(STATE.activeTripId);
+    });
+  }
+
+  var openJsonBtn = $('#open-json-modal-btn');
+  if (openJsonBtn) {
+    openJsonBtn.addEventListener('click', function () {
+      closeTripModal();
+      openJsonIoModal('export');
+    });
+  }
+
+  // 2. AI Provider Settings in User Modal
+  var aiProvSel = $('#user-ai-provider-select');
+  if (aiProvSel) {
+    aiProvSel.addEventListener('change', function () {
+      var endBox = $('#user-ai-endpoint-box');
+      if (endBox) endBox.hidden = (this.value !== 'custom');
+    });
+  }
+
+  var toggleAiKeyBtn = $('#toggle-show-ai-key-btn');
+  if (toggleAiKeyBtn) {
+    toggleAiKeyBtn.addEventListener('click', function () {
+      var keyInp = $('#user-ai-key-input');
+      if (!keyInp) return;
+      if (keyInp.type === 'password') {
+        keyInp.type = 'text';
+        this.textContent = '🔒';
+      } else {
+        keyInp.type = 'password';
+        this.textContent = '👁';
+      }
+    });
+  }
+
+  var saveAiBtn = $('#save-ai-settings-btn');
+  if (saveAiBtn) {
+    saveAiBtn.addEventListener('click', function () {
+      var prov = $('#user-ai-provider-select').value;
+      var key = ($('#user-ai-key-input').value || '').trim();
+      var model = ($('#user-ai-model-input').value || '').trim();
+      var endpoint = ($('#user-ai-endpoint-input').value || '').trim();
+
+      localStorage.setItem('nomad_ai_provider', prov);
+      localStorage.setItem('nomad_ai_key', key);
+      localStorage.setItem('nomad_ai_model', model);
+      localStorage.setItem('nomad_ai_endpoint', endpoint);
+
+      updateAiKeyStatusBadge();
+      showToast('💾 AI Settings saved successfully!');
+    });
+  }
+
+  // 3. AI Trip Generator Modal
+  var aiGenClose = $('#ai-gen-modal-close');
+  if (aiGenClose) aiGenClose.addEventListener('click', closeAiGeneratorModal);
+
+  var aiGenModal = $('#ai-generator-modal');
+  if (aiGenModal) {
+    aiGenModal.addEventListener('click', function (e) {
+      if (e.target === this) closeAiGeneratorModal();
+    });
+  }
+
+  var vibePills = $$('#ai-gen-vibe-pills .filter-pill');
+  vibePills.forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      vibePills.forEach(function (p) { p.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+
+  var aiGenSubmitBtn = $('#ai-gen-submit-btn');
+  if (aiGenSubmitBtn) aiGenSubmitBtn.addEventListener('click', startAiTripGeneration);
+
+  // 4. Structured JSON IO Modal
+  var jsonClose = $('#json-io-close-btn');
+  if (jsonClose) jsonClose.addEventListener('click', closeJsonIoModal);
+
+  var jsonModal = $('#json-io-modal');
+  if (jsonModal) {
+    jsonModal.addEventListener('click', function (e) {
+      if (e.target === this) closeJsonIoModal();
+    });
+  }
+
+  var jsonTabExport = $('#json-tab-export-btn');
+  if (jsonTabExport) {
+    jsonTabExport.addEventListener('click', function () {
+      setJsonIoTab('export');
+    });
+  }
+
+  var jsonTabImport = $('#json-tab-import-btn');
+  if (jsonTabImport) {
+    jsonTabImport.addEventListener('click', function () {
+      setJsonIoTab('import');
+    });
+  }
+
+  var jsonCopyBtn = $('#json-copy-btn');
+  if (jsonCopyBtn) {
+    jsonCopyBtn.addEventListener('click', function () {
+      var txt = $('#json-export-textarea').value;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function () {
+          showToast('📋 Trip JSON copied to clipboard!');
+        });
+      } else {
+        $('#json-export-textarea').select();
+        document.execCommand('copy');
+        showToast('📋 Trip JSON copied!');
+      }
+    });
+  }
+
+  var jsonDownloadBtn = $('#json-download-btn');
+  if (jsonDownloadBtn) {
+    jsonDownloadBtn.addEventListener('click', function () {
+      var txt = $('#json-export-textarea').value;
+      var t = STATE.docs.trip || STATE.trip || {};
+      var dest = (t.destination || t.city || t.title || t.name || 'nomad-trip');
+      var filename = dest.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.nomad.json';
+      var blob = new Blob([txt], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('💾 Downloaded ' + filename);
+    });
+  }
+
+  var jsonFileInput = $('#json-import-file-input');
+  if (jsonFileInput) {
+    jsonFileInput.addEventListener('change', function () {
+      var file = this.files && this.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        $('#json-import-textarea').value = e.target.result;
+        showToast('📂 Loaded ' + file.name);
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  var jsonSubmitBtn = $('#json-submit-import-btn');
+  if (jsonSubmitBtn) {
+    jsonSubmitBtn.addEventListener('click', function () {
+      var raw = ($('#json-import-textarea').value || '').trim();
+      if (!raw) {
+        alert('Please paste JSON or choose a .json file first.');
+        return;
+      }
+      try {
+        var parsed = JSON.parse(raw);
+        applyMasterTripJson(parsed);
+        closeJsonIoModal();
+        showToast('✨ Trip JSON imported and applied successfully!');
+      } catch (e) {
+        alert('Failed to parse JSON: ' + (e.message || e));
+      }
+    });
+  }
 }
 
 function openSignInModal() {
@@ -788,8 +1033,9 @@ function calculateDecisionsDelta() {
   decs.forEach(function (d) {
     var pickedOptId = getActivePick(d);
     var opt = (d.options || []).find(function (o) { return o.id === pickedOptId; });
-    if (opt && opt.cost_delta_sgd != null) {
-      delta += num(opt.cost_delta_sgd) || 0;
+    if (opt) {
+      var dVal = opt.cost_delta_sgd != null ? opt.cost_delta_sgd : opt.cost_delta;
+      if (dVal != null) delta += num(dVal) || 0;
     }
   });
   return delta;
@@ -797,15 +1043,18 @@ function calculateDecisionsDelta() {
 
 function calculateBudget() {
   var t = STATE.docs.trip || STATE.trip || {};
-  var cap = num(t.budget_per_person || t.budget || 1500);
+  var cap = num(t.budget_cap != null ? t.budget_cap : (t.budget_per_person || t.budget || 1500));
 
   var items = getExpensesPlanned();
   var base = 0;
-  items.forEach(function (it) {
-    var c = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd || it.cost));
-    if (c != null) base += c;
-  });
-  if (base === 0) base = 978; // Standard baseline if uncalculated
+  if (items.length > 0) {
+    items.forEach(function (it) {
+      var c = num(it.amount != null ? it.amount : (it.cost_sgd != null ? it.cost_sgd : (it.amount_sgd != null ? it.amount_sgd : it.cost)));
+      if (c != null) base += c;
+    });
+  } else if (!STATE.trip || STATE.trip.name === 'Vietnam Christmas & New Year' || (t.destination || '').toLowerCase().includes('vietnam')) {
+    base = 978; // Standard baseline if uncalculated on Vietnam trip
+  }
 
   var delta = calculateDecisionsDelta();
   var netPlanned = Math.max(0, base + delta);
@@ -822,17 +1071,68 @@ function calculateBudget() {
 
 /* ------------------------------------------------------------- BANNER & MODALS */
 
+var MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatDdMmm(dStr) {
+  if (!dStr) return '';
+  var s = String(dStr).trim();
+
+  // If already like "24-Dec" or "01-Jan"
+  if (/^\d{1,2}-[A-Za-z]{3}$/i.test(s)) {
+    var parts = s.split('-');
+    var dPart = parts[0].length === 1 ? '0' + parts[0] : parts[0];
+    var mPart = parts[1].slice(0, 1).toUpperCase() + parts[1].slice(1, 3).toLowerCase();
+    return dPart + '-' + mPart;
+  }
+
+  // Match ISO YYYY-MM-DD
+  var isoMatch = s.match(/(\d{4})?-?(\d{1,2})-(\d{1,2})/);
+  if (isoMatch && isoMatch[2] && isoMatch[3]) {
+    var monthIdx = parseInt(isoMatch[2], 10) - 1;
+    var dayNum = parseInt(isoMatch[3], 10);
+    if (monthIdx >= 0 && monthIdx < 12 && !isNaN(dayNum)) {
+      var dd = dayNum < 10 ? '0' + dayNum : '' + dayNum;
+      var mmm = MONTH_NAMES_SHORT[monthIdx];
+      return dd + '-' + mmm;
+    }
+  }
+
+  // Text like "24 Dec" or "24 Dec 2026"
+  var textMatch = s.match(/(\d{1,2})\s+([A-Za-z]{3,9})/);
+  if (textMatch) {
+    var dVal = parseInt(textMatch[1], 10);
+    var dd = dVal < 10 ? '0' + dVal : '' + dVal;
+    var mName = textMatch[2].slice(0, 3).toLowerCase();
+    var foundIdx = MONTH_NAMES_SHORT.findIndex(function (m) { return m.toLowerCase() === mName; });
+    if (foundIdx !== -1) {
+      return dd + '-' + MONTH_NAMES_SHORT[foundIdx];
+    }
+  }
+
+  // Parse Date object fallback
+  var parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    var dd = parsed.getDate() < 10 ? '0' + parsed.getDate() : '' + parsed.getDate();
+    var mmm = MONTH_NAMES_SHORT[parsed.getMonth()];
+    return dd + '-' + mmm;
+  }
+
+  return s;
+}
+
 function renderTripBanner() {
   var t = STATE.docs.trip || STATE.trip || {};
 
-  var dest = (t.destination || t.city || 'Vietnam').split('(')[0].trim();
+  var dest = (t.destination || t.city || t.title || t.name || 'Nomad Trip').split('(')[0].trim();
+  var startStr = t.start_date || t.start || '';
+  var endStr = t.end_date || t.end || '';
   var datesStr = '';
-  if (t.start && t.end) {
-    datesStr = t.start + ' – ' + t.end;
-  } else if (t.start_date && t.end_date) {
-    datesStr = t.start_date.slice(5) + '–' + t.end_date.slice(5);
+  if (startStr && endStr) {
+    datesStr = formatDdMmm(startStr) + ' to ' + formatDdMmm(endStr);
+  } else if (startStr) {
+    datesStr = formatDdMmm(startStr);
   } else {
-    datesStr = 'End 2026';
+    datesStr = 'Trip Dates';
   }
 
   var nameEl = $('#current-trip-name');
@@ -852,6 +1152,9 @@ function renderTripBanner() {
 }
 
 function openTripModal() {
+  var formBox = $('#new-trip-form-box');
+  if (formBox) formBox.hidden = true;
+
   var list = $('#trips-list-container');
   clear(list);
 
@@ -860,7 +1163,7 @@ function openTripModal() {
     var info = ce('div');
     info.appendChild(ce('div', 'trip-pick-name', t.name || t.title || 'Untitled Trip'));
     var sub = [];
-    if (t.start_date) sub.push(t.start_date.slice(0, 10));
+    if (t.start_date) sub.push(formatDdMmm(t.start_date));
     if (t.travellers) sub.push(t.travellers + ' travellers');
     info.appendChild(ce('div', 'trip-pick-dates', sub.join(' · ')));
     card.appendChild(info);
@@ -880,10 +1183,23 @@ function openTripModal() {
 }
 function closeTripModal() { $('#trip-modal').hidden = true; }
 
+function updateAiKeyStatusBadge() {
+  var badge = $('#ai-key-status-badge');
+  if (!badge) return;
+  var key = (localStorage.getItem('nomad_ai_key') || '').trim();
+  if (key) {
+    badge.textContent = 'Configured ✓';
+    badge.className = 'badge badge-good';
+  } else {
+    badge.textContent = 'No Key';
+    badge.className = 'badge';
+  }
+}
+
 function openUserModal(user) {
   var box = $('#user-modal-avatar-box');
   clear(box);
-  if (user.avatar) {
+  if (user && user.avatar) {
     var img = ce('img', 'avatar-circle');
     img.style.width = '64px';
     img.style.height = '64px';
@@ -894,12 +1210,32 @@ function openUserModal(user) {
     circle.style.width = '64px';
     circle.style.height = '64px';
     circle.style.fontSize = '1.8rem';
-    circle.textContent = (user.name || user.email || 'U').charAt(0).toUpperCase();
+    circle.textContent = ((user && (user.name || user.email)) || 'U').charAt(0).toUpperCase();
     box.appendChild(circle);
   }
 
-  $('#user-modal-name').textContent = user.name || 'Traveller';
-  $('#user-modal-email').textContent = user.email || '';
+  $('#user-modal-name').textContent = (user && user.name) || 'Traveller';
+  $('#user-modal-email').textContent = (user && user.email) || '';
+
+  // Load saved AI settings
+  var prov = localStorage.getItem('nomad_ai_provider') || 'openrouter';
+  var key = localStorage.getItem('nomad_ai_key') || '';
+  var model = localStorage.getItem('nomad_ai_model') || '';
+  var endpoint = localStorage.getItem('nomad_ai_endpoint') || '';
+
+  var provSel = $('#user-ai-provider-select');
+  if (provSel) provSel.value = prov;
+  var keyInp = $('#user-ai-key-input');
+  if (keyInp) keyInp.value = key;
+  var modelInp = $('#user-ai-model-input');
+  if (modelInp) modelInp.value = model;
+  var endInp = $('#user-ai-endpoint-input');
+  if (endInp) endInp.value = endpoint;
+
+  var endBox = $('#user-ai-endpoint-box');
+  if (endBox) endBox.hidden = (prov !== 'custom');
+
+  updateAiKeyStatusBadge();
   $('#user-modal').hidden = false;
 }
 function closeUserModal() { $('#user-modal').hidden = true; }
@@ -927,6 +1263,13 @@ function renderCurrentTab() {
    ========================================================================== */
 
 function categorizeItemSlot(it) {
+  if (it.slot) {
+    var s = String(it.slot).toLowerCase();
+    if (s === 'morning' || s === 'afternoon' || s === 'evening' || s === 'night') {
+      return s;
+    }
+  }
+
   var t = (it.time || '').toLowerCase();
   var w = (it.what || it.title || it.activity || it.name || '').toLowerCase();
 
@@ -954,8 +1297,32 @@ function renderItinerary() {
   clear(root);
 
   var days = getItineraryDays();
+  var hasActivities = days.some(function (d) { return d.items && d.items.length > 0; });
+
+  // If trip has zero activities or empty days, render the AI Generation Banner
+  if (!hasActivities) {
+    var ctaBanner = ce('div', 'ai-banner-cta');
+    ctaBanner.innerHTML =
+      '<div style="font-size: 1.8rem; margin-bottom: 6px;">✨</div>' +
+      '<h3 style="margin: 0 0 6px; font-size: 1.05rem;">Your Itinerary is Ready to be Planned!</h3>' +
+      '<p class="muted small" style="margin: 0 0 14px; max-width: 440px; margin-inline: auto;">' +
+        'Nomad can automatically craft a complete day-by-day route, lodging recommendations, itemized budget, and packing checklist with AI.' +
+      '</p>' +
+      '<div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">' +
+        '<button type="button" id="cta-ai-gen-btn" class="btn btn-google small">✨ Generate Trip with AI</button>' +
+        '<button type="button" id="cta-json-import-btn" class="btn btn-secondary small">📦 Import Trip JSON</button>' +
+      '</div>';
+
+    var ctaGen = ctaBanner.querySelector('#cta-ai-gen-btn');
+    if (ctaGen) ctaGen.addEventListener('click', function () { openAiGeneratorModal(); });
+    var ctaImp = ctaBanner.querySelector('#cta-json-import-btn');
+    if (ctaImp) ctaImp.addEventListener('click', function () { openJsonIoModal('import'); });
+
+    root.appendChild(ctaBanner);
+  }
+
   if (!days.length) {
-    root.appendChild(renderEmpty('No itinerary entries recorded for this trip.'));
+    if (hasActivities) root.appendChild(renderEmpty('No itinerary entries recorded for this trip.'));
     return;
   }
 
@@ -1011,6 +1378,12 @@ function renderItineraryGlanceTable(root, days) {
   toolbar.appendChild(leftTools);
 
   var rightTools = ce('div', 'table-toolbar-right');
+  var aiPlanBtn = ce('button', 'btn btn-secondary small', '✨ AI Plan');
+  aiPlanBtn.addEventListener('click', function () {
+    openAiGeneratorModal();
+  });
+  rightTools.appendChild(aiPlanBtn);
+
   var pdfBtn = ce('button', 'btn btn-google small', '📄 Export / View PDF');
   pdfBtn.addEventListener('click', function () {
     openPdfPreview();
@@ -1306,21 +1679,29 @@ function createEventPill(dayNum, itemIdx, it) {
   var pill = ce('div', 'glance-event-pill');
   pill.title = 'Click to edit: ' + (it.what || it.title || 'Activity');
 
-  // Explicit color-coding classification
-  var titleText = (it.what || it.title || it.activity || it.name || '').toLowerCase();
-  var catText = (it.category || it.type || '').toLowerCase();
-  var notesText = (it.notes || '').toLowerCase();
-  var combined = titleText + ' ' + catText + ' ' + notesText;
-
+  // Explicit color-coding classification: check it.type first
   var pillType = 'activity';
-  if (combined.includes('hotel') || combined.includes('resort') || combined.includes('homestay') || combined.includes('hostel') || combined.includes('check-in') || combined.includes('check in') || combined.includes('lodging') || combined.includes('sleeper bus') || combined.includes('overnight')) {
-    pillType = 'stay';
-  } else if (combined.includes('food') || combined.includes('dinner') || combined.includes('lunch') || combined.includes('breakfast') || combined.includes('eat') || combined.includes('phở') || combined.includes('pho') || combined.includes('bún') || combined.includes('bun') || combined.includes('bánh') || combined.includes('banh') || combined.includes('coffee') || combined.includes('café') || combined.includes('cafe') || combined.includes('beer') || combined.includes('restaurant') || combined.includes('dining') || combined.includes('tasting') || combined.includes('snack')) {
-    pillType = 'food';
-  } else if (combined.includes('bus') || combined.includes('train') || combined.includes('flight') || combined.includes('limousine') || combined.includes('transit') || combined.includes('transfer') || combined.includes('minivan') || combined.includes('drive to') || combined.includes('ride to') || combined.includes('departure') || combined.includes('arrival')) {
-    pillType = 'transit';
+  if (it.type) {
+    var rawType = String(it.type).toLowerCase();
+    if (rawType === 'stay' || rawType === 'lodging' || rawType === 'hotel') pillType = 'stay';
+    else if (rawType === 'food' || rawType === 'dining' || rawType === 'drink') pillType = 'food';
+    else if (rawType === 'transit' || rawType === 'transport' || rawType === 'flight' || rawType === 'bus') pillType = 'transit';
+    else pillType = 'activity';
   } else {
-    pillType = 'activity';
+    var titleText = (it.what || it.title || it.activity || it.name || '').toLowerCase();
+    var catText = (it.category || '').toLowerCase();
+    var notesText = (it.notes || '').toLowerCase();
+    var combined = titleText + ' ' + catText + ' ' + notesText;
+
+    if (combined.includes('hotel') || combined.includes('resort') || combined.includes('homestay') || combined.includes('hostel') || combined.includes('check-in') || combined.includes('check in') || combined.includes('lodging') || combined.includes('sleeper bus') || combined.includes('overnight')) {
+      pillType = 'stay';
+    } else if (combined.includes('food') || combined.includes('dinner') || combined.includes('lunch') || combined.includes('breakfast') || combined.includes('eat') || combined.includes('phở') || combined.includes('pho') || combined.includes('bún') || combined.includes('bun') || combined.includes('bánh') || combined.includes('banh') || combined.includes('coffee') || combined.includes('café') || combined.includes('cafe') || combined.includes('beer') || combined.includes('restaurant') || combined.includes('dining') || combined.includes('tasting') || combined.includes('snack')) {
+      pillType = 'food';
+    } else if (combined.includes('bus') || combined.includes('train') || combined.includes('flight') || combined.includes('limousine') || combined.includes('transit') || combined.includes('transfer') || combined.includes('minivan') || combined.includes('drive to') || combined.includes('ride to') || combined.includes('departure') || combined.includes('arrival')) {
+      pillType = 'transit';
+    } else {
+      pillType = 'activity';
+    }
   }
   pill.classList.add('pill-type-' + pillType);
 
@@ -1411,16 +1792,26 @@ function saveItemEditor() {
   var currency = $('#edit-item-currency').value;
   var bookingUrl = $('#edit-item-booking-url').value.trim();
   var notes = $('#edit-item-notes').value.trim();
+  var slot = $('#edit-item-slot').value;
 
-  var days = getItineraryDays();
-  var dayObj = days.find(function (d, i) { return (d.day || i + 1) === dayNum; });
-  if (!dayObj) return;
+  var rawIti = STATE.docs.itinerary;
+  if (!rawIti) {
+    rawIti = { days: [] };
+    STATE.docs.itinerary = rawIti;
+  }
+  var rawDays = Array.isArray(rawIti) ? rawIti : (rawIti.days || (rawIti.days = []));
+  var dayObj = rawDays.find(function (d, i) { return (d.day || i + 1) === dayNum; });
+  if (!dayObj) {
+    dayObj = { day: dayNum, items: [] };
+    rawDays.push(dayObj);
+  }
 
   if (!dayObj.items) dayObj.items = [];
 
   var updatedItem = {
     time: time,
     what: what,
+    slot: slot,
     cost: cost,
     currency: currency,
     notes: notes,
@@ -1428,6 +1819,9 @@ function saveItemEditor() {
     booking_platform: bookingUrl ? (bookingUrl.includes('klook') ? 'Klook' : (bookingUrl.includes('booking.com') ? 'Booking.com' : (bookingUrl.includes('12go') ? '12Go' : (bookingUrl.includes('airbnb') ? 'Airbnb' : 'Direct Booking')))) : undefined,
     refs: bookingUrl ? [bookingUrl] : []
   };
+  if (STATE.editingItem.item && STATE.editingItem.item.type) {
+    updatedItem.type = STATE.editingItem.item.type;
+  }
 
   if (itemIndex >= 0 && itemIndex < dayObj.items.length) {
     dayObj.items[itemIndex] = Object.assign({}, dayObj.items[itemIndex], updatedItem);
@@ -1452,8 +1846,9 @@ function deleteItemEditor() {
   var dayNum = STATE.editingItem.dayNum;
   var itemIndex = STATE.editingItem.itemIndex;
 
-  var days = getItineraryDays();
-  var dayObj = days.find(function (d, i) { return (d.day || i + 1) === dayNum; });
+  var rawIti = STATE.docs.itinerary;
+  var rawDays = Array.isArray(rawIti) ? rawIti : (rawIti && rawIti.days ? rawIti.days : []);
+  var dayObj = rawDays.find(function (d, i) { return (d.day || i + 1) === dayNum; });
   if (!dayObj || !dayObj.items) return;
 
   dayObj.items.splice(itemIndex, 1);
@@ -1744,6 +2139,23 @@ function renderSwapIdeasList(filterText, filterCategory) {
    ========================================================================== */
 
 function getPlannedRoute() {
+  var docAcc = STATE.docs.accommodation;
+  var customRoute = docAcc && (Array.isArray(docAcc.route) ? docAcc.route : (Array.isArray(docAcc.planned_route) ? docAcc.planned_route : null));
+  var stays = getAccommodations();
+
+  if (customRoute && customRoute.length > 0) {
+    var copyRoute = JSON.parse(JSON.stringify(customRoute));
+    copyRoute.forEach(function (leg) {
+      if (leg.stayId) {
+        var found = stays.find(function (s) { return s.id === leg.stayId; });
+        if (found && found.status) {
+          leg.status = found.status.charAt(0).toUpperCase() + found.status.slice(1);
+        }
+      }
+    });
+    return copyRoute;
+  }
+
   var decNyePick = (STATE.picks['dec-nye'] && STATE.picks['dec-nye'].option_id) || 'opt-hanoi-nye';
 
   var route = [
@@ -2985,11 +3397,37 @@ function renderShare() {
   });
   card.appendChild(mList);
 
+  // Instant Onboarding Link box
+  var linkBox = ce('div', 'card-panel');
+  linkBox.style.marginTop = '20px';
+  linkBox.appendChild(ce('h3', null, '🔗 Instant Onboarding Link'));
+  linkBox.appendChild(ce('p', 'muted tiny', 'Anyone with this link can join this trip and collaborate in real-time.'));
+
+  var linkRow = ce('div');
+  linkRow.style.display = 'flex';
+  linkRow.style.gap = '8px';
+  linkRow.style.alignItems = 'center';
+
+  var linkInp = ce('input', 'search-input');
+  linkInp.style.flex = '1';
+  linkInp.readOnly = true;
+  linkInp.value = getTripInviteLink(STATE.activeTripId);
+
+  var copyBtn = ce('button', 'btn btn-secondary small', '📋 Copy Link');
+  copyBtn.addEventListener('click', function () {
+    copyTripInviteLink(STATE.activeTripId);
+  });
+
+  linkRow.appendChild(linkInp);
+  linkRow.appendChild(copyBtn);
+  linkBox.appendChild(linkRow);
+  card.appendChild(linkBox);
+
   // Invite by email form
   if (STATE.canEdit) {
     var inviteBox = ce('div', 'card-panel');
     inviteBox.style.marginTop = '20px';
-    inviteBox.appendChild(ce('h3', null, 'Invite a Traveller'));
+    inviteBox.appendChild(ce('h3', null, 'Invite by Email'));
     var inp = ce('input', 'search-input');
     inp.style.marginBottom = '10px';
     inp.placeholder = 'traveller@example.com';
@@ -3625,6 +4063,589 @@ function openPdfInNewTab() {
   var blob = new Blob([fullHtml], { type: 'text/html' });
   var url = URL.createObjectURL(blob);
   window.open(url, '_blank');
+}
+
+/* ==========================================================================
+   9. STRUCTURED MASTER TRIP JSON & AI GENERATION ENGINE
+   ========================================================================== */
+
+function getTripInviteLink(tripId) {
+  var id = tripId || STATE.activeTripId;
+  if (!id) return window.location.href;
+  var base = window.location.origin + window.location.pathname;
+  return base + '?trip=' + encodeURIComponent(id);
+}
+
+function copyTripInviteLink(tripId) {
+  var id = tripId || STATE.activeTripId;
+  if (!id) {
+    showToast('⚠️ No active trip selected.');
+    return;
+  }
+  var link = getTripInviteLink(id);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(function () {
+      showToast('🔗 Invite link copied to clipboard!');
+    }).catch(function () {
+      prompt('Copy this trip invite link:', link);
+    });
+  } else {
+    prompt('Copy this trip invite link:', link);
+  }
+}
+
+function exportMasterTripJson() {
+  var t = STATE.docs.trip || STATE.trip || {};
+  var itiDays = getItineraryDays();
+  var stays = getAccommodations();
+  var route = getPlannedRoute();
+  var expenses = getExpensesPlanned();
+  var decisions = getDecisions();
+  var packing = getPackingCategories();
+  var recs = getRecommendations();
+  var budgetObj = calculateBudget();
+
+  var master = {
+    schema_version: '1.0',
+    exported_at: new Date().toISOString(),
+    trip: {
+      id: STATE.activeTripId || undefined,
+      destination: t.destination || t.city || t.title || t.name || 'Nomad Trip',
+      start_date: t.start_date || t.start || '',
+      end_date: t.end_date || t.end || '',
+      currency: t.currency || 'SGD',
+      budget_cap: (t.budget_cap != null) ? t.budget_cap : (budgetObj.cap || 2500),
+      travellers: t.travellers || 2,
+      description: t.description || t.notes || ''
+    },
+    itinerary: {
+      days: itiDays
+    },
+    accommodation: {
+      route: route,
+      stays: stays
+    },
+    expenses: {
+      budget_cap: (t.budget_cap != null) ? t.budget_cap : (budgetObj.cap || 2500),
+      currency: t.currency || 'SGD',
+      planned: expenses
+    },
+    decisions: decisions,
+    packing: {
+      categories: packing
+    },
+    recommendations: recs
+  };
+
+  return master;
+}
+
+function applyMasterTripJson(master) {
+  if (!master || typeof master !== 'object') {
+    throw new Error('Invalid JSON format: Expected an object.');
+  }
+
+  var tripInfo = master.trip || {};
+  var itineraryData = master.itinerary || (master.days ? { days: master.days } : null);
+  var accData = master.accommodation || (master.stays ? { stays: master.stays, route: master.route || [] } : null);
+  var expData = master.expenses || (master.planned_expenses ? { planned: master.planned_expenses } : null);
+  var decsData = master.decisions || null;
+  var packData = master.packing || (master.packing_categories ? { categories: master.packing_categories } : null);
+  var recsData = master.recommendations || null;
+
+  if (tripInfo.destination || tripInfo.title || tripInfo.name) {
+    STATE.docs.trip = Object.assign({}, STATE.docs.trip || {}, tripInfo);
+    if (STATE.trip) {
+      STATE.trip.name = tripInfo.destination || tripInfo.title || tripInfo.name || STATE.trip.name;
+      STATE.trip.destination = tripInfo.destination || STATE.trip.destination;
+      STATE.trip.start_date = tripInfo.start_date || STATE.trip.start_date;
+      STATE.trip.end_date = tripInfo.end_date || STATE.trip.end_date;
+      STATE.trip.currency = tripInfo.currency || STATE.trip.currency;
+      if (tripInfo.budget_cap != null) STATE.trip.budget_cap = tripInfo.budget_cap;
+    }
+  }
+
+  if (itineraryData) {
+    STATE.docs.itinerary = itineraryData;
+  }
+  if (accData) {
+    STATE.docs.accommodation = accData;
+  }
+  if (expData) {
+    STATE.docs.expenses = expData;
+  }
+  if (decsData) {
+    STATE.docs.decisions = decsData;
+  }
+  if (packData) {
+    STATE.docs.packing = packData;
+  }
+  if (recsData) {
+    STATE.docs.recommendations = recsData;
+  }
+
+  // Persist updated documents to backend & local storage
+  if (STATE.activeTripId) {
+    TripAuth.saveDocs(STATE.activeTripId, STATE.docs).catch(function (e) {
+      console.warn('Failed to save imported docs:', e);
+    });
+  }
+
+  renderTripBanner();
+  renderCurrentTab();
+}
+
+function createBlankTrip(dest, startDate, endDate, budget, currency) {
+  var tripName = dest || 'New Adventure';
+  var cur = currency || 'SGD';
+  var bCap = Number(budget) || 2000;
+  var sDate = startDate || '';
+  var eDate = endDate || '';
+
+  // Calculate day count
+  var dayCount = 3;
+  if (sDate && eDate) {
+    var d1 = new Date(sDate);
+    var d2 = new Date(eDate);
+    if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+      var diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+      if (diffDays > 0 && diffDays <= 60) dayCount = diffDays;
+    }
+  }
+
+  // Generate blank itinerary days
+  var blankDays = [];
+  for (var i = 1; i <= dayCount; i++) {
+    var curD = '';
+    if (sDate) {
+      var dObj = new Date(sDate);
+      dObj.setDate(dObj.getDate() + (i - 1));
+      if (!isNaN(dObj.getTime())) {
+        curD = dObj.toISOString().slice(0, 10);
+      }
+    }
+    blankDays.push({
+      day: i,
+      date: curD,
+      focus: 'Day ' + i + ' Focus',
+      location: dest.split(',')[0].trim() || 'Destination',
+      day_cost_estimate: 0,
+      items: []
+    });
+  }
+
+  // Standard 6 packing categories
+  var defaultPacking = [
+    {
+      id: 'cat-clothings',
+      name: 'Clothings',
+      items: [
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Light jacket / windbreaker', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Comfortable daily outfits (x' + Math.min(dayCount, 5) + ')', checked: false }
+      ]
+    },
+    {
+      id: 'cat-footwear',
+      name: 'Footwear',
+      items: [
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Walking sneakers', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Slip-on sandals', checked: false }
+      ]
+    },
+    {
+      id: 'cat-electronics',
+      name: 'Electronics',
+      items: [
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Phone charger & cable', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Portable power bank (10,000–20,000mAh)', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Universal travel adapter', checked: false }
+      ]
+    },
+    {
+      id: 'cat-documents',
+      name: 'Documents',
+      items: [
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Passport (valid > 6 months)', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Ballpoint pen (for arrival / customs cards)', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Printed or offline e-ticket & insurance policy', checked: false }
+      ]
+    },
+    {
+      id: 'cat-toiletries',
+      name: 'Toiletries',
+      items: [
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Travel toothbrush & paste', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Sunscreen SPF 50+', checked: false }
+      ]
+    },
+    {
+      id: 'cat-medicine',
+      name: 'Medicine',
+      items: [
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Paracetamol / Pain relief', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Motion sickness & digestive pills', checked: false },
+        { id: 'p-' + Math.random().toString(36).slice(2, 7), name: 'Band-aids & antiseptic wipes', checked: false }
+      ]
+    }
+  ];
+
+  var scaffoldDocs = {
+    trip: {
+      destination: dest,
+      start_date: sDate,
+      end_date: eDate,
+      budget_cap: bCap,
+      currency: cur,
+      travellers: 2
+    },
+    itinerary: {
+      days: blankDays
+    },
+    accommodation: {
+      route: [],
+      stays: []
+    },
+    expenses: {
+      budget_cap: bCap,
+      currency: cur,
+      planned: []
+    },
+    decisions: [],
+    packing: {
+      categories: defaultPacking
+    },
+    recommendations: []
+  };
+
+  showLoading('Creating trip template...');
+  return TripAuth.createTrip({
+    name: tripName,
+    destination: dest,
+    start_date: sDate,
+    end_date: eDate,
+    currency: cur,
+    budget_cap: bCap,
+    travellers: 2,
+    docs: scaffoldDocs
+  }).then(function (createdTrip) {
+    hideLoading();
+    showToast('✨ Trip template created!');
+    return TripAuth.listTrips().then(function (trips) {
+      STATE.trips = trips || [];
+      selectTrip(createdTrip.id);
+      return createdTrip;
+    });
+  }).catch(function (e) {
+    hideLoading();
+    console.error('Failed to create trip:', e);
+    alert('Failed to create trip: ' + (e.message || e));
+  });
+}
+
+function openAiGeneratorModal(dest, sDate, eDate, budget, curr) {
+  var t = STATE.docs.trip || STATE.trip || {};
+  var dInp = $('#ai-gen-dest-input');
+  var sInp = $('#ai-gen-start-input');
+  var eInp = $('#ai-gen-end-input');
+  var bInp = $('#ai-gen-budget-input');
+  var cSel = $('#ai-gen-currency-select');
+
+  if (dInp) dInp.value = dest || t.destination || t.city || t.title || t.name || '';
+  if (sInp) sInp.value = sDate || t.start_date || t.start || '';
+  if (eInp) eInp.value = eDate || t.end_date || t.end || '';
+  if (bInp) bInp.value = budget != null ? budget : (t.budget_cap || t.budget || 2500);
+  if (cSel) cSel.value = curr || t.currency || 'SGD';
+
+  $('#ai-gen-form-view').hidden = false;
+  $('#ai-gen-progress-view').hidden = true;
+  $('#ai-generator-modal').hidden = false;
+}
+
+function closeAiGeneratorModal() {
+  $('#ai-generator-modal').hidden = true;
+}
+
+function executeAICompletion(messages, onStatus) {
+  var provider = localStorage.getItem('nomad_ai_provider') || 'openrouter';
+  var apiKey = (localStorage.getItem('nomad_ai_key') || '').trim();
+  var customModel = (localStorage.getItem('nomad_ai_model') || '').trim();
+  var customEndpoint = (localStorage.getItem('nomad_ai_endpoint') || '').trim();
+
+  if (!apiKey && provider !== 'custom') {
+    return Promise.reject(new Error('Please configure your AI API key in Account Settings first.'));
+  }
+
+  var endpoint = '';
+  var model = '';
+  var headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (apiKey) {
+    headers['Authorization'] = 'Bearer ' + apiKey;
+  }
+
+  if (provider === 'openrouter') {
+    endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+    model = customModel || 'google/gemini-2.0-flash-001';
+    headers['HTTP-Referer'] = window.location.origin || 'https://alienlab.tailbed832.ts.net:10000/trip/';
+    headers['X-Title'] = 'Nomad Trip Planner';
+  } else if (provider === 'openai') {
+    endpoint = 'https://api.openai.com/v1/chat/completions';
+    model = customModel || 'gpt-4o-mini';
+  } else if (provider === 'gemini') {
+    endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+    model = customModel || 'gemini-2.0-flash';
+  } else if (provider === 'groq') {
+    endpoint = 'https://api.groq.com/openai/v1/chat/completions';
+    model = customModel || 'llama-3.3-70b-versatile';
+  } else if (provider === 'custom') {
+    endpoint = customEndpoint || 'http://localhost:11434/v1/chat/completions';
+    model = customModel || 'default';
+  }
+
+  if (typeof onStatus === 'function') onStatus('Sending request to ' + provider + ' (' + model + ')...');
+
+  var payload = {
+    model: model,
+    messages: messages,
+    temperature: 0.7
+  };
+
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify(payload)
+  }).then(function (res) {
+    if (!res.ok) {
+      return res.text().then(function (t) {
+        var errDetail = t;
+        try {
+          var parsedErr = JSON.parse(t);
+          errDetail = (parsedErr.error && parsedErr.error.message) || t;
+        } catch (e) {}
+        throw new Error('AI API Error (' + res.status + '): ' + errDetail);
+      });
+    }
+    return res.json();
+  }).then(function (data) {
+    if (!data || !data.choices || !data.choices.length || !data.choices[0].message) {
+      throw new Error('AI returned an empty or invalid response format.');
+    }
+    return data.choices[0].message.content;
+  });
+}
+
+function extractJsonFromAiResponse(rawText) {
+  var text = (rawText || '').trim();
+  var jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (jsonMatch) {
+    text = jsonMatch[1].trim();
+  }
+  var firstBrace = text.indexOf('{');
+  var lastBrace = text.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    text = text.substring(firstBrace, lastBrace + 1);
+  }
+  return JSON.parse(text);
+}
+
+function startAiTripGeneration() {
+  var key = (localStorage.getItem('nomad_ai_key') || '').trim();
+  var prov = localStorage.getItem('nomad_ai_provider') || 'openrouter';
+  if (!key && prov !== 'custom') {
+    alert('AI API Key Required:\nPlease configure your API key in Account Settings (top right avatar → AI Trip Planner Settings) before generating trips.');
+    closeAiGeneratorModal();
+    openUserModal(TripAuth.status().user || {});
+    return;
+  }
+
+  var dest = ($('#ai-gen-dest-input').value || '').trim();
+  if (!dest) {
+    alert('Please enter a destination.');
+    return;
+  }
+  var sDate = $('#ai-gen-start-input').value;
+  var eDate = $('#ai-gen-end-input').value;
+  var budget = parseFloat($('#ai-gen-budget-input').value) || 2500;
+  var curr = $('#ai-gen-currency-select').value || 'SGD';
+  var promptNotes = ($('#ai-gen-prompt-input').value || '').trim();
+
+  var activeVibePill = $('#ai-gen-vibe-pills .filter-pill.active');
+  var vibe = activeVibePill ? (activeVibePill.dataset.vibe || activeVibePill.textContent) : 'Balanced Highlights & Must-Sees';
+
+  $('#ai-gen-form-view').hidden = true;
+  $('#ai-gen-progress-view').hidden = false;
+  $('#ai-gen-progress-title').textContent = 'Consulting AI travel intelligence...';
+  $('#ai-gen-progress-sub').textContent = 'Structuring ' + dest + ' daily schedule, stays & budget';
+
+  var systemPrompt = 
+    "You are Nomad, an elite AI travel architect. Given a destination, dates, budget, and travel vibe, " +
+    "create a detailed, realistic, and complete trip plan. You MUST respond with ONLY a single raw JSON object " +
+    "conforming strictly to the Nomad Master Trip Schema. Do NOT include markdown code blocks (no ```json), commentary, or text outside the JSON.\n\n" +
+    "SCHEMA FORMAT:\n" +
+    "{\n" +
+    '  "schema_version": "1.0",\n' +
+    '  "trip": {\n' +
+    '    "destination": "' + dest + '",\n' +
+    '    "start_date": "' + sDate + '",\n' +
+    '    "end_date": "' + eDate + '",\n' +
+    '    "currency": "' + curr + '",\n' +
+    '    "budget_cap": ' + budget + ',\n' +
+    '    "travellers": 2,\n' +
+    '    "description": "Short summary"\n' +
+    '  },\n' +
+    '  "itinerary": {\n' +
+    '    "days": [\n' +
+    '      {\n' +
+    '        "day": 1,\n' +
+    '        "date": "YYYY-MM-DD",\n' +
+    '        "focus": "Daily theme / highlight",\n' +
+    '        "location": "City or Neighborhood",\n' +
+    '        "day_cost_estimate": 40,\n' +
+    '        "items": [\n' +
+    '          {\n' +
+    '            "time": "09:00",\n' +
+    '            "what": "Activity title",\n' +
+    '            "type": "stay" | "food" | "activity" | "transit",\n' +
+    '            "slot": "morning" | "afternoon" | "evening" | "night",\n' +
+    '            "cost": 15,\n' +
+    '            "currency": "' + curr + '",\n' +
+    '            "booking_url": "https://...",\n' +
+    '            "booking_platform": "Klook / Booking.com / 12Go / Direct",\n' +
+    '            "notes": "Practical local tip or address"\n' +
+    '          }\n' +
+    '        ]\n' +
+    '      }\n' +
+    '    ]\n' +
+    '  },\n' +
+    '  "accommodation": {\n' +
+    '    "route": [\n' +
+    '      {\n' +
+    '        "id": "leg-1",\n' +
+    '        "stayId": "acc-1",\n' +
+    '        "nights": "Night 1 (DD–DD MMM)",\n' +
+    '        "city": "City area",\n' +
+    '        "hotelName": "Hotel name",\n' +
+    '        "rate": "price per night",\n' +
+    '        "status": "Planned",\n' +
+    '        "notes": "Location highlights"\n' +
+    '      }\n' +
+    '    ],\n' +
+    '    "stays": [\n' +
+    '      {\n' +
+    '        "id": "acc-1",\n' +
+    '        "name": "Hotel Name",\n' +
+    '        "city": "City Area",\n' +
+    '        "nights": "Night 1",\n' +
+    '        "status": "planned" | "wishlist",\n' +
+    '        "price_sgd": 65,\n' +
+    '        "price_local": "Local currency price",\n' +
+    '        "rating": 9.2,\n' +
+    '        "badge": "Recommended",\n' +
+    '        "booking_url": "https://booking.com",\n' +
+    '        "notes": "Pros and amenities"\n' +
+    '      }\n' +
+    '    ]\n' +
+    '  },\n' +
+    '  "expenses": {\n' +
+    '    "budget_cap": ' + budget + ',\n' +
+    '    "currency": "' + curr + '",\n' +
+    '    "planned": [\n' +
+    '      { "id": "exp-1", "category": "Flights"|"Lodging"|"Activities"|"Transit"|"Food & Dining"|"Buffer", "name": "Item name", "amount_sgd": 350, "notes": "Details" }\n' +
+    '    ]\n' +
+    '  },\n' +
+    '  "decisions": [\n' +
+    '    {\n' +
+    '      "id": "dec-1",\n' +
+    '      "title": "Decision title",\n' +
+    '      "status": "open",\n' +
+    '      "options": [\n' +
+    '        { "id": "opt-1", "name": "Option A", "cost_delta": 0, "summary": "Pros/cons" },\n' +
+    '        { "id": "opt-2", "name": "Option B", "cost_delta": -50, "summary": "Pros/cons" }\n' +
+    '      ]\n' +
+    '    }\n' +
+    '  ],\n' +
+    '  "packing": {\n' +
+    '    "categories": [\n' +
+    '      { "id": "cat-clothings", "name": "Clothings", "items": [{ "id": "p-1", "name": "Item", "checked": false }] },\n' +
+    '      { "id": "cat-footwear", "name": "Footwear", "items": [{ "id": "p-2", "name": "Item", "checked": false }] },\n' +
+    '      { "id": "cat-electronics", "name": "Electronics", "items": [{ "id": "p-3", "name": "Item", "checked": false }] },\n' +
+    '      { "id": "cat-documents", "name": "Documents", "items": [{ "id": "p-4", "name": "Passport", "checked": false }, { "id": "p-5", "name": "Ballpoint pen (for arrival cards)", "checked": false }] },\n' +
+    '      { "id": "cat-toiletries", "name": "Toiletries", "items": [{ "id": "p-6", "name": "Item", "checked": false }] },\n' +
+    '      { "id": "cat-medicine", "name": "Medicine", "items": [{ "id": "p-7", "name": "Item", "checked": false }] }\n' +
+    '    ]\n' +
+    '  },\n' +
+    '  "recommendations": [\n' +
+    '    { "id": "rec-1", "name": "Spot Name", "category": "Food & Drink"|"Must-See"|"Hidden Gem"|"Nightlife", "location": "Area", "rating": 4.9, "cost_estimate": "$$", "notes": "Why visit" }\n' +
+    '  ]\n' +
+    '}';
+
+  var userPrompt =
+    "Generate a complete trip plan for " + dest + ".\n" +
+    (sDate && eDate ? ("- Dates: " + sDate + " to " + eDate + "\n") : "") +
+    "- Target Budget: " + budget + " " + curr + "\n" +
+    "- Travel Style: " + vibe + "\n" +
+    (promptNotes ? ("- Specific Preferences: " + promptNotes + "\n") : "") +
+    "\nEnsure every day has rich morning, afternoon, evening, and night activities with explicit 'type' and 'slot' fields. Include stays with 'status', budget breakdown, fork decisions, 6 packing categories (Clothings, Footwear, Electronics, Documents including ballpoint pen, Toiletries, Medicine), and top recommendations.";
+
+  var messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt }
+  ];
+
+  executeAICompletion(messages, function (statusText) {
+    $('#ai-gen-progress-sub').textContent = statusText;
+  }).then(function (rawText) {
+    $('#ai-gen-progress-title').textContent = 'Finalizing trip plan...';
+    $('#ai-gen-progress-sub').textContent = 'Applying daily schedule and lodging';
+    var parsed = extractJsonFromAiResponse(rawText);
+    applyMasterTripJson(parsed);
+    closeAiGeneratorModal();
+    showToast('✨ ' + dest + ' trip planned successfully with AI!');
+  }).catch(function (err) {
+    console.error('AI Trip Generation Error:', err);
+    $('#ai-gen-form-view').hidden = false;
+    $('#ai-gen-progress-view').hidden = true;
+    alert('AI Trip Planning Error:\n' + (err.message || err));
+  });
+}
+
+function openJsonIoModal(defaultTab) {
+  var activeTab = defaultTab || 'export';
+  setJsonIoTab(activeTab);
+
+  if (activeTab === 'export') {
+    var master = exportMasterTripJson();
+    $('#json-export-textarea').value = JSON.stringify(master, null, 2);
+  }
+
+  $('#json-io-modal').hidden = false;
+}
+
+function closeJsonIoModal() {
+  $('#json-io-modal').hidden = true;
+}
+
+function setJsonIoTab(tab) {
+  var expBtn = $('#json-tab-export-btn');
+  var impBtn = $('#json-tab-import-btn');
+  var expPane = $('#json-export-pane');
+  var impPane = $('#json-import-pane');
+
+  if (tab === 'export') {
+    expBtn.classList.add('active');
+    impBtn.classList.remove('active');
+    expPane.hidden = false;
+    impPane.hidden = true;
+    var master = exportMasterTripJson();
+    $('#json-export-textarea').value = JSON.stringify(master, null, 2);
+  } else {
+    impBtn.classList.add('active');
+    expBtn.classList.remove('active');
+    impPane.hidden = false;
+    expPane.hidden = true;
+  }
 }
 
 function renderEmpty(msg) {
