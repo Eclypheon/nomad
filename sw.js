@@ -2,7 +2,7 @@
    Nomad Service Worker — PWA Offline Caching & Installability
    ========================================================================== */
 
-const CACHE_NAME = 'nomad-pwa-v7';
+const CACHE_NAME = 'nomad-pwa-v8';
 const STATIC_ASSETS = [
   './',
   'index.html',

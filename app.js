@@ -1878,8 +1878,8 @@ function renderItinerary() {
   modeBar.appendChild(titleBox);
 
   var toggleGroup = ce('div', 'view-toggle-group');
-  var glanceBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'glance' ? ' active' : ''), '📊 Full Trip Table');
-  var deepBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'deep-dive' ? ' active' : ''), '🔍 Day Deep Dive');
+  var glanceBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'glance' ? ' active' : ''), 'Table');
+  var deepBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'deep-dive' ? ' active' : ''), 'Details');
 
   glanceBtn.addEventListener('click', function () {
     STATE.itineraryViewMode = 'glance';
@@ -1949,6 +1949,46 @@ window.addEventListener('resize', function () {
   });
 });
 
+function getDayHighlight(d) {
+  if (!d) return '—';
+  var text = (d.key_event || d.highlight || '').trim();
+  if (!text) {
+    text = (d.title || d.base || '—').trim();
+  }
+
+  // De-capitalize screaming all-caps words (e.g. "THE MONEY DAY" -> "The money day")
+  text = text.replace(/\b([A-Z]{2,})\b/g, function (m) {
+    if (/^(NYE|SIN|HAN|ATM|SIM|USD|VND|SGD|IDR)$/.test(m)) return m;
+    return m.charAt(0) + m.slice(1).toLowerCase();
+  });
+
+  // If long, pick the primary highlight
+  if (text.length > 55) {
+    var parts = text.split(/\s*—\s*/);
+    if (parts.length > 1) {
+      if (parts[0].length >= 15 && parts[0].length <= 55) {
+        text = parts[0];
+      } else if (parts[1] && parts[1].length <= 55) {
+        text = parts[1];
+      } else {
+        text = parts[0];
+      }
+    }
+  }
+
+  // Strip leading redundant prefixes
+  if (text.length > 50) {
+    text = text.replace(/^(Loop day \d|Transit day|Christmas Day)\s*[:—]\s*/i, '');
+  }
+
+  // Cap character count to keep under 3 lines
+  if (text.length > 55) {
+    text = text.slice(0, 52).trim() + '…';
+  }
+
+  return text.trim();
+}
+
 function renderFlippedMatrix(table, days) {
   var thead = ce('thead');
   var hrow = ce('tr');
@@ -1992,12 +2032,12 @@ function renderFlippedMatrix(table, days) {
     return { day: d, dayNum: d.day || (dayIdx + 1), dayIdx: dayIdx, slots: slots };
   });
 
-  // Row 2: Focus (Sticky Row in thead)
+  // Row 2: Key Event (Sticky Row in thead)
   var trBase = ce('tr', 'glance-tr glance-tr-focus');
-  trBase.appendChild(ce('th', 'glance-th glance-dimension-cell', '📍 Route & Focus'));
+  trBase.appendChild(ce('th', 'glance-th glance-dimension-cell', 'Key Event'));
   daySlots.forEach(function (ds) {
     var th = ce('th', 'glance-th glance-col-day-th glance-focus-cell');
-    var focusText = (ds.day.route ? ds.day.route + (ds.day.title ? ': ' + ds.day.title : '') : (ds.day.title || ds.day.base || '—')).trim();
+    var focusText = getDayHighlight(ds.day);
     var pill = ce('div', 'glance-focus-text');
     pill.style.whiteSpace = 'normal';
     pill.textContent = focusText || '—';
@@ -6710,6 +6750,7 @@ function startAiTripGeneration() {
     '      {\n' +
     '        "day": 1,\n' +
     '        "date": "YYYY-MM-DD",\n' +
+    '        "key_event": "Daily highlight max 45 chars in sentence case (no ALL CAPS)",\n' +
     '        "focus": "Daily theme / highlight",\n' +
     '        "location": "City or Neighborhood",\n' +
     '        "day_cost_estimate": 40,\n' +
