@@ -1208,4 +1208,196 @@ p { margin: 0 0 10px; }
   margin-top: 10px;
 }
 
+/* ==================== AT-A-GLANCE ITINERARY & STAY TABLES ==================== */
+
+/* View Mode Segmented Control */
+.view-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.view-toggle-group {
+  display: inline-flex;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border);
+  padding: 3px;
+  border-radius: var(--radius-pill);
+}
+.view-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.view-toggle-btn:hover { color: var(--fg); }
+.view-toggle-btn.active {
+  background: var(--primary);
+  color: var(--primary-fg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Master At-a-Glance Table Container */
+.glance-table-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.glance-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.84rem;
+  min-width: 920px;
+}
+.glance-th {
+  background: var(--bg-card-subtle);
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.glance-tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+.glance-tr:last-child { border-bottom: none; }
+.glance-tr:hover { background: rgba(56, 189, 248, 0.04); }
+
+.glance-day-cell {
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  z-index: 2;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
+  padding: 12px 14px;
+  min-width: 140px;
+  vertical-align: top;
+}
+.glance-tr:hover .glance-day-cell { background: var(--bg-card-hover); }
+
+.glance-day-num { font-weight: 700; font-size: 0.95rem; color: var(--fg); }
+.glance-day-date { font-size: 0.76rem; color: var(--fg-muted); margin-bottom: 4px; }
+.glance-day-base {
+  display: inline-block;
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.glance-slot-cell {
+  padding: 10px 12px;
+  vertical-align: top;
+  min-width: 180px;
+  max-width: 240px;
+  border-left: 1px solid rgba(30, 41, 59, 0.5);
+}
+.glance-slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.glance-event-pill {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: var(--fg);
+}
+.glance-event-time {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+  white-space: nowrap;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+.glance-stay-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(129, 140, 248, 0.1);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  color: #a5b4fc;
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.glance-cost-cell {
+  padding: 12px;
+  vertical-align: top;
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--fg);
+}
+.glance-action-cell {
+  padding: 12px;
+  vertical-align: top;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Accommodations Route Table */
+.stay-route-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.84rem;
+  min-width: 820px;
+}
+.stay-route-tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+.stay-route-tr:hover { background: rgba(56, 189, 248, 0.04); }
+.stay-route-cell {
+  padding: 14px 16px;
+  vertical-align: top;
+}
+.stay-hotel-name { font-weight: 700; font-size: 0.95rem; color: var(--fg); margin-bottom: 3px; }
+.stay-hotel-rate { font-size: 0.8rem; color: var(--good); font-weight: 600; }
+.stay-alts-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  color: var(--accent-amber);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  margin-top: 5px;
+}
+
+
 

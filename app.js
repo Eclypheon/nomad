@@ -14,6 +14,8 @@ var LS_PACKING_PREFIX = 'nomad.packing.v1.';
 /* App Reactive State */
 var STATE = {
   activeTab: 'itinerary',
+  itineraryViewMode: 'glance', /* 'glance' (table at a glance) or 'deep-dive' (day breakdown) */
+  stayViewMode: 'route',       /* 'route' (at a glance night schedule) or 'directory' (all 23 stays) */
   activeDay: null,          /* null = all days, or day number (1..N) */
   recCategory: 'all',
   recArea: 'all',
@@ -666,8 +668,32 @@ function renderCurrentTab() {
 }
 
 /* ==========================================================================
-   1. ITINERARY TAB (AI-Planned, Day-by-Day, Swappable Ideas)
+   1. ITINERARY TAB (At-a-Glance Table Matrix & Day Deep-Dive)
    ========================================================================== */
+
+function categorizeItemSlot(it) {
+  var t = (it.time || '').toLowerCase();
+  var w = (it.what || it.title || it.activity || it.name || '').toLowerCase();
+
+  // Try extracting 24h hour: "14:30", "07:30", "~11:00"
+  var match = t.match(/(\d{1,2}):(\d{2})/);
+  if (match) {
+    var h = parseInt(match[1], 10);
+    if (h < 12) return 'morning';
+    if (h < 17) return 'afternoon';
+    if (h < 20 || (h === 20 && parseInt(match[2], 10) <= 15)) return 'evening';
+    return 'night';
+  }
+
+  // Keywords
+  if (t.includes('morning') || w.includes('breakfast') || w.includes('sunrise') || w.includes('first light') || w.includes('depart') || w.includes('permit') || w.includes('check')) return 'morning';
+  if (t.includes('afternoon') || w.includes('lunch') || w.includes('arrive') || w.includes('land at') || w.includes('boat trip') || w.includes('pass') || w.includes('tour') || w.includes('cycle')) return 'afternoon';
+  if (t.includes('evening') || t.includes('sunset') || w.includes('dinner') || w.includes('dusk') || w.includes('golden hour') || w.includes('train street') || w.includes('walk')) return 'evening';
+  if (t.includes('night') || w.includes('fireworks') || w.includes('sleeper bus') || w.includes('beer') || w.includes('bia hoi') || w.includes('hotel') || w.includes('sleep') || w.includes('rest')) return 'night';
+
+  return 'afternoon';
+}
+
 function renderItinerary() {
   var root = $('#tab-itinerary');
   clear(root);
@@ -678,7 +704,190 @@ function renderItinerary() {
     return;
   }
 
-  // Day filter pills
+  // Header Bar with Mode Switcher
+  var modeBar = ce('div', 'view-mode-bar');
+  var titleBox = ce('div');
+  titleBox.appendChild(ce('h2', null, 'Trip Itinerary'));
+  titleBox.appendChild(ce('div', 'muted small', days.length + ' Days · Pre-planned with AI · Swappable activities'));
+  modeBar.appendChild(titleBox);
+
+  var toggleGroup = ce('div', 'view-toggle-group');
+  var glanceBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'glance' ? ' active' : ''), '📊 Full Trip Table (At a Glance)');
+  var deepBtn = ce('button', 'view-toggle-btn' + (STATE.itineraryViewMode === 'deep-dive' ? ' active' : ''), '🔍 Day Deep-Dive');
+
+  glanceBtn.addEventListener('click', function () {
+    STATE.itineraryViewMode = 'glance';
+    renderItinerary();
+  });
+  deepBtn.addEventListener('click', function () {
+    STATE.itineraryViewMode = 'deep-dive';
+    if (STATE.activeDay === null && days.length > 0) STATE.activeDay = days[0].day || 1;
+    renderItinerary();
+  });
+
+  toggleGroup.appendChild(glanceBtn);
+  toggleGroup.appendChild(deepBtn);
+  modeBar.appendChild(toggleGroup);
+  root.appendChild(modeBar);
+
+  if (STATE.itineraryViewMode === 'glance') {
+    renderItineraryGlanceTable(root, days);
+  } else {
+    renderItineraryDeepDive(root, days);
+  }
+}
+
+function renderItineraryGlanceTable(root, days) {
+  var container = ce('div', 'glance-table-container');
+  var table = ce('table', 'glance-table');
+
+  var thead = ce('thead');
+  var hrow = ce('tr');
+  hrow.appendChild(ce('th', 'glance-th', 'Day & Base'));
+  hrow.appendChild(ce('th', 'glance-th', '🌅 Morning (06:00 – 12:00)'));
+  hrow.appendChild(ce('th', 'glance-th', '☀️ Afternoon (12:00 – 17:00)'));
+  hrow.appendChild(ce('th', 'glance-th', '🌆 Evening (17:00 – 20:30)'));
+  hrow.appendChild(ce('th', 'glance-th', '🌙 Night & Lodging'));
+  hrow.appendChild(ce('th', 'glance-th', 'Est. Spend'));
+  hrow.appendChild(ce('th', 'glance-th', 'Drill-Down'));
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  var tbody = ce('tbody');
+  days.forEach(function (d, i) {
+    var dayNum = d.day || (i + 1);
+    var tr = ce('tr', 'glance-tr');
+
+    // 1. Day & Base (sticky column)
+    var dayCell = ce('td', 'glance-day-cell');
+    dayCell.appendChild(ce('div', 'glance-day-num', 'Day ' + dayNum));
+    if (d.date) dayCell.appendChild(ce('div', 'glance-day-date', d.date.slice(5)));
+    if (d.base) dayCell.appendChild(ce('span', 'glance-day-base', d.base));
+    tr.appendChild(dayCell);
+
+    // Group items into slots
+    var items = d.items || d.events || d.activities || [];
+    var slots = { morning: [], afternoon: [], evening: [], night: [] };
+
+    items.forEach(function (it) {
+      var w = (it.what || it.title || it.activity || it.name || '');
+      if (it.time === '—' && (w.toLowerCase().includes('food & drink') || w.toLowerCase().includes('local transport') || w.toLowerCase().includes('lodging:'))) return;
+      var slot = categorizeItemSlot(it);
+      slots[slot].push(it);
+    });
+
+    function createSlotCell(list) {
+      var td = ce('td', 'glance-slot-cell');
+      if (list.length === 0) {
+        td.appendChild(ce('span', 'muted small', '—'));
+      } else {
+        var box = ce('div', 'glance-slot-list');
+        list.forEach(function (it) {
+          var pill = ce('div', 'glance-event-pill');
+          if (it.time && it.time !== '—') {
+            pill.appendChild(ce('span', 'glance-event-time', it.time.replace(' (assumed)', '')));
+          }
+          var text = ce('span', null, it.what || it.title || it.activity || it.name || 'Event');
+          pill.appendChild(text);
+          box.appendChild(pill);
+        });
+        td.appendChild(box);
+      }
+      return td;
+    }
+
+    // 2. Morning
+    tr.appendChild(createSlotCell(slots.morning));
+
+    // 3. Afternoon
+    tr.appendChild(createSlotCell(slots.afternoon));
+
+    // 4. Evening
+    tr.appendChild(createSlotCell(slots.evening));
+
+    // 5. Night & Lodging
+    var nightTd = ce('td', 'glance-slot-cell');
+    var nightBox = ce('div', 'glance-slot-list');
+
+    slots.night.forEach(function (it) {
+      var pill = ce('div', 'glance-event-pill');
+      if (it.time && it.time !== '—') {
+        pill.appendChild(ce('span', 'glance-event-time', it.time));
+      }
+      pill.appendChild(ce('span', null, it.what || it.title || it.activity || it.name));
+      nightBox.appendChild(pill);
+    });
+
+    if (d.lodging) {
+      var lodgingShort = d.lodging.split('—')[0].replace('acc-', 'Acc-');
+      if (d.lodging.includes('—')) lodgingShort = d.lodging.split('—')[1].split(',')[0].trim();
+      var stayPill = ce('div', 'glance-stay-pill', '🏨 ' + lodgingShort);
+      nightBox.appendChild(stayPill);
+    } else if (d.transit && d.transit.toLowerCase().includes('sleeper')) {
+      var busPill = ce('div', 'glance-stay-pill', '🚌 Sleeper Bus (Overnight)');
+      nightBox.appendChild(busPill);
+    }
+
+    if (nightBox.children.length === 0) {
+      nightTd.appendChild(ce('span', 'muted small', '—'));
+    } else {
+      nightTd.appendChild(nightBox);
+    }
+    tr.appendChild(nightTd);
+
+    // 6. Cost
+    var costTd = ce('td', 'glance-cost-cell');
+    var c = d.day_cost || d.day_cost_estimate;
+    costTd.appendChild(ce('span', 'badge', c ? sgd(c) : '—'));
+    tr.appendChild(costTd);
+
+    // 7. Action / Drill-down
+    var actTd = ce('td', 'glance-action-cell');
+    var btn = ce('button', 'btn btn-secondary small', 'Details →');
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      STATE.itineraryViewMode = 'deep-dive';
+      STATE.activeDay = dayNum;
+      renderItinerary();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    actTd.appendChild(btn);
+    tr.appendChild(actTd);
+
+    tr.addEventListener('click', function () {
+      STATE.itineraryViewMode = 'deep-dive';
+      STATE.activeDay = dayNum;
+      renderItinerary();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+  root.appendChild(container);
+
+  var tip = ce('p', 'muted small text-center', '💡 Click any day row or "Details →" to open that day\'s complete schedule, notes, and idea-swapping.');
+  root.appendChild(tip);
+}
+
+function renderItineraryDeepDive(root, days) {
+  var backBar = ce('div', 'card-panel', null);
+  backBar.style.display = 'flex';
+  backBar.style.justifyContent = 'space-between';
+  backBar.style.alignItems = 'center';
+  backBar.style.padding = '12px 18px';
+
+  var backBtn = ce('button', 'btn-swap', '← Back to Master Trip Table');
+  backBtn.addEventListener('click', function () {
+    STATE.itineraryViewMode = 'glance';
+    renderItinerary();
+  });
+  backBar.appendChild(backBtn);
+  backBar.appendChild(ce('span', 'muted small', 'Viewing detailed breakdown with notes & references'));
+  root.appendChild(backBar);
+
   var scroller = ce('div', 'day-scroller');
   var allChip = ce('button', 'day-chip' + (STATE.activeDay === null ? ' active' : ''));
   allChip.appendChild(ce('span', 'day-chip-title', 'All Days'));
@@ -696,7 +905,6 @@ function renderItinerary() {
   });
   root.appendChild(scroller);
 
-  // Timeline of Days
   var timeline = ce('div', 'timeline');
   days.forEach(function (d, dayIdx) {
     var dayNum = d.day || (dayIdx + 1);
@@ -704,7 +912,6 @@ function renderItinerary() {
 
     var dayCard = ce('div', 'day-card');
 
-    // Header
     var header = ce('div', 'day-card-header');
     var titleRow = ce('div', 'item-top');
     var titleLeft = ce('div');
@@ -718,19 +925,15 @@ function renderItinerary() {
     var h2 = ce('h2', 'day-title', d.title || (d.base ? 'Exploring ' + d.base : 'Day ' + dayNum));
     header.appendChild(h2);
 
-    // Actions on Day: Add / Swap Idea
     var actRow = ce('div', 'day-header-actions');
     var addBtn = ce('button', 'btn-swap', '➕ Add / Swap Idea');
-    addBtn.addEventListener('click', function () {
-      openSwapModal(d);
-    });
+    addBtn.addEventListener('click', function () { openSwapModal(d); });
     actRow.appendChild(addBtn);
     if (d.base) actRow.appendChild(ce('span', 'badge', '📍 ' + d.base));
     header.appendChild(actRow);
 
     dayCard.appendChild(header);
 
-    // Transit banner if present
     if (d.transit) {
       var tBox = ce('div', 'transit-box');
       tBox.appendChild(ce('div', 'transit-box-title', '🚆 Transit & Movement'));
@@ -738,7 +941,6 @@ function renderItinerary() {
       dayCard.appendChild(tBox);
     }
 
-    // Lodging for the night
     if (d.lodging) {
       var lBox = ce('div', 'day-lodging-card');
       var lLeft = ce('div');
@@ -751,7 +953,6 @@ function renderItinerary() {
       dayCard.appendChild(lBox);
     }
 
-    // Activities / Scheduled Items
     var items = d.items || d.events || d.activities || [];
     if (items.length > 0) {
       var evList = ce('div', 'timeline');
@@ -762,7 +963,6 @@ function renderItinerary() {
         var c = num(ev.cost);
         if (c != null && c > 0) top.appendChild(ce('span', 'badge badge-good', sgd(c)));
 
-        // Remove item button
         var removeBtn = ce('button', 'btn-icon-danger', '✕');
         removeBtn.title = 'Remove from itinerary';
         removeBtn.addEventListener('click', function () {
@@ -820,7 +1020,6 @@ function openSwapModal(day) {
   $('#swap-modal-title').textContent = 'Add Idea to Day ' + (day.day || '');
   $('#swap-modal-subtitle').textContent = 'Base: ' + (day.base || 'All') + ' · Pick a curated spot or experience';
 
-  // Populate categories
   var catRow = $('#swap-category-pills');
   clear(catRow);
   var cats = ['All', 'food', 'coffee', 'culture', 'nature', 'nightlife'];
@@ -865,7 +1064,6 @@ function renderSwapIdeasList(filterText, filterCategory) {
     return true;
   });
 
-  // Sort spots matching current day's base city first
   filtered.sort(function (a, b) {
     var aMatch = baseCity && (a.area || '').toLowerCase().includes(baseCity);
     var bMatch = baseCity && (b.area || '').toLowerCase().includes(baseCity);
@@ -918,8 +1116,84 @@ function renderSwapIdeasList(filterText, filterCategory) {
 }
 
 /* ==========================================================================
-   2. ACCOMMODATION TAB (Curated Stays, Base Filters, Night Rates)
+   2. ACCOMMODATION TAB (Route at a Glance & 23-Stay Directory)
    ========================================================================== */
+
+var PLANNED_ROUTE = [
+  {
+    nights: 'Night 1 (24–25 Dec)',
+    city: 'Hanoi Old Quarter',
+    hotelName: 'Peridot Grand Hotel & Spa',
+    rate: '2,400,000 VND (~S$ 59/person)',
+    status: 'Planned',
+    notes: 'Christmas Eve peak window: 300m from Hoan Kiem, inner courtyard, spa. Book 2-4 weeks out.',
+    alts: ['acc-001 (La Siesta Splurge)', 'acc-002 (Emerald Waters)', 'acc-006 (Hanoi Pearl)']
+  },
+  {
+    nights: 'Night 2 (25–26 Dec)',
+    city: 'Hanoi → Ha Giang (Transit)',
+    hotelName: '21:00 Sleeper Bus to Ha Giang',
+    rate: 'Included in Transit Leg',
+    status: 'Scheduled',
+    notes: 'Overnight sleeper berth; hotel stores bags during the day after morning checkout.',
+    alts: ['Daytime limousine van on 26 Dec (see dec-loop-start)']
+  },
+  {
+    nights: 'Night 3 (26–27 Dec)',
+    city: 'Ha Giang Loop (Quản Bạ)',
+    hotelName: 'Dao Lodge Nam Dam / H\'Mong Village Resort',
+    rate: 'Included in Easy Rider Tour',
+    status: 'Tour Homestay',
+    notes: 'Mountain homestay dinner, clay lodge, herbal footbath, corn wine.',
+    alts: ['acc-018 H\'Mong Village Resort', 'acc-022 Dao Lodge Nam Dam']
+  },
+  {
+    nights: 'Night 4 (27–28 Dec)',
+    city: 'Ha Giang Loop (Đồng Văn / Mèo Vạc)',
+    hotelName: 'Auberge de Meo Vac / Ancient Town Guesthouse',
+    rate: 'Included in Easy Rider Tour',
+    status: 'Tour Homestay',
+    notes: 'Century-old H\'Mong stone architecture at the gateway to Mã Pí Lèng pass.',
+    alts: ['acc-019 Ancient Town Guesthouse', 'acc-020 Lo Lo Eco Lodge']
+  },
+  {
+    nights: 'Night 5 (28–29 Dec)',
+    city: 'Ha Giang City',
+    hotelName: 'Yen Bien Luxury Hotel',
+    rate: '1,065,000 VND (~S$ 26/person)',
+    status: 'Planned',
+    notes: 'Post-loop reset night: rooftop pool, river view, laundry before 10h transit.',
+    alts: ['acc-016 P\'apiu Resort (Ultra Splurge)', 'acc-017 Ha Giang Historic Hotel']
+  },
+  {
+    nights: 'Nights 6–7 (29–31 Dec)',
+    city: 'Tam Coc / Ninh Binh (2 nights)',
+    hotelName: 'Tam Coc Garden Resort',
+    rate: '1,170,000 VND / night (~S$ 29/person)',
+    status: 'Planned',
+    notes: 'Surrounded by limestone karst & paddies; 10 min bicycle from Tam Coc boat dock.',
+    alts: ['acc-014 Tam Coc Sunshine Homestay (Budget ~S$9)', 'acc-011 Emeralda Resort']
+  },
+  {
+    nights: 'Night 8 (31 Dec – 1 Jan)',
+    city: 'Hanoi Old Quarter',
+    hotelName: 'Hanoi La Siesta Premium Hang Be',
+    rate: '2,860,000 VND (~S$ 70/person)',
+    status: 'Planned',
+    notes: 'New Year\'s Eve lake fireworks: within 300m walking distance so no taxis needed after midnight.',
+    alts: ['acc-006 Hanoi Pearl (Fallback -S$19)', 'acc-004 O\'Gallery Premier', 'Tam Coc NYE (see dec-nye)']
+  },
+  {
+    nights: 'Day 9 (1 Jan)',
+    city: 'Flight HAN → SIN',
+    hotelName: 'Noi Bai International Airport (HAN)',
+    rate: 'Outbound Flight',
+    status: 'Return Leg',
+    notes: 'Direct flight back to Singapore Changi.',
+    alts: []
+  }
+];
+
 function renderAccommodation() {
   var root = $('#tab-accommodation');
   clear(root);
@@ -930,7 +1204,104 @@ function renderAccommodation() {
     return;
   }
 
-  // Extract unique areas
+  var modeBar = ce('div', 'view-mode-bar');
+  var titleBox = ce('div');
+  titleBox.appendChild(ce('h2', null, 'Accommodations & Stays'));
+  titleBox.appendChild(ce('div', 'muted small', 'Night-by-night lodging schedule & curated alternatives'));
+  modeBar.appendChild(titleBox);
+
+  var toggleGroup = ce('div', 'view-toggle-group');
+  var routeBtn = ce('button', 'view-toggle-btn' + (STATE.stayViewMode === 'route' ? ' active' : ''), '🗺 Planned Route (At a Glance)');
+  var dirBtn = ce('button', 'view-toggle-btn' + (STATE.stayViewMode === 'directory' ? ' active' : ''), '📚 Stays Directory (23 Options)');
+
+  routeBtn.addEventListener('click', function () {
+    STATE.stayViewMode = 'route';
+    renderAccommodation();
+  });
+  dirBtn.addEventListener('click', function () {
+    STATE.stayViewMode = 'directory';
+    renderAccommodation();
+  });
+
+  toggleGroup.appendChild(routeBtn);
+  toggleGroup.appendChild(dirBtn);
+  modeBar.appendChild(toggleGroup);
+  root.appendChild(modeBar);
+
+  if (STATE.stayViewMode === 'route') {
+    renderAccommodationRouteTable(root, stays);
+  } else {
+    renderAccommodationDirectory(root, stays);
+  }
+}
+
+function renderAccommodationRouteTable(root, stays) {
+  var container = ce('div', 'glance-table-container');
+  var table = ce('table', 'stay-route-table');
+
+  var thead = ce('thead');
+  var hrow = ce('tr');
+  hrow.appendChild(ce('th', 'glance-th', 'Night & Dates'));
+  hrow.appendChild(ce('th', 'glance-th', 'Base / Region'));
+  hrow.appendChild(ce('th', 'glance-th', 'Active Planned Stay'));
+  hrow.appendChild(ce('th', 'glance-th', 'Estimated Rate'));
+  hrow.appendChild(ce('th', 'glance-th', 'Status'));
+  hrow.appendChild(ce('th', 'glance-th', 'Strategic Booking Notes'));
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  var tbody = ce('tbody');
+  PLANNED_ROUTE.forEach(function (leg) {
+    var tr = ce('tr', 'stay-route-tr');
+
+    var nCell = ce('td', 'stay-route-cell');
+    nCell.appendChild(ce('div', 'glance-day-num', leg.nights));
+    tr.appendChild(nCell);
+
+    var cCell = ce('td', 'stay-route-cell');
+    cCell.appendChild(ce('span', 'glance-day-base', leg.city));
+    tr.appendChild(cCell);
+
+    var hCell = ce('td', 'stay-route-cell');
+    hCell.appendChild(ce('div', 'stay-hotel-name', '🏨 ' + leg.hotelName));
+    if (leg.alts && leg.alts.length > 0) {
+      var altBox = ce('div', 'stay-alts-tag', '⇄ Alts: ' + leg.alts.join(' · '));
+      hCell.appendChild(altBox);
+    }
+    tr.appendChild(hCell);
+
+    var rCell = ce('td', 'stay-route-cell');
+    rCell.appendChild(ce('div', 'stay-hotel-rate', leg.rate));
+    tr.appendChild(rCell);
+
+    var sCell = ce('td', 'stay-route-cell');
+    var badgeCls = leg.status.includes('Tour') ? 'badge-good' : (leg.status.includes('Planned') ? 'badge' : 'badge-warn');
+    sCell.appendChild(ce('span', 'badge ' + badgeCls, leg.status));
+    tr.appendChild(sCell);
+
+    var notesCell = ce('td', 'stay-route-cell');
+    notesCell.appendChild(ce('p', 'small muted', leg.notes));
+    tr.appendChild(notesCell);
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+  root.appendChild(container);
+
+  var switchNotice = ce('div', 'card-panel text-center');
+  switchNotice.appendChild(ce('p', 'muted small', 'Want to explore or compare all 23 lodging options with photos and links?'));
+  var switchBtn = ce('button', 'btn btn-secondary small', 'Browse All 23 Stays in Directory →');
+  switchBtn.addEventListener('click', function () {
+    STATE.stayViewMode = 'directory';
+    renderAccommodation();
+  });
+  switchNotice.appendChild(switchBtn);
+  root.appendChild(switchNotice);
+}
+
+function renderAccommodationDirectory(root, stays) {
   var areas = ['all'];
   stays.forEach(function (s) {
     var a = s.area || s.location || '';
@@ -938,7 +1309,6 @@ function renderAccommodation() {
     if (baseWord && !areas.includes(baseWord)) areas.push(baseWord);
   });
 
-  // Area filter pills
   var filterBar = ce('div', 'filter-pills-row');
   areas.forEach(function (area) {
     var pill = ce('button', 'filter-pill' + (STATE.stayArea === area ? ' active' : ''), area === 'all' ? 'All Stays' : area);
@@ -991,7 +1361,6 @@ function renderAccommodation() {
     priceLine.appendChild(ce('span', null, rateStr));
     card.appendChild(priceLine);
 
-    // External link
     if (s.link || s.source_url) {
       var linkRow = ce('div', 'stay-price-line');
       var aTag = ce('a', 'muted small', 'Open Booking / Listing ↗');
