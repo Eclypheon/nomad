@@ -303,9 +303,10 @@
 
           <div id="oauth-waiting-card" class="oauth-waiting-state" hidden>
             <div class="spinner small-spinner"></div>
-            <div>
-              <div class="waiting-title">Authorizing with Google...</div>
-              <div class="waiting-sub muted small">Complete the sign-in in the secure prompt window.</div>
+            <div style="flex:1;">
+              <div id="oauth-waiting-title" class="waiting-title">Authorizing with Google...</div>
+              <div id="oauth-waiting-sub" class="waiting-sub muted small">Complete the sign-in in the secure prompt window.</div>
+              <button type="button" id="oauth-blocked-btn" class="btn btn-secondary small" style="margin-top: 8px;" hidden>Open Google Sign-in Window</button>
             </div>
           </div>
         </div>

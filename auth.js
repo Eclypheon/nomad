@@ -142,7 +142,7 @@ global.TripAuth = {
   /* ask the backend again whether any sign-in method is available yet */
   refreshAuthMethods: function () { return read('refresh', [], status()); },
 
-  signIn: function () { return call('signIn', []); },
+  signIn: function (opts) { return call('signIn', [opts]); },
   signInWithPassword: function (identity, password) { return call('signInWithPassword', [identity, password]); },
   signOut: function () { return read('signOut', [], false); },
   listTrips: function () { return read('listTrips', [], []); },
