@@ -31,8 +31,8 @@
 (function (global) {
 'use strict';
 
-var DOC_NAMES = ['trip', 'itinerary', 'accommodation', 'expenses', 'packing', 'recommendations', 'decisions'];
-var SECTIONS  = ['itinerary', 'accommodation', 'expenses', 'packing', 'recommendations', 'decisions'];
+var DOC_NAMES = ['trip', 'itinerary', 'accommodation', 'expenses', 'packing', 'recommendations', 'decisions', 'travellers'];
+var SECTIONS  = ['itinerary', 'accommodation', 'expenses', 'packing', 'recommendations', 'decisions', 'travellers'];
 var PROVIDER  = 'google';                    /* the only "key" in the client */
 var STORE_KEY = 'pocketbase_auth';           /* PocketBase JS SDK default store key */
 var DEFAULT_LIB = 'backends/vendor/pocketbase.umd.js';   /* vendored, see backends/vendor/README.md */

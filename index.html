@@ -7,6 +7,12 @@
   <meta name="theme-color" content="#0b0f17">
   <meta name="description" content="Nomad — Collaborative Trip & Travel Companion">
   <title>Nomad — Travel Planner</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Nomad">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -148,6 +154,7 @@
           <button class="tab-pill" data-tab="decisions"><span>🗳</span> Decisions <span id="decisions-pill-badge" class="count-badge" hidden>0</span></button>
           <button class="tab-pill" data-tab="packing"><span>🎒</span> Packing</button>
           <button class="tab-pill" data-tab="recommendations"><span>💡</span> Ideas</button>
+          <button class="tab-pill" data-tab="travellers"><span>🛂</span> Travellers</button>
           <button class="tab-pill" data-tab="share"><span>👥</span> Trip &amp; Share</button>
         </div>
       </nav>
@@ -160,6 +167,7 @@
         <section class="tab-content-panel" id="tab-decisions" role="tabpanel" hidden></section>
         <section class="tab-content-panel" id="tab-packing" role="tabpanel" hidden></section>
         <section class="tab-content-panel" id="tab-recommendations" role="tabpanel" hidden></section>
+        <section class="tab-content-panel" id="tab-travellers" role="tabpanel" hidden></section>
         <section class="tab-content-panel" id="tab-share" role="tabpanel" hidden></section>
       </div>
 
@@ -226,6 +234,10 @@
         <button class="sheet-menu-item" data-tab="recommendations">
           <span class="sheet-menu-icon">💡</span>
           <span class="sheet-menu-text">Ideas &amp; Spots</span>
+        </button>
+        <button class="sheet-menu-item" data-tab="travellers">
+          <span class="sheet-menu-icon">🛂</span>
+          <span class="sheet-menu-text">Passports &amp; Travellers</span>
         </button>
         <button class="sheet-menu-item" data-tab="share">
           <span class="sheet-menu-icon">👥</span>
@@ -322,6 +334,173 @@
           <button type="submit" id="auth-submit-btn" class="btn w-full" style="margin-top: 12px;">Sign In</button>
           <div id="auth-form-error" class="auth-error-msg" hidden></div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Seamless Activity / Item Editor Modal -->
+  <div id="item-editor-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" style="max-width: 520px;">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="item-editor-modal-title">Edit Itinerary Item</h2>
+          <p class="muted small" id="item-editor-modal-sub">Update timing, details, or direct booking link</p>
+        </div>
+        <button class="modal-close-btn" id="item-editor-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="item-editor-form" onsubmit="return false;">
+          <input type="hidden" id="edit-item-day">
+          <input type="hidden" id="edit-item-index">
+          
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="edit-item-time" class="form-label">Time / Schedule</label>
+              <input type="text" id="edit-item-time" class="search-input" placeholder="e.g. 09:30 or ~11:00" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-item-slot" class="form-label">Timeslot</label>
+              <select id="edit-item-slot" class="search-input">
+                <option value="morning">🌅 Morning (06:00 – 12:00)</option>
+                <option value="afternoon">☀️ Afternoon (12:00 – 17:00)</option>
+                <option value="evening">🌆 Evening (17:00 – 20:30)</option>
+                <option value="night">🌙 Night &amp; Stay</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label for="edit-item-what" class="form-label">Activity / Event Name</label>
+            <input type="text" id="edit-item-what" class="search-input" placeholder="e.g. Noi Bai → Old Quarter transfer" required>
+          </div>
+
+          <div class="form-row-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="edit-item-cost" class="form-label">Estimated Cost</label>
+              <input type="number" id="edit-item-cost" class="search-input" placeholder="0" min="0" step="any">
+            </div>
+            <div class="form-group">
+              <label for="edit-item-currency" class="form-label">Currency</label>
+              <select id="edit-item-currency" class="search-input">
+                <option value="SGD">SGD (S$)</option>
+                <option value="VND">VND (₫)</option>
+                <option value="USD">USD ($)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label for="edit-item-booking-url" class="form-label">Direct Booking URL (Klook, Booking.com, Airbnb, Airline)</label>
+            <div class="input-with-action">
+              <input type="url" id="edit-item-booking-url" class="search-input" placeholder="https://www.klook.com/... or booking.com/...">
+              <a id="edit-item-booking-test-btn" class="btn btn-secondary small" target="_blank" rel="noopener" hidden>Test ↗</a>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label for="edit-item-notes" class="form-label">Notes &amp; Details</label>
+            <textarea id="edit-item-notes" class="search-input" rows="4" placeholder="Tips, booking deadlines, logistics, alternative options..."></textarea>
+          </div>
+
+          <div class="modal-footer-actions" style="margin-top: 16px; display: flex; gap: 8px;">
+            <button type="button" id="edit-item-delete-btn" class="btn btn-danger small" style="margin-right: auto;" hidden>Delete</button>
+            <button type="button" id="edit-item-cancel-btn" class="btn btn-secondary small">Cancel</button>
+            <button type="submit" id="edit-item-save-btn" class="btn small">Save Activity</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Traveller / Passport Editor Modal -->
+  <div id="traveller-editor-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" style="max-width: 480px;">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="traveller-editor-title">Edit Traveller Details</h2>
+          <p class="muted small">Passport &amp; identification info for bookings and check-in</p>
+        </div>
+        <button class="modal-close-btn" id="traveller-editor-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="traveller-editor-form" onsubmit="return false;">
+          <input type="hidden" id="edit-traveller-id">
+          <input type="hidden" id="edit-traveller-is-self">
+
+          <div class="form-group">
+            <label for="edit-traveller-name" class="form-label">Full Name (as in Passport)</label>
+            <input type="text" id="edit-traveller-name" class="search-input" placeholder="e.g. Kester Neo" required>
+          </div>
+
+          <div class="form-row-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="edit-traveller-passport" class="form-label">Passport Number</label>
+              <input type="text" id="edit-traveller-passport" class="search-input" placeholder="e.g. E1234567A" required autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="edit-traveller-nationality" class="form-label">Nationality / Country</label>
+              <input type="text" id="edit-traveller-nationality" class="search-input" placeholder="Singapore" value="Singapore">
+            </div>
+          </div>
+
+          <div class="form-row-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="edit-traveller-dob" class="form-label">Date of Birth</label>
+              <input type="date" id="edit-traveller-dob" class="search-input">
+            </div>
+            <div class="form-group">
+              <label for="edit-traveller-expiry" class="form-label">Passport Expiry Date</label>
+              <input type="date" id="edit-traveller-expiry" class="search-input" required>
+            </div>
+          </div>
+
+          <div id="traveller-relationship-group" class="form-group" style="margin-top: 10px;">
+            <label for="edit-traveller-relationship" class="form-label">Relationship / Role</label>
+            <input type="text" id="edit-traveller-relationship" class="search-input" placeholder="e.g. Travel Partner, Friend, Family">
+          </div>
+
+          <div class="form-row-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="edit-traveller-emergency-name" class="form-label">Emergency Contact Name</label>
+              <input type="text" id="edit-traveller-emergency-name" class="search-input" placeholder="Contact Name">
+            </div>
+            <div class="form-group">
+              <label for="edit-traveller-emergency-phone" class="form-label">Emergency Contact Phone</label>
+              <input type="tel" id="edit-traveller-emergency-phone" class="search-input" placeholder="+65 ...">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label for="edit-traveller-notes" class="form-label">Notes (Dietary, Medical, Visa details)</label>
+            <textarea id="edit-traveller-notes" class="search-input" rows="2" placeholder="e.g. Halal, special requests, visa exemptions..."></textarea>
+          </div>
+
+          <div class="modal-footer-actions" style="margin-top: 16px; display: flex; gap: 8px;">
+            <button type="button" id="edit-traveller-delete-btn" class="btn btn-danger small" style="margin-right: auto;" hidden>Remove</button>
+            <button type="button" id="edit-traveller-cancel-btn" class="btn btn-secondary small">Cancel</button>
+            <button type="submit" id="edit-traveller-save-btn" class="btn small">Save Details</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Clean PDF Export & Print Preview Modal -->
+  <div id="pdf-export-modal" class="modal-backdrop pdf-modal-backdrop" hidden>
+    <div class="modal-sheet pdf-modal-sheet" role="dialog" aria-modal="true">
+      <div class="modal-header pdf-modal-header no-print">
+        <div class="pdf-header-info">
+          <h2 class="modal-title">📄 Itinerary Master Table — PDF Export &amp; Print</h2>
+          <p class="muted small">High-density landscape overview. Zoom in or save as clean PDF.</p>
+        </div>
+        <div class="pdf-modal-actions">
+          <button class="btn btn-secondary small" id="pdf-open-tab-btn" title="Open full raw table in new window to pinch-to-zoom">🔍 Fullscreen Zoom ↗</button>
+          <button class="btn btn-google small" id="pdf-print-btn">🖨️ Save as PDF / Print</button>
+          <button class="modal-close-btn" id="pdf-modal-close" aria-label="Close">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body pdf-modal-body" id="pdf-preview-content">
+        <!-- Injected dynamically by app.js -->
       </div>
     </div>
   </div>

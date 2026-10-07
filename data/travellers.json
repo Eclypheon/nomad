@@ -1,0 +1,27 @@
+{
+  "my_passport": {
+    "full_name": "Kester Neo",
+    "passport_number": "",
+    "nationality": "Singapore",
+    "date_of_birth": "",
+    "expiry_date": "",
+    "emergency_contact_name": "",
+    "emergency_contact_phone": "",
+    "dietary_notes": "",
+    "notes": "Singapore passport holders enter Vietnam visa-free for up to 30 days. Requires 6+ months passport validity upon entry."
+  },
+  "companions": [
+    {
+      "id": "comp-1",
+      "full_name": "Accompanying Traveller",
+      "relationship": "Companion",
+      "passport_number": "",
+      "nationality": "Singapore",
+      "date_of_birth": "",
+      "expiry_date": "",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "notes": "Requires 6+ months passport validity upon entry."
+    }
+  ]
+}

@@ -8,10 +8,13 @@
     "checkout": "2026-12-25",
     "price_per_night": 2860000,
     "currency": "VND",
-    "link": "https://hanoitourism.org/old-quarter-accommodation",
+    "link": "https://www.booking.com/hotel/vn/la-siesta-premium-hang-be.html",
     "status": "wishlist",
     "notes": "Splurge pick. Source quoted US$90-130/night (midpoint converted at 25,963 VND/USD, rounded). 300m from Hoan Kiem Lake, quiet inner courtyard, own spa. PRICE IS A 2026 GUIDE TYPICAL, NOT A QUOTE FOR 24-25 DEC - Christmas nights sell out and price up; book within 2-4 weeks. Hanoi round 1 is ONE night (24-25 Dec), not two: the 25th is spent on the 21:00 sleeper bus - see data/decisions.json (dec-loop-start).",
-    "source_url": "https://hanoitourism.org/old-quarter-accommodation"
+    "source_url": "https://hanoitourism.org/old-quarter-accommodation",
+    "booking_url": "https://www.booking.com/hotel/vn/la-siesta-premium-hang-be.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://hanoilasiestahotel.com/"
   },
   {
     "id": "acc-002",
@@ -22,10 +25,13 @@
     "checkout": "2026-12-25",
     "price_per_night": 2790000,
     "currency": "VND",
-    "link": "https://familytravelpath.com/blog/where-to-stay-hanoi-neighborhoods",
+    "link": "https://www.booking.com/hotel/vn/hanoi-emerald-waters-hotel-spa.html",
     "status": "wishlist",
     "notes": "Source quoted US$65-150/night (midpoint converted, rounded). Rooftop pool with Old Quarter views, family suites. Good for a couple wanting a pool. Hanoi round 1 is one night (24-25 Dec), not two - see data/decisions.json (dec-loop-start).",
-    "source_url": "https://familytravelpath.com/blog/where-to-stay-hanoi-neighborhoods"
+    "source_url": "https://familytravelpath.com/blog/where-to-stay-hanoi-neighborhoods",
+    "booking_url": "https://www.booking.com/hotel/vn/hanoi-emerald-waters-hotel-spa.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://hanoiemeraldwatershotel.com/"
   },
   {
     "id": "acc-003",
@@ -36,10 +42,13 @@
     "checkout": "2026-12-25",
     "price_per_night": 2400000,
     "currency": "VND",
-    "link": "https://vietnamspot.ru/en/blog/hanoi-hotels",
+    "link": "https://www.booking.com/hotel/vn/peridot-grand-hotel-spa.html",
     "status": "wishlist",
     "notes": "Best mid-range value pick. Source quoted US$75-110/night. Modern 2022 interior, rooftop bar. Recommended FIRST among the mid-range trio. Hanoi round 1 is one night (24-25 Dec), not two - see data/decisions.json (dec-loop-start).",
-    "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels"
+    "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels",
+    "booking_url": "https://www.booking.com/hotel/vn/peridot-grand-hotel-spa.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://peridotgrandhotel.com/"
   },
   {
     "id": "acc-004",
@@ -50,10 +59,13 @@
     "checkout": "2026-12-25",
     "price_per_night": 2600000,
     "currency": "VND",
-    "link": "https://vietnamspot.ru/en/blog/hanoi-hotels",
+    "link": "https://www.booking.com/hotel/vn/o-gallery-premier-hotel-spa.html",
     "status": "wishlist",
     "notes": "Source quoted US$80-120/night. Boutique format, free fruit bar. Hanoi round 1 is one night (24-25 Dec), not two - see data/decisions.json (dec-loop-start).",
-    "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels"
+    "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels",
+    "booking_url": "https://www.booking.com/hotel/vn/o-gallery-premier-hotel-spa.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://ogallerypremierhotel.com/"
   },
   {
     "id": "acc-005",
@@ -64,10 +76,13 @@
     "checkout": "2026-12-25",
     "price_per_night": 1820000,
     "currency": "VND",
-    "link": "https://vietnamspot.ru/en/blog/hanoi-hotels",
+    "link": "https://www.booking.com/hotel/vn/tirant.html",
     "status": "wishlist",
     "notes": "Source quoted US$50-90/night. Rooftop bar, central. Good value if the Peridot is full. Hanoi round 1 is one night (24-25 Dec), not two - see data/decisions.json (dec-loop-start).",
-    "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels"
+    "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels",
+    "booking_url": "https://www.booking.com/hotel/vn/tirant.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://hanoitiranthotel.com/"
   },
   {
     "id": "acc-006",
@@ -78,10 +93,13 @@
     "checkout": "2026-12-25",
     "price_per_night": 2080000,
     "currency": "VND",
-    "link": "https://vietnamspot.ru/en/blog/hanoi-hotels",
+    "link": "https://www.booking.com/hotel/vn/hanoi-pearl.html",
     "status": "wishlist",
     "notes": "Source quoted US$60-100/night. Skyline rooftop bar, central. Solid and unexciting. Hanoi round 1 is one night (24-25 Dec), not two - see data/decisions.json (dec-loop-start).",
-    "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels"
+    "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels",
+    "booking_url": "https://www.booking.com/hotel/vn/hanoi-pearl.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://hanoipearlhotel.com/"
   },
   {
     "id": "acc-007",
@@ -92,10 +110,13 @@
     "checkout": "2026-12-25",
     "price_per_night": 2210000,
     "currency": "VND",
-    "link": "https://hanoitourism.org/old-quarter-accommodation",
+    "link": "https://www.booking.com/hotel/vn/essence-hanoi-hotel-spa.html",
     "status": "wishlist",
     "notes": "Source quoted US$60-110/night. Central, free breakfast. Hanoi round 1 is one night (24-25 Dec), not two - see data/decisions.json (dec-loop-start).",
-    "source_url": "https://hanoitourism.org/old-quarter-accommodation"
+    "source_url": "https://hanoitourism.org/old-quarter-accommodation",
+    "booking_url": "https://www.booking.com/hotel/vn/essence-hanoi-hotel-spa.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://essencehanoihotel.com/"
   },
   {
     "id": "acc-008",
@@ -106,10 +127,13 @@
     "checkout": "2026-12-25",
     "price_per_night": 2600000,
     "currency": "VND",
-    "link": "https://hanoitourism.org/old-quarter-accommodation",
+    "link": "https://www.booking.com/hotel/vn/la-siesta-classic-ma-may.html",
     "status": "wishlist",
     "notes": "Source quoted US$70-130/night. Family-friendly sister property of La Siesta Premium; same group, often slightly cheaper. Hanoi round 1 is one night (24-25 Dec), not two - see data/decisions.json (dec-loop-start).",
-    "source_url": "https://hanoitourism.org/old-quarter-accommodation"
+    "source_url": "https://hanoitourism.org/old-quarter-accommodation",
+    "booking_url": "https://www.booking.com/hotel/vn/la-siesta-classic-ma-may.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://hanoilasiestahotel.com/"
   },
   {
     "id": "acc-009",
@@ -120,10 +144,13 @@
     "checkout": "2027-01-01",
     "price_per_night": 2860000,
     "currency": "VND",
-    "link": "https://hanoitourism.org/old-quarter-accommodation",
+    "link": "https://www.booking.com/hotel/vn/la-siesta-premium-hang-be.html",
     "status": "wishlist",
     "notes": "The NYE night (31 Dec) - the scarcest and most expensive single night of the window. Book this FIRST. Alternative if sold out: spend NYE in Tam Coc (quiet and much cheaper) and return to Hanoi on 1 Jan for the flight.",
-    "source_url": "https://hanoitourism.org/old-quarter-accommodation"
+    "source_url": "https://hanoitourism.org/old-quarter-accommodation",
+    "booking_url": "https://www.booking.com/hotel/vn/la-siesta-premium-hang-be.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://hanoilasiestahotel.com/"
   },
   {
     "id": "acc-010",
@@ -134,10 +161,13 @@
     "checkout": "2026-12-31",
     "price_per_night": 1170000,
     "currency": "VND",
-    "link": "https://bestofninhbinh.com/best-ninh-binh-hotels",
+    "link": "https://www.booking.com/hotel/vn/tam-coc-garden.html",
     "status": "wishlist",
     "notes": "BEST all-round mid-range pick. Source quoted US$35-55/night. Bungalows in a genuine garden with an unobstructed view of the Mua Cave karst range, pool, 15 min walk to the pier. Best bet for the photographer.",
-    "source_url": "https://bestofninhbinh.com/best-ninh-binh-hotels"
+    "source_url": "https://bestofninhbinh.com/best-ninh-binh-hotels",
+    "booking_url": "https://www.booking.com/hotel/vn/tam-coc-garden.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://www.tamcocgarden.com/"
   },
   {
     "id": "acc-011",
@@ -148,10 +178,13 @@
     "checkout": "2026-12-31",
     "price_per_night": 1690000,
     "currency": "VND",
-    "link": "https://bestofninhbinh.com/best-ninh-binh-hotels",
+    "link": "https://www.booking.com/hotel/vn/ninh-binh-hidden-charm-resort.html",
     "status": "wishlist",
     "notes": "Source quoted US$50-80/night. Rooftop pool, 12 min walk to the pier. Comfort-seekers.",
-    "source_url": "https://bestofninhbinh.com/best-ninh-binh-hotels"
+    "source_url": "https://bestofninhbinh.com/best-ninh-binh-hotels",
+    "booking_url": "https://www.booking.com/hotel/vn/ninh-binh-hidden-charm-resort.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://hiddencharmresort.com/"
   },
   {
     "id": "acc-012",
@@ -162,10 +195,13 @@
     "checkout": "2026-12-31",
     "price_per_night": 1880000,
     "currency": "VND",
-    "link": "https://bestofninhbinh.com/best-ninh-binh-hotels",
+    "link": "https://www.booking.com/hotel/vn/tam-coc-rice-fields-resort.html",
     "status": "wishlist",
     "notes": "Splurge option for Ninh Binh. Source quoted US$55-90/night. Boutique, garden setting, 20 min walk to the pier.",
-    "source_url": "https://bestofninhbinh.com/best-ninh-binh-hotels"
+    "source_url": "https://bestofninhbinh.com/best-ninh-binh-hotels",
+    "booking_url": "https://www.booking.com/hotel/vn/tam-coc-rice-fields-resort.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://www.tamcocricefieldsresort.com/"
   },
   {
     "id": "acc-013",
@@ -176,10 +212,13 @@
     "checkout": "2026-12-31",
     "price_per_night": 550000,
     "currency": "VND",
-    "link": "https://bestofninhbinh.com/ninh-binh-homestay-guide",
+    "link": "https://www.booking.com/hotel/vn/trang-an-retreat.html",
     "status": "wishlist",
     "notes": "Source quoted 450,000-650,000 VND/night. Five rooms in a garden between karst formations built with local stone and wood; 1.5 km to the Trang An boats, 3 km to Hoa Lu. Good for couples and nature photographers.",
-    "source_url": "https://bestofninhbinh.com/ninh-binh-homestay-guide"
+    "source_url": "https://bestofninhbinh.com/ninh-binh-homestay-guide",
+    "booking_url": "https://www.booking.com/hotel/vn/trang-an-retreat.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://www.airbnb.com/s/Trang-An-Retreat-Ninh-Binh/homes"
   },
   {
     "id": "acc-014",
@@ -190,10 +229,13 @@
     "checkout": "2026-12-31",
     "price_per_night": 375000,
     "currency": "VND",
-    "link": "https://bestofninhbinh.com/ninh-binh-homestay-guide",
+    "link": "https://www.booking.com/hotel/vn/tam-coc-sunshine-homestay.html",
     "status": "wishlist",
     "notes": "Value pick. Source quoted 300,000-450,000 VND/night. Family-run, 6 rooms around a courtyard, 400 m from the boat wharf, breakfast included (pho, banh cuon, eggs). Bicycle rental 50,000 VND/day.",
-    "source_url": "https://bestofninhbinh.com/ninh-binh-homestay-guide"
+    "source_url": "https://bestofninhbinh.com/ninh-binh-homestay-guide",
+    "booking_url": "https://www.booking.com/hotel/vn/tam-coc-sunshine-homestay.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://www.airbnb.com/s/Tam-Coc-Sunshine-Homestay/homes"
   },
   {
     "id": "acc-015",
@@ -204,10 +246,13 @@
     "checkout": "2026-12-29",
     "price_per_night": 1065000,
     "currency": "VND",
-    "link": "https://www.agoda.com/yen-bien-luxury-hotel/hotel/ha-giang-vn.html",
+    "link": "https://www.booking.com/hotel/vn/yen-bien-luxury-hotel.html",
     "status": "wishlist",
     "notes": "Post-loop reset night in Ha Giang city. 4-star, from 1,065,000 VND/night per one source and US$25 per another (figures disagree - verify). Rooftop pool, mountain views, 5-min walk to the Km 0 milestone, 5 min from the bus station area.",
-    "source_url": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025"
+    "source_url": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025",
+    "booking_url": "https://www.booking.com/hotel/vn/yen-bien-luxury-hotel.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://yenbienluxury.com/"
   },
   {
     "id": "acc-016",
@@ -218,10 +263,13 @@
     "checkout": "2026-12-29",
     "price_per_night": 550000,
     "currency": "VND",
-    "link": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025",
+    "link": "https://www.booking.com/hotel/vn/the-bluestone-lodge.html",
     "status": "wishlist",
     "notes": "From 550,000 VND/night. Small boutique with a rustic feel and very friendly staff.",
-    "source_url": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025"
+    "source_url": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025",
+    "booking_url": "https://www.booking.com/hotel/vn/the-bluestone-lodge.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://www.airbnb.com/s/Bluestone-Lodge-Ha-Giang/homes"
   },
   {
     "id": "acc-017",
@@ -232,10 +280,13 @@
     "checkout": "2026-12-29",
     "price_per_night": 490000,
     "currency": "VND",
-    "link": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "link": "https://www.booking.com/hotel/vn/truong-xuan-resort.html",
     "status": "wishlist",
     "notes": "Source quoted US$19/night. Eco setting, closest resort to town.",
-    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang"
+    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "booking_url": "https://www.booking.com/hotel/vn/truong-xuan-resort.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://truongxuanresort.com/"
   },
   {
     "id": "acc-018",
@@ -246,10 +297,13 @@
     "checkout": "2026-12-27",
     "price_per_night": 360000,
     "currency": "VND",
-    "link": "https://www.agoda.com/khu-nghi-duong-h-mong-village/hotel/dong-van-vn.html",
+    "link": "https://www.booking.com/hotel/vn/h-39-mong-village-resort.html",
     "status": "wishlist",
     "notes": "Loop night 1 option. Source quoted traditional double US$14, deluxe triple US$23. H'Mong-style bungalow resort with mountain views and an infinity pool. NOTE: on a bookable tour the operator assigns loop accommodation - you do not usually get to choose it. Confirm before paying.",
-    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang"
+    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "booking_url": "https://www.booking.com/hotel/vn/h-39-mong-village-resort.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://hmongvillage.com.vn/"
   },
   {
     "id": "acc-019",
@@ -260,10 +314,13 @@
     "checkout": "2026-12-28",
     "price_per_night": 450000,
     "currency": "VND",
-    "link": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025",
+    "link": "https://www.booking.com/hotel/vn/ancient-town-dong-van.html",
     "status": "wishlist",
     "notes": "Loop night 2 option, in the middle of Dong Van old town - the best-located stay for the loop's midpoint. From 450,000 VND/night. Budget-friendly with character.",
-    "source_url": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025"
+    "source_url": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025",
+    "booking_url": "https://www.booking.com/hotel/vn/ancient-town-dong-van.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://www.airbnb.com/s/Dong-Van-Old-Town-Homestay/homes"
   },
   {
     "id": "acc-020",
@@ -274,10 +331,13 @@
     "checkout": "2026-12-28",
     "price_per_night": 210000,
     "currency": "VND",
-    "link": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "link": "https://www.booking.com/hotel/vn/lo-lo-eco-lodge.html",
     "status": "wishlist",
     "notes": "Closest stay to the Lung Cu flag tower. Source quoted dorm from US$8, earthen family room ~US$17, wooden bungalow with balcony ~US$25. Village homestay - confirm whether a private room is available.",
-    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang"
+    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "booking_url": "https://www.booking.com/hotel/vn/lo-lo-eco-lodge.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://www.airbnb.com/s/Lo-Lo-Chai-Dong-Van/homes"
   },
   {
     "id": "acc-021",
@@ -288,10 +348,13 @@
     "checkout": "2026-12-29",
     "price_per_night": 360000,
     "currency": "VND",
-    "link": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "link": "https://www.booking.com/hotel/vn/auberge-de-meo-vac.html",
     "status": "wishlist",
     "notes": "Source quoted ~US$14. Century-old H'Mong earthen house - the most characterful stay on the eastern end of the loop. Loop routing may or may not include a Meo Vac night; ask the operator.",
-    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang"
+    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "booking_url": "https://www.booking.com/hotel/vn/auberge-de-meo-vac.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://aubergedemeovac.com/"
   },
   {
     "id": "acc-022",
@@ -302,10 +365,13 @@
     "checkout": "2026-12-27",
     "price_per_night": 340000,
     "currency": "VND",
-    "link": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "link": "https://www.booking.com/hotel/vn/dao-lodge-nam-dam.html",
     "status": "wishlist",
     "notes": "Source quoted ~US$13/night. Asia green-architecture award; Dao ethnic village setting 20 min past Quan Ba. Natural loop night 1.",
-    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang"
+    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "booking_url": "https://www.booking.com/hotel/vn/dao-lodge-nam-dam.html",
+    "booking_platform": "Booking.com",
+    "direct_url": "https://www.airbnb.com/s/Dao-Lodge-Quan-Ba/homes"
   },
   {
     "id": "acc-023",
@@ -316,9 +382,12 @@
     "checkout": "2026-12-29",
     "price_per_night": 14280000,
     "currency": "VND",
-    "link": "https://www.agoda.com/p-apiu-resort/hotel/ha-giang-vn.html",
+    "link": "https://papiuresort.com/",
     "status": "wishlist",
     "notes": "SPLURGE, listed for completeness - ~US$550/night all-inclusive (converted at 25,963 VND/USD). 5-star, maximum 12 guests, whole-resort privacy in the mountains. Almost certainly out of the S$1,500/person budget. Not recommended; included so the option is visible.",
-    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang"
+    "source_url": "https://wherebest.com/en/top10-hotels-ha-giang",
+    "booking_url": "https://papiuresort.com/",
+    "booking_platform": "Official Luxury Booking",
+    "direct_url": "https://www.booking.com/hotel/vn/p-apiu-resort.html"
   }
 ]

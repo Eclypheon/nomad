@@ -7,7 +7,18 @@
 (function () {
 'use strict';
 
-var TABS = ['itinerary', 'accommodation', 'expenses', 'decisions', 'packing', 'recommendations', 'share'];
+// Register PWA Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').then(function (reg) {
+      console.log('[Nomad PWA] Service worker active:', reg.scope);
+    }).catch(function (err) {
+      console.warn('[Nomad PWA] Service worker registration failed:', err);
+    });
+  });
+}
+
+var TABS = ['itinerary', 'accommodation', 'expenses', 'decisions', 'packing', 'recommendations', 'travellers', 'share'];
 var LS_ACTIVE_TRIP = 'nomad.active_trip.v1';
 var LS_PACKING_PREFIX = 'nomad.packing.v1.';
 
@@ -15,6 +26,7 @@ var LS_PACKING_PREFIX = 'nomad.packing.v1.';
 var STATE = {
   activeTab: 'itinerary',
   itineraryViewMode: 'glance', /* 'glance' (table at a glance) or 'deep-dive' (day breakdown) */
+  tableOrientation: 'flipped', /* 'flipped' (Days across columns, Timeslots as rows) or 'standard' */
   stayViewMode: 'route',       /* 'route' (at a glance night schedule) or 'directory' (all 23 stays) */
   activeDay: null,          /* null = all days, or day number (1..N) */
   recCategory: 'all',
@@ -25,13 +37,16 @@ var STATE = {
   activeTripId: null,
   trips: [],
   trip: null,               /* active trip record */
-  docs: {},                 /* { trip, itinerary, accommodation, expenses, packing, recommendations, decisions } */
+  docs: {},                 /* { trip, itinerary, accommodation, expenses, packing, recommendations, decisions, travellers } */
   members: [],
   role: 'member',
   canEdit: false,
   picks: {},
   loading: false,
-  swapTargetDay: null       /* day object when swap modal is open */
+  swapTargetDay: null,      /* day object when swap modal is open */
+  maskPassports: true,      /* toggle to mask passport numbers for privacy */
+  editingItem: null,        /* { dayNum, itemIndex, item } when editing an activity */
+  editingTraveller: null    /* { isSelf, companionId } when editing passport/companion */
 };
 
 /* DOM Helpers */
@@ -131,6 +146,43 @@ function getPackingCategories() {
   if (!d) return [];
   if (Array.isArray(d)) return d;
   return d.categories || d.packing || [];
+}
+
+function getTravellersData() {
+  var d = STATE.docs.travellers;
+  if (d && typeof d === 'object' && (d.my_passport || Array.isArray(d.companions))) {
+    return d;
+  }
+  try {
+    var raw = localStorage.getItem('nomad_travellers_override_' + (STATE.activeTripId || 'default'));
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {
+    my_passport: {
+      full_name: 'Kester Neo',
+      passport_number: '',
+      nationality: 'Singapore',
+      date_of_birth: '',
+      expiry_date: '',
+      emergency_contact_name: '',
+      emergency_contact_phone: '',
+      notes: 'Singapore passport holders enter Vietnam visa-free for up to 30 days.'
+    },
+    companions: [
+      {
+        id: 'comp-1',
+        full_name: 'Accompanying Traveller',
+        relationship: 'Companion',
+        passport_number: '',
+        nationality: 'Singapore',
+        date_of_birth: '',
+        expiry_date: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        notes: '6+ months validity upon entry required'
+      }
+    ]
+  };
 }
 
 /* ---------------------------------------------------------------- LIFECYCLE */
@@ -331,6 +383,79 @@ function bindEvents() {
   var swapClose = $('#swap-modal-close');
   if (swapClose) swapClose.addEventListener('click', closeSwapModal);
 
+  // Item Editor modal listeners
+  var itemEditorClose = $('#item-editor-close');
+  if (itemEditorClose) itemEditorClose.addEventListener('click', closeItemEditor);
+  var itemEditorCancel = $('#edit-item-cancel-btn');
+  if (itemEditorCancel) itemEditorCancel.addEventListener('click', closeItemEditor);
+  var itemEditorModal = $('#item-editor-modal');
+  if (itemEditorModal) {
+    itemEditorModal.addEventListener('click', function (e) {
+      if (e.target === this) closeItemEditor();
+    });
+  }
+  var itemEditorForm = $('#item-editor-form');
+  if (itemEditorForm) {
+    itemEditorForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      saveItemEditor();
+    });
+  }
+  var itemEditorDel = $('#edit-item-delete-btn');
+  if (itemEditorDel) itemEditorDel.addEventListener('click', deleteItemEditor);
+  var bookingUrlInp = $('#edit-item-booking-url');
+  if (bookingUrlInp) {
+    bookingUrlInp.addEventListener('input', function () {
+      var u = this.value.trim();
+      var tBtn = $('#edit-item-booking-test-btn');
+      if (tBtn) {
+        tBtn.hidden = !u;
+        tBtn.href = u || '#';
+      }
+    });
+  }
+
+  // Traveller / Passport Editor modal listeners
+  var travClose = $('#traveller-editor-close');
+  if (travClose) travClose.addEventListener('click', closeTravellerEditor);
+  var travCancel = $('#edit-traveller-cancel-btn');
+  if (travCancel) travCancel.addEventListener('click', closeTravellerEditor);
+  var travModal = $('#traveller-editor-modal');
+  if (travModal) {
+    travModal.addEventListener('click', function (e) {
+      if (e.target === this) closeTravellerEditor();
+    });
+  }
+  var travForm = $('#traveller-editor-form');
+  if (travForm) {
+    travForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      saveTravellerEditor();
+    });
+  }
+  var travDel = $('#edit-traveller-delete-btn');
+  if (travDel) {
+    travDel.addEventListener('click', function () {
+      var id = $('#edit-traveller-id').value;
+      var name = $('#edit-traveller-name').value;
+      deleteCompanion(id, name);
+    });
+  }
+
+  // PDF Export & Print modal listeners
+  var pdfClose = $('#pdf-modal-close');
+  if (pdfClose) pdfClose.addEventListener('click', closePdfPreview);
+  var pdfModal = $('#pdf-export-modal');
+  if (pdfModal) {
+    pdfModal.addEventListener('click', function (e) {
+      if (e.target === this) closePdfPreview();
+    });
+  }
+  var pdfPrintBtn = $('#pdf-print-btn');
+  if (pdfPrintBtn) pdfPrintBtn.addEventListener('click', printPdfItinerary);
+  var pdfOpenTabBtn = $('#pdf-open-tab-btn');
+  if (pdfOpenTabBtn) pdfOpenTabBtn.addEventListener('click', openPdfInNewTab);
+
   $('#trip-modal').addEventListener('click', function (e) {
     if (e.target === this) closeTripModal();
   });
@@ -507,7 +632,7 @@ function switchTab(tabName) {
 
   $$('.mobile-nav-item').forEach(function (btn) {
     if (btn.dataset.tab === 'more') {
-      btn.classList.toggle('active', ['packing', 'recommendations', 'share'].includes(tabName));
+      btn.classList.toggle('active', ['packing', 'recommendations', 'travellers', 'share'].includes(tabName));
     } else {
       btn.classList.toggle('active', btn.dataset.tab === tabName);
     }
@@ -690,6 +815,7 @@ function renderCurrentTab() {
     case 'decisions':      renderDecisions(); break;
     case 'packing':        renderPacking(); break;
     case 'recommendations':renderRecommendations(); break;
+    case 'travellers':     renderTravellers(); break;
     case 'share':          renderShare(); break;
   }
 }
@@ -765,9 +891,237 @@ function renderItinerary() {
 }
 
 function renderItineraryGlanceTable(root, days) {
-  var container = ce('div', 'glance-table-container');
-  var table = ce('table', 'glance-table');
+  // Table Toolbar
+  var toolbar = ce('div', 'table-toolbar');
 
+  var leftTools = ce('div', 'table-toolbar-left');
+  var orientBtn = ce('button', 'btn btn-secondary small');
+  if (STATE.tableOrientation === 'flipped') {
+    orientBtn.innerHTML = '↔️ Layout: <strong>Days Across</strong> (Tap for Rows)';
+  } else {
+    orientBtn.innerHTML = '↕️ Layout: <strong>Days Down</strong> (Tap for Columns)';
+  }
+  orientBtn.addEventListener('click', function () {
+    STATE.tableOrientation = (STATE.tableOrientation === 'flipped') ? 'standard' : 'flipped';
+    renderItinerary();
+  });
+  leftTools.appendChild(orientBtn);
+
+  var addActBtn = ce('button', 'btn btn-secondary small', '➕ Add Activity');
+  addActBtn.addEventListener('click', function () {
+    openItemEditor(1, -1, null);
+  });
+  leftTools.appendChild(addActBtn);
+  toolbar.appendChild(leftTools);
+
+  var rightTools = ce('div', 'table-toolbar-right');
+  var pdfBtn = ce('button', 'btn btn-google small', '📄 Export / View PDF');
+  pdfBtn.addEventListener('click', function () {
+    openPdfPreview();
+  });
+  rightTools.appendChild(pdfBtn);
+  toolbar.appendChild(rightTools);
+
+  root.appendChild(toolbar);
+
+  // Table Container
+  var container = ce('div', 'glance-table-container');
+  var table = ce('table', 'glance-table' + (STATE.tableOrientation === 'flipped' ? ' flipped' : ''));
+
+  if (STATE.tableOrientation === 'flipped') {
+    renderFlippedMatrix(table, days);
+  } else {
+    renderStandardMatrix(table, days);
+  }
+
+  container.appendChild(table);
+  root.appendChild(container);
+
+  var tip = ce('p', 'muted small text-center', '💡 Tap any activity to edit schedule, details, or direct booking links. Swipe horizontally to view all days.');
+  root.appendChild(tip);
+}
+
+function renderFlippedMatrix(table, days) {
+  var thead = ce('thead');
+  var hrow = ce('tr');
+  var thCorner = ce('th', 'glance-th glance-dimension-cell', 'Timeline \\ Day');
+  hrow.appendChild(thCorner);
+
+  days.forEach(function (d, dayIdx) {
+    var dayNum = d.day || (dayIdx + 1);
+    var th = ce('th', 'glance-th glance-col-day-th');
+
+    var headWrap = ce('div', 'glance-day-header');
+    headWrap.appendChild(ce('div', 'glance-day-num', 'Day ' + dayNum));
+    if (d.date) headWrap.appendChild(ce('div', 'glance-day-date', d.date.slice(5)));
+    if (d.base) headWrap.appendChild(ce('span', 'glance-day-base', d.base));
+    th.appendChild(headWrap);
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  var tbody = ce('tbody');
+
+  var daySlots = days.map(function (d, dayIdx) {
+    var items = d.items || d.events || d.activities || [];
+    var slots = { morning: [], afternoon: [], evening: [], night: [] };
+    items.forEach(function (it, itemIdx) {
+      var w = (it.what || it.title || it.activity || it.name || '');
+      if (it.time === '—' && (w.toLowerCase().includes('food & drink') || w.toLowerCase().includes('local transport') || w.toLowerCase().includes('lodging:'))) return;
+      var slot = categorizeItemSlot(it);
+      slots[slot].push({ it: it, itemIdx: itemIdx });
+    });
+    return { day: d, dayNum: d.day || (dayIdx + 1), dayIdx: dayIdx, slots: slots };
+  });
+
+  // Row 1: Focus
+  var trBase = ce('tr', 'glance-tr');
+  trBase.appendChild(ce('td', 'glance-dimension-cell', '📍 Route & Focus'));
+  daySlots.forEach(function (ds) {
+    var td = ce('td', 'glance-col-day-cell');
+    var focusText = ds.day.title ? ds.day.title.split('—')[0].trim() : (ds.day.base || '');
+    var pill = ce('div', null);
+    pill.style.fontSize = '0.72rem';
+    pill.style.color = 'var(--fg-muted)';
+    pill.textContent = focusText || '—';
+    td.appendChild(pill);
+    trBase.appendChild(td);
+  });
+  tbody.appendChild(trBase);
+
+  function buildFlippedSlotRow(slotName, label) {
+    var tr = ce('tr', 'glance-tr');
+    tr.appendChild(ce('td', 'glance-dimension-cell', label));
+
+    daySlots.forEach(function (ds) {
+      var td = ce('td', 'glance-col-day-cell');
+      var list = ds.slots[slotName];
+
+      if (list.length === 0) {
+        td.appendChild(ce('span', 'muted small', '—'));
+      } else {
+        var box = ce('div', 'glance-slot-list');
+        list.forEach(function (entry) {
+          box.appendChild(createEventPill(ds.dayNum, entry.itemIdx, entry.it));
+        });
+        td.appendChild(box);
+      }
+      tr.appendChild(td);
+    });
+    return tr;
+  }
+
+  // Row 2: Morning
+  tbody.appendChild(buildFlippedSlotRow('morning', '🌅 Morning\n06:00 – 12:00'));
+
+  // Row 3: Afternoon
+  tbody.appendChild(buildFlippedSlotRow('afternoon', '☀️ Afternoon\n12:00 – 17:00'));
+
+  // Row 4: Evening
+  tbody.appendChild(buildFlippedSlotRow('evening', '🌆 Evening\n17:00 – 20:30'));
+
+  // Row 5: Night & Stay
+  var trNight = ce('tr', 'glance-tr');
+  trNight.appendChild(ce('td', 'glance-dimension-cell', '🌙 Night & Stay'));
+  daySlots.forEach(function (ds) {
+    var td = ce('td', 'glance-col-day-cell');
+    var box = ce('div', 'glance-slot-list');
+
+    ds.slots.night.forEach(function (entry) {
+      box.appendChild(createEventPill(ds.dayNum, entry.itemIdx, entry.it));
+    });
+
+    if (ds.day.lodging) {
+      var lodgingShort = ds.day.lodging.split('—')[0].replace('acc-', 'Acc-');
+      if (ds.day.lodging.includes('—')) lodgingShort = ds.day.lodging.split('—')[1].split(',')[0].trim();
+
+      var stayPill = ce('div', 'glance-stay-pill');
+      stayPill.appendChild(ce('span', null, '🏨 ' + lodgingShort));
+
+      var allStays = getAccommodations();
+      var matchedStay = allStays.find(function (s) {
+        return lodgingShort.toLowerCase().includes((s.name || '').toLowerCase().slice(0, 8)) ||
+               (s.name && s.name.toLowerCase().includes(lodgingShort.toLowerCase().slice(0, 8)));
+      });
+      if (matchedStay && (matchedStay.booking_url || matchedStay.link)) {
+        var bLink = ce('a', 'glance-booking-link', 'Book ↗');
+        bLink.href = matchedStay.booking_url || matchedStay.link;
+        bLink.target = '_blank';
+        bLink.rel = 'noopener';
+        bLink.addEventListener('click', function (e) { e.stopPropagation(); });
+        stayPill.appendChild(bLink);
+      }
+      box.appendChild(stayPill);
+    } else if (ds.day.transit && ds.day.transit.toLowerCase().includes('sleeper')) {
+      var busPill = ce('div', 'glance-stay-pill');
+      busPill.appendChild(ce('span', null, '🚌 Sleeper Bus'));
+      var busLink = ce('a', 'glance-booking-link', '12Go ↗');
+      busLink.href = 'https://12go.asia/en/travel/hanoi/ha-giang';
+      busLink.target = '_blank';
+      busLink.rel = 'noopener';
+      busLink.addEventListener('click', function (e) { e.stopPropagation(); });
+      busPill.appendChild(busLink);
+      box.appendChild(busPill);
+    }
+
+    if (box.children.length === 0) {
+      td.appendChild(ce('span', 'muted small', '—'));
+    } else {
+      td.appendChild(box);
+    }
+    trNight.appendChild(td);
+  });
+  tbody.appendChild(trNight);
+
+  // Row 6: Spend
+  var trCost = ce('tr', 'glance-tr');
+  trCost.appendChild(ce('td', 'glance-dimension-cell', '💰 Est. Spend'));
+  daySlots.forEach(function (ds) {
+    var td = ce('td', 'glance-col-day-cell');
+    var c = ds.day.day_cost || ds.day.day_cost_estimate;
+    td.appendChild(ce('span', 'badge', c ? sgd(c) : '—'));
+    trCost.appendChild(td);
+  });
+  tbody.appendChild(trCost);
+
+  // Row 7: Actions
+  var trActions = ce('tr', 'glance-tr');
+  trActions.appendChild(ce('td', 'glance-dimension-cell', '⚡ Actions'));
+  daySlots.forEach(function (ds) {
+    var td = ce('td', 'glance-col-day-cell');
+    var actBox = ce('div', null);
+    actBox.style.display = 'flex';
+    actBox.style.gap = '4px';
+
+    var addBtn = ce('button', 'btn btn-secondary tiny', '+ Add');
+    addBtn.title = 'Add activity to Day ' + ds.dayNum;
+    addBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openItemEditor(ds.dayNum, -1, null);
+    });
+    actBox.appendChild(addBtn);
+
+    var detBtn = ce('button', 'btn btn-secondary tiny', 'Deep →');
+    detBtn.title = 'Open Day ' + ds.dayNum + ' breakdown';
+    detBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      STATE.itineraryViewMode = 'deep-dive';
+      STATE.activeDay = ds.dayNum;
+      renderItinerary();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    actBox.appendChild(detBtn);
+
+    td.appendChild(actBox);
+    trActions.appendChild(td);
+  });
+  tbody.appendChild(trActions);
+
+  table.appendChild(tbody);
+}
+
+function renderStandardMatrix(table, days) {
   var thead = ce('thead');
   var hrow = ce('tr');
   hrow.appendChild(ce('th', 'glance-th', 'Day & Base'));
@@ -781,77 +1135,57 @@ function renderItineraryGlanceTable(root, days) {
   table.appendChild(thead);
 
   var tbody = ce('tbody');
-  days.forEach(function (d, i) {
-    var dayNum = d.day || (i + 1);
+  days.forEach(function (d, dayIdx) {
+    var dayNum = d.day || (dayIdx + 1);
     var tr = ce('tr', 'glance-tr');
 
-    // 1. Day & Base (sticky column)
     var dayCell = ce('td', 'glance-day-cell');
     dayCell.appendChild(ce('div', 'glance-day-num', 'Day ' + dayNum));
     if (d.date) dayCell.appendChild(ce('div', 'glance-day-date', d.date.slice(5)));
     if (d.base) dayCell.appendChild(ce('span', 'glance-day-base', d.base));
     tr.appendChild(dayCell);
 
-    // Group items into slots
     var items = d.items || d.events || d.activities || [];
     var slots = { morning: [], afternoon: [], evening: [], night: [] };
-
-    items.forEach(function (it) {
+    items.forEach(function (it, itemIdx) {
       var w = (it.what || it.title || it.activity || it.name || '');
       if (it.time === '—' && (w.toLowerCase().includes('food & drink') || w.toLowerCase().includes('local transport') || w.toLowerCase().includes('lodging:'))) return;
       var slot = categorizeItemSlot(it);
-      slots[slot].push(it);
+      slots[slot].push({ it: it, itemIdx: itemIdx });
     });
 
-    function createSlotCell(list) {
+    function createStandardSlotCell(list) {
       var td = ce('td', 'glance-slot-cell');
       if (list.length === 0) {
         td.appendChild(ce('span', 'muted small', '—'));
       } else {
         var box = ce('div', 'glance-slot-list');
-        list.forEach(function (it) {
-          var pill = ce('div', 'glance-event-pill');
-          if (it.time && it.time !== '—') {
-            pill.appendChild(ce('span', 'glance-event-time', it.time.replace(' (assumed)', '')));
-          }
-          var text = ce('span', null, it.what || it.title || it.activity || it.name || 'Event');
-          pill.appendChild(text);
-          box.appendChild(pill);
+        list.forEach(function (entry) {
+          box.appendChild(createEventPill(dayNum, entry.itemIdx, entry.it));
         });
         td.appendChild(box);
       }
       return td;
     }
 
-    // 2. Morning
-    tr.appendChild(createSlotCell(slots.morning));
+    tr.appendChild(createStandardSlotCell(slots.morning));
+    tr.appendChild(createStandardSlotCell(slots.afternoon));
+    tr.appendChild(createStandardSlotCell(slots.evening));
 
-    // 3. Afternoon
-    tr.appendChild(createSlotCell(slots.afternoon));
-
-    // 4. Evening
-    tr.appendChild(createSlotCell(slots.evening));
-
-    // 5. Night & Lodging
     var nightTd = ce('td', 'glance-slot-cell');
     var nightBox = ce('div', 'glance-slot-list');
-
-    slots.night.forEach(function (it) {
-      var pill = ce('div', 'glance-event-pill');
-      if (it.time && it.time !== '—') {
-        pill.appendChild(ce('span', 'glance-event-time', it.time));
-      }
-      pill.appendChild(ce('span', null, it.what || it.title || it.activity || it.name));
-      nightBox.appendChild(pill);
+    slots.night.forEach(function (entry) {
+      nightBox.appendChild(createEventPill(dayNum, entry.itemIdx, entry.it));
     });
 
     if (d.lodging) {
       var lodgingShort = d.lodging.split('—')[0].replace('acc-', 'Acc-');
       if (d.lodging.includes('—')) lodgingShort = d.lodging.split('—')[1].split(',')[0].trim();
-      var stayPill = ce('div', 'glance-stay-pill', '🏨 ' + lodgingShort);
+      var stayPill = ce('div', 'glance-stay-pill');
+      stayPill.appendChild(ce('span', null, '🏨 ' + lodgingShort));
       nightBox.appendChild(stayPill);
     } else if (d.transit && d.transit.toLowerCase().includes('sleeper')) {
-      var busPill = ce('div', 'glance-stay-pill', '🚌 Sleeper Bus (Overnight)');
+      var busPill = ce('div', 'glance-stay-pill', '🚌 Sleeper Bus');
       nightBox.appendChild(busPill);
     }
 
@@ -862,13 +1196,11 @@ function renderItineraryGlanceTable(root, days) {
     }
     tr.appendChild(nightTd);
 
-    // 6. Cost
     var costTd = ce('td', 'glance-cost-cell');
     var c = d.day_cost || d.day_cost_estimate;
     costTd.appendChild(ce('span', 'badge', c ? sgd(c) : '—'));
     tr.appendChild(costTd);
 
-    // 7. Action / Drill-down
     var actTd = ce('td', 'glance-action-cell');
     var btn = ce('button', 'btn btn-secondary small', 'Details →');
     btn.addEventListener('click', function (e) {
@@ -881,22 +1213,152 @@ function renderItineraryGlanceTable(root, days) {
     actTd.appendChild(btn);
     tr.appendChild(actTd);
 
-    tr.addEventListener('click', function () {
-      STATE.itineraryViewMode = 'deep-dive';
-      STATE.activeDay = dayNum;
-      renderItinerary();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
     tbody.appendChild(tr);
   });
-
   table.appendChild(tbody);
-  container.appendChild(table);
-  root.appendChild(container);
+}
 
-  var tip = ce('p', 'muted small text-center', '💡 Click any day row or "Details →" to open that day\'s complete schedule, notes, and idea-swapping.');
-  root.appendChild(tip);
+function createEventPill(dayNum, itemIdx, it) {
+  var pill = ce('div', 'glance-event-pill');
+  pill.title = 'Click to edit: ' + (it.what || it.title || 'Activity');
+
+  var header = ce('div', 'glance-pill-header');
+  if (it.time && it.time !== '—') {
+    header.appendChild(ce('span', 'glance-event-time', it.time.replace(' (assumed)', '')));
+  }
+  header.appendChild(ce('span', 'glance-edit-icon', '✏️'));
+  pill.appendChild(header);
+
+  var title = ce('div', 'glance-pill-title', it.what || it.title || it.activity || it.name || 'Event');
+  pill.appendChild(title);
+
+  if (it.booking_url || (it.refs && it.refs.length > 0)) {
+    var actions = ce('div', 'glance-pill-actions');
+    var bUrl = it.booking_url || it.refs[0];
+    var bLabel = it.booking_platform || (bUrl.includes('klook') ? 'Klook ↗' : (bUrl.includes('booking.com') ? 'Booking ↗' : (bUrl.includes('12go') ? '12Go ↗' : 'Book ↗')));
+    var bLink = ce('a', 'glance-booking-link', '🏷️ ' + bLabel);
+    bLink.href = bUrl;
+    bLink.target = '_blank';
+    bLink.rel = 'noopener';
+    bLink.addEventListener('click', function (e) { e.stopPropagation(); });
+    actions.appendChild(bLink);
+    pill.appendChild(actions);
+  }
+
+  pill.addEventListener('click', function () {
+    openItemEditor(dayNum, itemIdx, it);
+  });
+
+  return pill;
+}
+
+/* ------------------------------------------------------------- ITEM EDITOR */
+
+function openItemEditor(dayNum, itemIndex, item) {
+  STATE.editingItem = {
+    dayNum: dayNum,
+    itemIndex: itemIndex,
+    item: item || {}
+  };
+
+  $('#item-editor-modal-title').textContent = itemIndex >= 0 ? ('Edit Activity — Day ' + dayNum) : ('Add Activity to Day ' + dayNum);
+  $('#edit-item-day').value = dayNum;
+  $('#edit-item-index').value = itemIndex;
+
+  $('#edit-item-time').value = (item && item.time) ? item.time : '09:00';
+  $('#edit-item-what').value = (item && (item.what || item.title || item.activity || item.name)) || '';
+  $('#edit-item-cost').value = (item && item.cost != null) ? item.cost : '0';
+  $('#edit-item-currency').value = (item && item.currency) || 'SGD';
+  $('#edit-item-booking-url').value = (item && item.booking_url) || ((item && item.refs && item.refs[0]) || '');
+  $('#edit-item-notes').value = (item && item.notes) || '';
+
+  var slot = item ? categorizeItemSlot(item) : 'morning';
+  $('#edit-item-slot').value = slot;
+
+  var testBtn = $('#edit-item-booking-test-btn');
+  if (testBtn) {
+    var url = $('#edit-item-booking-url').value.trim();
+    testBtn.hidden = !url;
+    testBtn.href = url || '#';
+  }
+
+  var delBtn = $('#edit-item-delete-btn');
+  if (delBtn) delBtn.hidden = (itemIndex < 0);
+
+  $('#item-editor-modal').hidden = false;
+}
+
+function closeItemEditor() {
+  $('#item-editor-modal').hidden = true;
+  STATE.editingItem = null;
+}
+
+function saveItemEditor() {
+  if (!STATE.editingItem) return;
+  var dayNum = parseInt($('#edit-item-day').value, 10);
+  var itemIndex = parseInt($('#edit-item-index').value, 10);
+
+  var what = $('#edit-item-what').value.trim();
+  if (!what) {
+    alert('Please enter an activity name.');
+    return;
+  }
+
+  var time = $('#edit-item-time').value.trim() || '—';
+  var cost = parseFloat($('#edit-item-cost').value) || 0;
+  var currency = $('#edit-item-currency').value;
+  var bookingUrl = $('#edit-item-booking-url').value.trim();
+  var notes = $('#edit-item-notes').value.trim();
+
+  var days = getItineraryDays();
+  var dayObj = days.find(function (d, i) { return (d.day || i + 1) === dayNum; });
+  if (!dayObj) return;
+
+  if (!dayObj.items) dayObj.items = [];
+
+  var updatedItem = {
+    time: time,
+    what: what,
+    cost: cost,
+    currency: currency,
+    notes: notes,
+    booking_url: bookingUrl || undefined,
+    booking_platform: bookingUrl ? (bookingUrl.includes('klook') ? 'Klook' : (bookingUrl.includes('booking.com') ? 'Booking.com' : (bookingUrl.includes('12go') ? '12Go' : (bookingUrl.includes('airbnb') ? 'Airbnb' : 'Direct Booking')))) : undefined,
+    refs: bookingUrl ? [bookingUrl] : []
+  };
+
+  if (itemIndex >= 0 && itemIndex < dayObj.items.length) {
+    dayObj.items[itemIndex] = Object.assign({}, dayObj.items[itemIndex], updatedItem);
+  } else {
+    dayObj.items.push(updatedItem);
+  }
+
+  // Recalculate day cost
+  var total = 0;
+  dayObj.items.forEach(function (it) { if (it.cost) total += Number(it.cost); });
+  dayObj.day_cost = total;
+  dayObj.day_cost_estimate = total;
+
+  closeItemEditor();
+  saveItineraryDoc();
+  renderItinerary();
+  showToast('Saved "' + what + '" to Day ' + dayNum + '!');
+}
+
+function deleteItemEditor() {
+  if (!STATE.editingItem || STATE.editingItem.itemIndex < 0) return;
+  var dayNum = STATE.editingItem.dayNum;
+  var itemIndex = STATE.editingItem.itemIndex;
+
+  var days = getItineraryDays();
+  var dayObj = days.find(function (d, i) { return (d.day || i + 1) === dayNum; });
+  if (!dayObj || !dayObj.items) return;
+
+  dayObj.items.splice(itemIndex, 1);
+  closeItemEditor();
+  saveItineraryDoc();
+  renderItinerary();
+  showToast('Removed activity from Day ' + dayNum);
 }
 
 function renderItineraryDeepDive(root, days) {
@@ -1004,22 +1466,41 @@ function renderItineraryDeepDive(root, days) {
         it.appendChild(top);
 
         var titleText = ev.what || ev.title || ev.activity || ev.name || 'Activity';
-        it.appendChild(ce('div', 'item-title', titleText));
+        var titleEl = ce('div', 'item-title', titleText);
+        titleEl.style.cursor = 'pointer';
+        titleEl.title = 'Click to edit activity';
+        titleEl.addEventListener('click', function () {
+          openItemEditor(dayNum, evIdx, ev);
+        });
+        it.appendChild(titleEl);
 
         if (ev.notes) it.appendChild(ce('p', 'small muted', ev.notes));
 
-        if (ev.refs && ev.refs.length) {
-          var links = ce('div', 'small muted');
-          ev.refs.forEach(function (r) {
-            var a = ce('a', 'muted', '🔗 Reference');
-            a.href = r;
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.style.marginRight = '8px';
-            links.appendChild(a);
-          });
-          it.appendChild(links);
+        var bUrl = ev.booking_url || (ev.refs && ev.refs[0]);
+        var linkBox = ce('div', 'small muted');
+        linkBox.style.marginTop = '6px';
+        linkBox.style.display = 'flex';
+        linkBox.style.alignItems = 'center';
+        linkBox.style.gap = '8px';
+        linkBox.style.flexWrap = 'wrap';
+
+        if (bUrl) {
+          var platName = ev.booking_platform || (bUrl.includes('klook') ? 'Klook' : (bUrl.includes('booking.com') ? 'Booking.com' : (bUrl.includes('12go') ? '12Go' : (bUrl.includes('airbnb') ? 'Airbnb' : (bUrl.includes('google.com/travel/flights') ? 'Google Flights' : 'Direct Booking')))));
+          var bookLink = ce('a', 'btn btn-secondary tiny', '🎟 Book on ' + platName + ' ↗');
+          bookLink.href = bUrl;
+          bookLink.target = '_blank';
+          bookLink.rel = 'noopener';
+          linkBox.appendChild(bookLink);
         }
+
+        var editBtn = ce('button', 'btn-swap tiny', '✏️ Edit');
+        editBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          openItemEditor(dayNum, evIdx, ev);
+        });
+        linkBox.appendChild(editBtn);
+
+        it.appendChild(linkBox);
 
         evList.appendChild(it);
       });
@@ -1295,6 +1776,23 @@ function renderAccommodationRouteTable(root, stays) {
       var altBox = ce('div', 'stay-alts-tag', '⇄ Alts: ' + leg.alts.join(' · '));
       hCell.appendChild(altBox);
     }
+
+    var matchedStay = stays.find(function (s) {
+      var sName = (s.name || s.hotel || '').toLowerCase();
+      var lName = leg.hotelName.toLowerCase();
+      return (sName && (lName.includes(sName.slice(0, 8)) || sName.includes(lName.slice(0, 8))));
+    });
+    var bookUrl = (matchedStay && (matchedStay.booking_url || matchedStay.link)) || leg.booking_url;
+    if (bookUrl) {
+      var plat = (matchedStay && matchedStay.booking_platform) || (bookUrl.includes('booking.com') ? 'Booking.com' : (bookUrl.includes('airbnb') ? 'Airbnb' : 'Online'));
+      var bLink = ce('a', 'glance-booking-link', 'Book (' + plat + ') ↗');
+      bLink.href = bookUrl;
+      bLink.target = '_blank';
+      bLink.rel = 'noopener';
+      bLink.style.display = 'inline-block';
+      bLink.style.marginTop = '4px';
+      hCell.appendChild(bLink);
+    }
     tr.appendChild(hCell);
 
     var rCell = ce('td', 'stay-route-cell');
@@ -1388,13 +1886,31 @@ function renderAccommodationDirectory(root, stays) {
     priceLine.appendChild(ce('span', null, rateStr));
     card.appendChild(priceLine);
 
-    if (s.link || s.source_url) {
+    var bookingUrl = s.booking_url || s.link || s.source_url;
+    if (bookingUrl) {
       var linkRow = ce('div', 'stay-price-line');
-      var aTag = ce('a', 'muted small', 'Open Booking / Listing ↗');
-      aTag.href = s.link || s.source_url;
+      linkRow.style.marginTop = '8px';
+      linkRow.style.display = 'flex';
+      linkRow.style.alignItems = 'center';
+      linkRow.style.gap = '8px';
+      linkRow.style.flexWrap = 'wrap';
+
+      var plat = s.booking_platform || (bookingUrl.includes('booking.com') ? 'Booking.com' : (bookingUrl.includes('airbnb') ? 'Airbnb' : 'Online Listing'));
+      var aTag = ce('a', 'btn btn-secondary small', '🏨 Book on ' + plat + ' ↗');
+      aTag.href = bookingUrl;
       aTag.target = '_blank';
       aTag.rel = 'noopener';
+      aTag.style.textDecoration = 'none';
       linkRow.appendChild(aTag);
+
+      if (s.direct_url) {
+        var dirTag = ce('a', 'muted small', 'Official Hotel Site ↗');
+        dirTag.href = s.direct_url;
+        dirTag.target = '_blank';
+        dirTag.rel = 'noopener';
+        dirTag.style.marginLeft = '4px';
+        linkRow.appendChild(dirTag);
+      }
       card.appendChild(linkRow);
     }
 
@@ -1830,6 +2346,622 @@ function renderShare() {
   }
 
   root.appendChild(card);
+}
+
+/* ==========================================================================
+   8. TRAVELLERS & PASSPORTS TAB
+   ========================================================================== */
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function maskPassport(str) {
+  if (!str) return '—';
+  var s = String(str).trim();
+  if (!STATE.maskPassports) return s;
+  if (s.length <= 3) return '•••';
+  var first = s.slice(0, 1);
+  var last = s.slice(-2);
+  var dots = '•'.repeat(Math.max(3, s.length - 3));
+  return first + dots + last;
+}
+
+function calculatePassportValidity(expiryStr) {
+  if (!expiryStr) {
+    return {
+      statusText: 'No Expiry Set',
+      tagClass: 'warn',
+      months: null
+    };
+  }
+  var exp = new Date(expiryStr);
+  if (isNaN(exp.getTime())) {
+    return {
+      statusText: 'Invalid Date',
+      tagClass: 'warn',
+      months: null
+    };
+  }
+  var now = new Date();
+  var diffMs = exp.getTime() - now.getTime();
+  var months = diffMs / (1000 * 60 * 60 * 24 * 30.4375);
+
+  if (months < 0) {
+    return {
+      statusText: '❌ Expired',
+      tagClass: 'danger',
+      months: months
+    };
+  }
+  if (months < 6) {
+    return {
+      statusText: '⚠️ Expiring in ' + Math.max(0, Math.round(months)) + ' mos (Renewal required)',
+      tagClass: 'danger',
+      months: months
+    };
+  }
+  if (months < 12) {
+    return {
+      statusText: '⚠️ Valid (~' + Math.round(months) + ' mos left)',
+      tagClass: 'warn',
+      months: months
+    };
+  }
+  return {
+    statusText: '✅ Valid (' + (months / 12).toFixed(1) + ' yrs left)',
+    tagClass: 'good',
+    months: months
+  };
+}
+
+function copyPassportInfo(t, label) {
+  var lines = [];
+  lines.push('Traveller: ' + (t.full_name || '—'));
+  if (t.passport_number) lines.push('Passport No: ' + t.passport_number);
+  if (t.nationality) lines.push('Nationality: ' + t.nationality);
+  if (t.date_of_birth) lines.push('DOB: ' + t.date_of_birth);
+  if (t.expiry_date) lines.push('Passport Expiry: ' + t.expiry_date);
+  if (t.emergency_contact_name || t.emergency_contact_phone) {
+    lines.push('Emergency Contact: ' + (t.emergency_contact_name || '') + ' (' + (t.emergency_contact_phone || '') + ')');
+  }
+  if (t.notes) lines.push('Notes: ' + t.notes);
+
+  var text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () {
+      showToast('Copied ' + (label || (t.full_name || 'passport')) + ' info!');
+    }).catch(function () {
+      prompt('Copy passport details:', text);
+    });
+  } else {
+    prompt('Copy passport details:', text);
+  }
+}
+
+function saveTravellersDoc() {
+  if (STATE.activeTripId) {
+    TripAuth.saveDocs(STATE.activeTripId, { travellers: STATE.docs.travellers }).catch(function (e) {
+      console.warn('Failed to sync travellers to cloud:', e);
+    });
+    try {
+      localStorage.setItem('nomad_travellers_override_' + STATE.activeTripId, JSON.stringify(STATE.docs.travellers));
+    } catch (e) {}
+  }
+}
+
+function renderTravellers() {
+  var root = $('#tab-travellers');
+  clear(root);
+
+  var data = getTravellersData();
+  STATE.docs.travellers = data;
+
+  var container = ce('div', 'travellers-section');
+
+  // Top header with actions
+  var header = ce('div', 'view-mode-bar');
+  var titleBox = ce('div');
+  titleBox.appendChild(ce('h2', null, '🛂 Passports & Travelling Party'));
+  titleBox.appendChild(ce('div', 'muted small', 'Secure travel document records for flight bookings, check-ins, and immigration checks'));
+  header.appendChild(titleBox);
+
+  var actionsBox = ce('div', 'table-toolbar-left');
+  var maskBtn = ce('button', 'btn btn-secondary small', STATE.maskPassports ? '👁️ Reveal Numbers' : '🔒 Mask Numbers');
+  maskBtn.addEventListener('click', function () {
+    STATE.maskPassports = !STATE.maskPassports;
+    renderTravellers();
+  });
+  actionsBox.appendChild(maskBtn);
+
+  var addCompBtn = ce('button', 'btn small', '➕ Add Companion');
+  addCompBtn.addEventListener('click', function () {
+    openTravellerEditor(null, false);
+  });
+  actionsBox.appendChild(addCompBtn);
+  header.appendChild(actionsBox);
+  container.appendChild(header);
+
+  // Immigration Advisory Card
+  var noticeCard = ce('div', 'passport-notice-card');
+  var noticeIcon = ce('div', 'notice-icon', 'ℹ️');
+  noticeCard.appendChild(noticeIcon);
+  var noticeContent = ce('div');
+  noticeContent.appendChild(ce('div', 'notice-title', 'Vietnam Immigration & Visa-Free Advisory'));
+  noticeContent.appendChild(ce('p', 'notice-text', 'Singapore passport holders enjoy visa-free entry to Vietnam for up to 30 days. Immigration strictly requires a minimum of 6 months passport validity upon entry date. Verify all travellers have sufficient validity before travelling.'));
+  noticeCard.appendChild(noticeContent);
+  container.appendChild(noticeCard);
+
+  // Passports Grid
+  var grid = ce('div', 'passports-grid');
+
+  // 1. My Passport Card (Primary)
+  var myPassport = data.my_passport || {};
+  grid.appendChild(createPassportCard(myPassport, true));
+
+  // 2. Companion Cards
+  var companions = data.companions || [];
+  companions.forEach(function (comp) {
+    grid.appendChild(createPassportCard(comp, false));
+  });
+
+  container.appendChild(grid);
+  root.appendChild(container);
+}
+
+function createPassportCard(t, isSelf) {
+  var card = ce('div', 'passport-card' + (isSelf ? ' self-card' : ''));
+
+  // Header
+  var head = ce('div', 'passport-card-header');
+  var badge = ce('span', 'passport-badge', isSelf ? '⭐ Primary Traveller (You)' : ('👥 ' + (t.relationship || 'Companion')));
+  head.appendChild(badge);
+
+  var val = calculatePassportValidity(t.expiry_date);
+  var valTag = ce('span', 'validity-tag ' + val.tagClass, val.statusText);
+  head.appendChild(valTag);
+  card.appendChild(head);
+
+  // Name
+  var nameEl = ce('h3', 'passport-holder-name', t.full_name || 'Unnamed Traveller');
+  card.appendChild(nameEl);
+
+  // Meta Grid
+  var metaGrid = ce('div', 'passport-meta-list');
+
+  // Passport Number
+  var mPass = ce('div');
+  mPass.appendChild(ce('div', 'meta-item-label', 'Passport Number'));
+  var passVal = ce('div', 'meta-item-val passport-masked-val', maskPassport(t.passport_number));
+  mPass.appendChild(passVal);
+  metaGrid.appendChild(mPass);
+
+  // Nationality
+  var mNat = ce('div');
+  mNat.appendChild(ce('div', 'meta-item-label', 'Nationality'));
+  mNat.appendChild(ce('div', 'meta-item-val', '🇸🇬 ' + (t.nationality || 'Singapore')));
+  metaGrid.appendChild(mNat);
+
+  // Expiry Date
+  var mExp = ce('div');
+  mExp.appendChild(ce('div', 'meta-item-label', 'Expiry Date'));
+  mExp.appendChild(ce('div', 'meta-item-val', t.expiry_date || '—'));
+  metaGrid.appendChild(mExp);
+
+  // Date of Birth
+  var mDob = ce('div');
+  mDob.appendChild(ce('div', 'meta-item-label', 'Date of Birth'));
+  mDob.appendChild(ce('div', 'meta-item-val', t.date_of_birth || '—'));
+  metaGrid.appendChild(mDob);
+
+  // Emergency contact (if present)
+  if (t.emergency_contact_name || t.emergency_contact_phone) {
+    var mEm = ce('div');
+    mEm.style.gridColumn = '1 / -1';
+    mEm.appendChild(ce('div', 'meta-item-label', 'Emergency Contact'));
+    var emStr = (t.emergency_contact_name || '') + (t.emergency_contact_phone ? (' (' + t.emergency_contact_phone + ')') : '');
+    mEm.appendChild(ce('div', 'meta-item-val', '📞 ' + emStr));
+    metaGrid.appendChild(mEm);
+  }
+
+  // Notes
+  if (t.notes) {
+    var mNotes = ce('div');
+    mNotes.style.gridColumn = '1 / -1';
+    mNotes.appendChild(ce('div', 'meta-item-label', 'Notes'));
+    mNotes.appendChild(ce('div', 'small muted', t.notes));
+    metaGrid.appendChild(mNotes);
+  }
+
+  card.appendChild(metaGrid);
+
+  // Actions
+  var actions = ce('div', 'passport-card-actions');
+
+  var copyBtn = ce('button', 'btn btn-secondary tiny', '📋 Copy');
+  copyBtn.title = 'Copy passport information to clipboard for bookings';
+  copyBtn.addEventListener('click', function () {
+    copyPassportInfo(t, isSelf ? 'my passport' : t.full_name);
+  });
+  actions.appendChild(copyBtn);
+
+  var editBtn = ce('button', 'btn btn-secondary tiny', '✏️ Edit');
+  editBtn.addEventListener('click', function () {
+    openTravellerEditor(t, isSelf);
+  });
+  actions.appendChild(editBtn);
+
+  if (!isSelf) {
+    var delBtn = ce('button', 'btn-icon-danger tiny', '🗑️');
+    delBtn.title = 'Remove companion';
+    delBtn.addEventListener('click', function () {
+      deleteCompanion(t.id, t.full_name);
+    });
+    actions.appendChild(delBtn);
+  }
+
+  card.appendChild(actions);
+  return card;
+}
+
+function openTravellerEditor(traveller, isSelf) {
+  STATE.editingTraveller = {
+    isSelf: isSelf,
+    traveller: traveller || {}
+  };
+
+  $('#edit-traveller-is-self').value = isSelf ? 'true' : 'false';
+  $('#edit-traveller-id').value = (!isSelf && traveller) ? (traveller.id || '') : '';
+
+  $('#traveller-editor-title').textContent = isSelf ? 'Edit My Passport Details' : (traveller ? 'Edit Traveller Details' : 'Add Accompanying Traveller');
+
+  $('#edit-traveller-name').value = (traveller && traveller.full_name) || '';
+  $('#edit-traveller-passport').value = (traveller && traveller.passport_number) || '';
+  $('#edit-traveller-nationality').value = (traveller && traveller.nationality) || 'Singapore';
+  $('#edit-traveller-dob').value = (traveller && traveller.date_of_birth) || '';
+  $('#edit-traveller-expiry').value = (traveller && traveller.expiry_date) || '';
+  $('#edit-traveller-relationship').value = (traveller && traveller.relationship) || 'Travel Companion';
+  $('#edit-traveller-emergency-name').value = (traveller && traveller.emergency_contact_name) || '';
+  $('#edit-traveller-emergency-phone').value = (traveller && traveller.emergency_contact_phone) || '';
+  $('#edit-traveller-notes').value = (traveller && traveller.notes) || '';
+
+  var relGroup = $('#traveller-relationship-group');
+  if (relGroup) relGroup.hidden = !!isSelf;
+
+  var delBtn = $('#edit-traveller-delete-btn');
+  if (delBtn) delBtn.hidden = isSelf || !traveller || !traveller.id;
+
+  $('#traveller-editor-modal').hidden = false;
+}
+
+function closeTravellerEditor() {
+  $('#traveller-editor-modal').hidden = true;
+  STATE.editingTraveller = null;
+}
+
+function saveTravellerEditor() {
+  if (!STATE.editingTraveller) return;
+  var isSelf = $('#edit-traveller-is-self').value === 'true';
+  var id = $('#edit-traveller-id').value;
+
+  var name = $('#edit-traveller-name').value.trim();
+  if (!name) {
+    alert('Please enter traveller full name.');
+    return;
+  }
+
+  var passNo = $('#edit-traveller-passport').value.trim();
+  var nat = $('#edit-traveller-nationality').value.trim() || 'Singapore';
+  var dob = $('#edit-traveller-dob').value;
+  var expiry = $('#edit-traveller-expiry').value;
+  var rel = $('#edit-traveller-relationship').value.trim() || 'Companion';
+  var emName = $('#edit-traveller-emergency-name').value.trim();
+  var emPhone = $('#edit-traveller-emergency-phone').value.trim();
+  var notes = $('#edit-traveller-notes').value.trim();
+
+  var data = getTravellersData();
+  if (!data.companions) data.companions = [];
+
+  if (isSelf) {
+    data.my_passport = {
+      full_name: name,
+      passport_number: passNo,
+      nationality: nat,
+      date_of_birth: dob,
+      expiry_date: expiry,
+      emergency_contact_name: emName,
+      emergency_contact_phone: emPhone,
+      notes: notes
+    };
+  } else {
+    var compObj = {
+      id: id || ('comp-' + Date.now()),
+      full_name: name,
+      relationship: rel,
+      passport_number: passNo,
+      nationality: nat,
+      date_of_birth: dob,
+      expiry_date: expiry,
+      emergency_contact_name: emName,
+      emergency_contact_phone: emPhone,
+      notes: notes
+    };
+    if (id) {
+      var idx = data.companions.findIndex(function (c) { return c.id === id; });
+      if (idx >= 0) data.companions[idx] = compObj;
+      else data.companions.push(compObj);
+    } else {
+      data.companions.push(compObj);
+    }
+  }
+
+  STATE.docs.travellers = data;
+  saveTravellersDoc();
+  closeTravellerEditor();
+  renderTravellers();
+  showToast('Passport details saved for ' + name + '!');
+}
+
+function deleteCompanion(id, name) {
+  if (!confirm('Remove companion "' + (name || 'traveller') + '"?')) return;
+  var data = getTravellersData();
+  if (data.companions) {
+    data.companions = data.companions.filter(function (c) { return c.id !== id; });
+  }
+  STATE.docs.travellers = data;
+  saveTravellersDoc();
+  if ($('#traveller-editor-modal') && !$('#traveller-editor-modal').hidden) {
+    closeTravellerEditor();
+  }
+  renderTravellers();
+  showToast('Removed companion.');
+}
+
+/* ==========================================================================
+   9. CLEAN PDF EXPORT & PRINT VIEWER
+   ========================================================================== */
+
+function buildPrintableDocument() {
+  var t = STATE.docs.trip || STATE.trip || {};
+  var tripTitle = t.name || t.title || 'Nomad Itinerary';
+  var destination = t.destination || 'Vietnam (Hanoi · Ha Giang · Ninh Binh)';
+  var dateStr = (t.start_date && t.end_date) ? (t.start_date.slice(0, 10) + ' to ' + t.end_date.slice(0, 10)) : 'End 2026';
+  var days = getItineraryDays();
+  var b = calculateBudget();
+  var travellersData = getTravellersData();
+
+  var html = [];
+  html.push('<div class="print-document">');
+
+  // Header
+  html.push('  <div class="print-header">');
+  html.push('    <div>');
+  html.push('      <div style="font-size: 0.8rem; font-weight: 700; color: #2563eb; letter-spacing: 0.05em; text-transform: uppercase;">Nomad Trip Plan</div>');
+  html.push('      <h1 class="print-title">' + escapeHtml(tripTitle) + '</h1>');
+  html.push('      <p class="print-sub">📍 ' + escapeHtml(destination) + ' &nbsp;·&nbsp; 🗓️ ' + escapeHtml(dateStr) + ' &nbsp;·&nbsp; ⏱️ ' + days.length + ' Days</p>');
+  html.push('    </div>');
+  html.push('    <div style="text-align: right;">');
+  html.push('      <div style="font-size: 0.75rem; color: #6b7280;">Planned Budget</div>');
+  html.push('      <div style="font-size: 1.15rem; font-weight: 800; color: #111827;">' + sgd(b.cap) + ' / pax</div>');
+  html.push('      <div style="font-size: 0.72rem; color: #059669; font-weight: 600;">Est. Net: ' + sgd(b.netPlanned) + '</div>');
+  html.push('    </div>');
+  html.push('  </div>');
+
+  // Master Table (Flipped layout: Days horizontal columns, Timeslots vertical rows)
+  html.push('  <table class="print-table">');
+  html.push('    <thead>');
+  html.push('      <tr>');
+  html.push('        <th class="print-th" style="width: 100px;">Timeline</th>');
+  days.forEach(function (d, i) {
+    var dayNum = d.day || (i + 1);
+    html.push('        <th class="print-th">');
+    html.push('          <div style="font-weight: 800; color: #111827;">Day ' + dayNum + '</div>');
+    if (d.base) html.push('          <div style="font-size: 0.65rem; color: #2563eb; font-weight: 600;">' + escapeHtml(d.base) + '</div>');
+    if (d.date) html.push('          <div style="font-size: 0.65rem; color: #6b7280;">' + escapeHtml(d.date.slice(5)) + '</div>');
+    html.push('        </th>');
+  });
+  html.push('      </tr>');
+  html.push('    </thead>');
+  html.push('    <tbody>');
+
+  // Categorize slots
+  var daySlots = days.map(function (d, i) {
+    var items = d.items || d.events || d.activities || [];
+    var slots = { morning: [], afternoon: [], evening: [], night: [] };
+    items.forEach(function (it) {
+      var w = (it.what || it.title || it.activity || it.name || '');
+      if (it.time === '—' && (w.toLowerCase().includes('food & drink') || w.toLowerCase().includes('local transport') || w.toLowerCase().includes('lodging:'))) return;
+      var slot = categorizeItemSlot(it);
+      slots[slot].push(it);
+    });
+    return { day: d, dayNum: d.day || (i + 1), slots: slots };
+  });
+
+  // Focus Row
+  html.push('      <tr>');
+  html.push('        <td class="print-td" style="font-weight: 700; background: #f9fafb;">📍 Focus</td>');
+  daySlots.forEach(function (ds) {
+    var focus = ds.day.title ? ds.day.title.split('—')[0].trim() : (ds.day.base || '—');
+    html.push('        <td class="print-td" style="font-weight: 600; color: #374151;">' + escapeHtml(focus) + '</td>');
+  });
+  html.push('      </tr>');
+
+  // Helper for printing slot row
+  function printSlotRow(slotName, label) {
+    html.push('      <tr>');
+    html.push('        <td class="print-td" style="font-weight: 700; background: #f9fafb;">' + label + '</td>');
+    daySlots.forEach(function (ds) {
+      var list = ds.slots[slotName];
+      html.push('        <td class="print-td">');
+      if (list.length === 0) {
+        html.push('          <span style="color: #9ca3af;">—</span>');
+      } else {
+        list.forEach(function (it) {
+          var time = (it.time && it.time !== '—') ? ('<b>' + escapeHtml(it.time) + '</b> ') : '';
+          var what = escapeHtml(it.what || it.title || it.activity || it.name || 'Activity');
+          var cost = (it.cost != null && it.cost > 0) ? (' <span style="color: #059669; font-weight: 600;">(' + sgd(it.cost) + ')</span>') : '';
+          html.push('          <div style="margin-bottom: 4px; padding: 2px 4px; background: #f8fafc; border-radius: 3px; border: 1px solid #e2e8f0;">' + time + what + cost + '</div>');
+        });
+      }
+      html.push('        </td>');
+    });
+    html.push('      </tr>');
+  }
+
+  printSlotRow('morning', '🌅 Morning<br><span style="font-size: 0.65rem; color:#6b7280;">06:00-12:00</span>');
+  printSlotRow('afternoon', '☀️ Afternoon<br><span style="font-size: 0.65rem; color:#6b7280;">12:00-17:00</span>');
+  printSlotRow('evening', '🌆 Evening<br><span style="font-size: 0.65rem; color:#6b7280;">17:00-20:30</span>');
+
+  // Night & Lodging Row
+  html.push('      <tr>');
+  html.push('        <td class="print-td" style="font-weight: 700; background: #f9fafb;">🌙 Lodging &amp; Night</td>');
+  daySlots.forEach(function (ds) {
+    html.push('        <td class="print-td">');
+    ds.slots.night.forEach(function (it) {
+      var time = (it.time && it.time !== '—') ? ('<b>' + escapeHtml(it.time) + '</b> ') : '';
+      var what = escapeHtml(it.what || it.title || it.activity || it.name || 'Activity');
+      html.push('          <div style="margin-bottom: 3px; font-size: 0.68rem;">' + time + what + '</div>');
+    });
+    if (ds.day.lodging) {
+      var l = escapeHtml(ds.day.lodging.includes('—') ? ds.day.lodging.split('—')[1].split(',')[0].trim() : ds.day.lodging);
+      html.push('          <div style="font-weight: 700; color: #1e40af; font-size: 0.7rem; margin-top: 2px;">🏨 ' + l + '</div>');
+    } else if (ds.day.transit && ds.day.transit.toLowerCase().includes('sleeper')) {
+      html.push('          <div style="font-weight: 700; color: #b45309; font-size: 0.7rem; margin-top: 2px;">🚌 Sleeper Bus</div>');
+    }
+    html.push('        </td>');
+  });
+  html.push('      </tr>');
+
+  // Est Spend Row
+  html.push('      <tr>');
+  html.push('        <td class="print-td" style="font-weight: 700; background: #f9fafb;">💰 Est. Spend</td>');
+  daySlots.forEach(function (ds) {
+    var c = ds.day.day_cost || ds.day.day_cost_estimate;
+    html.push('        <td class="print-td" style="font-weight: 700; color: #059669;">' + (c ? sgd(c) : '—') + '</td>');
+  });
+  html.push('      </tr>');
+
+  html.push('    </tbody>');
+  html.push('  </table>');
+
+  // Travellers & Emergency Contacts Summary Table (Clean compact table)
+  var allTravellers = [];
+  if (travellersData.my_passport && travellersData.my_passport.full_name) {
+    allTravellers.push(Object.assign({ role: 'Primary' }, travellersData.my_passport));
+  }
+  if (Array.isArray(travellersData.companions)) {
+    travellersData.companions.forEach(function (c) {
+      allTravellers.push(Object.assign({ role: c.relationship || 'Companion' }, c));
+    });
+  }
+
+  if (allTravellers.length > 0) {
+    html.push('  <div style="margin-top: 18px; border-top: 1px solid #e5e7eb; padding-top: 12px;">');
+    html.push('    <div style="font-size: 0.8rem; font-weight: 700; color: #374151; margin-bottom: 6px;">🛂 Travelling Party &amp; Emergency Contacts</div>');
+    html.push('    <table class="print-table" style="font-size: 0.7rem;">');
+    html.push('      <thead>');
+    html.push('        <tr>');
+    html.push('          <th class="print-th">Role</th>');
+    html.push('          <th class="print-th">Full Name (as in Passport)</th>');
+    html.push('          <th class="print-th">Passport No</th>');
+    html.push('          <th class="print-th">Nationality</th>');
+    html.push('          <th class="print-th">Expiry Date</th>');
+    html.push('          <th class="print-th">Emergency Contact</th>');
+    html.push('        </tr>');
+    html.push('      </thead>');
+    html.push('      <tbody>');
+    allTravellers.forEach(function (tr) {
+      var em = (tr.emergency_contact_name || '') + (tr.emergency_contact_phone ? (' (' + tr.emergency_contact_phone + ')') : '');
+      html.push('        <tr>');
+      html.push('          <td class="print-td" style="font-weight: 600;">' + escapeHtml(tr.role) + '</td>');
+      html.push('          <td class="print-td" style="font-weight: 700;">' + escapeHtml(tr.full_name || '—') + '</td>');
+      html.push('          <td class="print-td" style="font-family: monospace;">' + escapeHtml(tr.passport_number || '—') + '</td>');
+      html.push('          <td class="print-td">' + escapeHtml(tr.nationality || 'Singapore') + '</td>');
+      html.push('          <td class="print-td">' + escapeHtml(tr.expiry_date || '—') + '</td>');
+      html.push('          <td class="print-td">' + escapeHtml(em || '—') + '</td>');
+      html.push('        </tr>');
+    });
+    html.push('      </tbody>');
+    html.push('    </table>');
+    html.push('  </div>');
+  }
+
+  // Footer
+  html.push('  <div style="margin-top: 14px; display: flex; justify-content: space-between; font-size: 0.65rem; color: #9ca3af;">');
+  html.push('    <span>Generated with Nomad Trip Planner (PWA) · Valid for international check-in &amp; offline access</span>');
+  html.push('    <span>' + new Date().toLocaleDateString() + '</span>');
+  html.push('  </div>');
+
+  html.push('</div>');
+  return html.join('\n');
+}
+
+function openPdfPreview() {
+  var content = $('#pdf-preview-content');
+  if (content) {
+    content.innerHTML = buildPrintableDocument();
+  }
+  var modal = $('#pdf-export-modal');
+  if (modal) modal.hidden = false;
+}
+
+function closePdfPreview() {
+  var modal = $('#pdf-export-modal');
+  if (modal) modal.hidden = true;
+}
+
+function printPdfItinerary() {
+  window.print();
+}
+
+function openPdfInNewTab() {
+  var printableHtml = buildPrintableDocument();
+  var fullHtml = [
+    '<!DOCTYPE html>',
+    '<html>',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">',
+    '<title>Nomad Itinerary — Print / PDF</title>',
+    '<style>',
+    '  * { box-sizing: border-box; }',
+    '  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 16px; background: #f8fafc; color: #111827; }',
+    '  .print-document { background: #fff; padding: 20px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 1400px; margin: 0 auto; }',
+    '  .print-header { display: flex; justify-content: space-between; border-bottom: 2px solid #111827; padding-bottom: 10px; margin-bottom: 12px; }',
+    '  .print-title { font-size: 1.3rem; font-weight: 800; margin: 2px 0; }',
+    '  .print-sub { font-size: 0.8rem; color: #4b5563; margin: 0; }',
+    '  .print-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }',
+    '  .print-th, .print-td { border: 1px solid #d1d5db; padding: 5px 6px; vertical-align: top; }',
+    '  .print-th { background: #f3f4f6; text-align: left; }',
+    '  .no-print { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto 12px auto; background: #e0f2fe; border: 1px solid #bae6fd; padding: 10px 14px; border-radius: 6px; font-size: 0.82rem; }',
+    '  .btn-print { background: #0284c7; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.82rem; }',
+    '  @media print {',
+    '    @page { size: landscape; margin: 8mm; }',
+    '    body { background: #fff; margin: 0; padding: 0; }',
+    '    .no-print { display: none !important; }',
+    '    .print-document { box-shadow: none; padding: 0; }',
+    '  }',
+    '</style>',
+    '</head>',
+    '<body>',
+    '  <div class="no-print">',
+    '    <span>💡 <b>Pinch to zoom</b> or scroll freely on mobile. Tap button to save as clean landscape PDF.</span>',
+    '    <button class="btn-print" onclick="window.print()">🖨️ Save as PDF / Print</button>',
+    '  </div>',
+    printableHtml,
+    '</body>',
+    '</html>'
+  ].join('\n');
+
+  var blob = new Blob([fullHtml], { type: 'text/html' });
+  var url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
 }
 
 function renderEmpty(msg) {

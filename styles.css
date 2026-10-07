@@ -1255,124 +1255,224 @@ p { margin: 0 0 10px; }
   margin-bottom: 20px;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Table Toolbar (Orientation Switcher, PDF Export, Add Item) */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.table-toolbar-left, .table-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Master Table Core Styling — Compact and High Density */
 .glance-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.84rem;
-  min-width: 920px;
+  font-size: 0.76rem;
+  line-height: 1.25;
 }
 .glance-th {
   background: var(--bg-card-subtle);
   color: var(--fg);
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 12px 14px;
+  letter-spacing: 0.03em;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 .glance-tr {
   border-bottom: 1px solid var(--border);
   transition: background 0.15s ease;
-  cursor: pointer;
 }
 .glance-tr:last-child { border-bottom: none; }
-.glance-tr:hover { background: rgba(56, 189, 248, 0.04); }
+.glance-tr:hover { background: rgba(56, 189, 248, 0.03); }
 
-.glance-day-cell {
+/* Flipped Layout (Columns = Days, Rows = Timeslots) */
+.glance-table.flipped {
+  min-width: 980px;
+}
+.glance-dimension-cell {
   position: sticky;
   left: 0;
   background: var(--bg-card);
-  z-index: 2;
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
-  padding: 12px 14px;
-  min-width: 140px;
+  z-index: 3;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.2);
+  padding: 6px 8px;
+  width: 120px;
+  min-width: 110px;
+  max-width: 125px;
   vertical-align: top;
+  border-right: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 0.74rem;
+  color: var(--fg);
 }
-.glance-tr:hover .glance-day-cell { background: var(--bg-card-hover); }
+.glance-tr:hover .glance-dimension-cell { background: var(--bg-card-hover); }
 
-.glance-day-num { font-weight: 700; font-size: 0.95rem; color: var(--fg); }
-.glance-day-date { font-size: 0.76rem; color: var(--fg-muted); margin-bottom: 4px; }
+.glance-col-day-th {
+  min-width: 135px;
+  max-width: 170px;
+  padding: 6px 8px;
+  vertical-align: top;
+  border-left: 1px solid rgba(30, 41, 59, 0.5);
+  background: var(--bg-card-subtle);
+}
+.glance-col-day-cell {
+  padding: 5px 6px;
+  vertical-align: top;
+  min-width: 135px;
+  max-width: 170px;
+  border-left: 1px solid rgba(30, 41, 59, 0.4);
+}
+
+.glance-day-num { font-weight: 700; font-size: 0.82rem; color: var(--fg); }
+.glance-day-date { font-size: 0.7rem; color: var(--fg-muted); margin-bottom: 2px; }
 .glance-day-base {
   display: inline-block;
   background: rgba(56, 189, 248, 0.12);
   color: var(--primary);
   border: 1px solid rgba(56, 189, 248, 0.25);
-  padding: 2px 7px;
+  padding: 1px 5px;
   border-radius: var(--radius-pill);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.glance-slot-cell {
-  padding: 10px 12px;
-  vertical-align: top;
-  min-width: 180px;
-  max-width: 240px;
-  border-left: 1px solid rgba(30, 41, 59, 0.5);
-}
+/* Event Pills & Direct Booking Link Integration */
 .glance-slot-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .glance-event-pill {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  flex-direction: column;
+  gap: 3px;
   background: var(--bg-card-subtle);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 5px 8px;
-  font-size: 0.78rem;
-  line-height: 1.3;
+  padding: 4px 6px;
+  font-size: 0.72rem;
+  line-height: 1.25;
   color: var(--fg);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.glance-event-pill:hover {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-1px);
+}
+.glance-pill-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
 }
 .glance-event-time {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--primary);
   white-space: nowrap;
-  background: rgba(56, 189, 248, 0.1);
+  background: rgba(56, 189, 248, 0.12);
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
+.glance-pill-title {
+  font-weight: 500;
+  color: var(--fg);
+  word-break: break-word;
+}
+.glance-pill-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+.glance-booking-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 3px;
+  padding: 1px 5px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+.glance-booking-link:hover {
+  background: var(--primary);
+  color: #0b0f17;
+}
+.glance-edit-icon {
+  font-size: 0.68rem;
+  opacity: 0.6;
+  color: var(--fg-muted);
+}
+.glance-event-pill:hover .glance-edit-icon { opacity: 1; color: var(--primary); }
+
 .glance-stay-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 4px;
   background: rgba(129, 140, 248, 0.1);
   border: 1px solid rgba(129, 140, 248, 0.3);
   color: #a5b4fc;
   border-radius: var(--radius-sm);
-  padding: 5px 8px;
-  font-size: 0.78rem;
+  padding: 4px 6px;
+  font-size: 0.72rem;
   font-weight: 500;
-  margin-top: 4px;
+  margin-top: 2px;
 }
-.glance-cost-cell {
-  padding: 12px;
-  vertical-align: top;
-  text-align: right;
-  white-space: nowrap;
+
+/* Forms & Item / Traveller Editor */
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-label {
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--fg);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
-.glance-action-cell {
-  padding: 12px;
-  vertical-align: top;
-  text-align: center;
-  white-space: nowrap;
+.input-with-action {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
+.input-with-action input { flex: 1; }
 
 /* Accommodations Route Table */
 .stay-route-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   min-width: 820px;
 }
 .stay-route-tr {
@@ -1381,23 +1481,295 @@ p { margin: 0 0 10px; }
 }
 .stay-route-tr:hover { background: rgba(56, 189, 248, 0.04); }
 .stay-route-cell {
-  padding: 14px 16px;
+  padding: 10px 12px;
   vertical-align: top;
 }
-.stay-hotel-name { font-weight: 700; font-size: 0.95rem; color: var(--fg); margin-bottom: 3px; }
-.stay-hotel-rate { font-size: 0.8rem; color: var(--good); font-weight: 600; }
+.stay-hotel-name { font-weight: 700; font-size: 0.9rem; color: var(--fg); margin-bottom: 3px; }
+.stay-hotel-rate { font-size: 0.78rem; color: var(--good); font-weight: 600; }
 .stay-alts-tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: var(--accent-amber);
   background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.25);
   padding: 2px 7px;
   border-radius: var(--radius-pill);
-  margin-top: 5px;
+  margin-top: 4px;
 }
+
+/* ==========================================================================
+   Travellers & Passports Tab
+   ========================================================================== */
+.travellers-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.passport-notice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  color: var(--fg);
+}
+.notice-icon { font-size: 1.5rem; line-height: 1; }
+.notice-title { font-weight: 700; font-size: 0.9rem; color: var(--primary); margin-bottom: 2px; }
+.notice-text { font-size: 0.8rem; color: var(--fg-muted); line-height: 1.4; margin: 0; }
+
+.passports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.passport-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+.passport-card.self-card {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.05) 0%, var(--bg-card) 40%);
+}
+.passport-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+.passport-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.passport-holder-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--fg);
+  margin: 2px 0 0 0;
+}
+.passport-meta-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+.meta-item-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 2px;
+}
+.meta-item-val {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.passport-masked-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+.validity-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.validity-tag.good { background: rgba(52, 211, 153, 0.12); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+.validity-tag.warn { background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+.validity-tag.danger { background: rgba(248, 113, 113, 0.12); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+
+.passport-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: auto;
+}
+
+/* ==========================================================================
+   Clean PDF Export & Print Styles
+   ========================================================================== */
+.pdf-modal-backdrop {
+  z-index: 1000;
+}
+.pdf-modal-sheet {
+  max-width: 1200px;
+  width: 95vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.pdf-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.pdf-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pdf-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  background: #0f141d;
+}
+
+/* Printable PDF Document Styling */
+.print-document {
+  background: #ffffff;
+  color: #111827;
+  padding: 24px;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.print-header {
+  border-bottom: 2px solid #111827;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.print-title { font-size: 1.4rem; font-weight: 800; color: #111827; margin: 0 0 4px 0; }
+.print-sub { font-size: 0.82rem; color: #4b5563; margin: 0; }
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+.print-th {
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 700;
+  border: 1px solid #d1d5db;
+  padding: 6px 8px;
+  text-align: left;
+}
+.print-td {
+  border: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  vertical-align: top;
+  color: #1f2937;
+}
+.print-tag {
+  display: inline-block;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+}
+.print-badge-cost {
+  font-weight: 700;
+  color: #047857;
+}
+
+/* Standard Print Media Rules */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  @page {
+    size: landscape;
+    margin: 6mm;
+  }
+  .app-header, .desktop-tabs-nav, .mobile-nav-bar, .no-print,
+  #loading-state, #landing-view, .table-toolbar, .btn,
+  .modal-backdrop:not(.pdf-modal-backdrop), .pdf-modal-header {
+    display: none !important;
+  }
+  .pdf-modal-backdrop {
+    position: static !important;
+    background: none !important;
+    display: block !important;
+  }
+  .pdf-modal-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    height: auto !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .pdf-modal-body {
+    background: #ffffff !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .print-document {
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    color: #000000 !important;
+  }
+  .print-th, .print-td {
+    border-color: #9ca3af !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .glance-table.flipped {
+    min-width: 900px;
+  }
+  .glance-dimension-cell {
+    width: 90px;
+    min-width: 85px;
+    font-size: 0.7rem;
+    padding: 4px 6px;
+  }
+  .glance-col-day-cell {
+    min-width: 120px;
+    padding: 4px 5px;
+  }
+  .glance-event-pill {
+    padding: 3px 5px;
+    font-size: 0.7rem;
+  }
+  .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
 
 
 
