@@ -21,17 +21,15 @@
   <header class="app-header">
     <div class="wrap header-inner">
       <div class="brand-area" id="brand-area">
-        <div class="brand-logo">
+        <div class="brand-logo" title="Nomad">
           <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
           </svg>
-          <span class="brand-name">Nomad</span>
         </div>
         
-        <!-- Trip Switcher Pill (shown when logged in) -->
+        <!-- Trip Location & Dates Pill (shown when logged in) -->
         <button id="trip-switcher-btn" class="trip-pill-btn" aria-haspopup="dialog" aria-expanded="false" hidden>
-          <span class="trip-icon">✈️</span>
           <span id="current-trip-name" class="trip-title-truncate">Select Trip</span>
           <svg class="chevron-icon" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
@@ -117,34 +115,6 @@
     <!-- ==================== 2. TRIP VIEW (LOGGED IN) ==================== -->
     <section id="trip-view" class="view-panel" hidden>
       
-      <!-- Trip Banner & Highlights -->
-      <div class="trip-banner">
-        <div class="wrap banner-inner">
-          <div class="banner-main">
-            <div class="banner-top-line">
-              <span id="banner-role-badge" class="badge">Member</span>
-              <span id="banner-dates" class="banner-dates muted">Dates</span>
-            </div>
-            <h1 id="banner-title" class="banner-title">Trip Title</h1>
-            <div id="banner-bases" class="banner-bases"></div>
-          </div>
-          
-          <div class="banner-budget-card" id="banner-budget-card">
-            <div class="budget-card-header">
-              <span class="muted small">Budget Headroom</span>
-              <span id="budget-headroom-val" class="budget-stat-val">—</span>
-            </div>
-            <div class="progress-bar">
-              <div id="budget-progress-fill" class="progress-fill" style="width: 0%"></div>
-            </div>
-            <div class="budget-card-footer small muted">
-              <span id="budget-spent-lbl">Planned: —</span>
-              <span id="budget-total-lbl">Cap: —</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Navigation Tabs (Desktop / Tablet Top Bar) -->
       <nav id="desktop-tabs" class="desktop-tabs-nav" aria-label="Trip Sections">
         <div class="wrap tab-pills-row">
@@ -171,27 +141,39 @@
         <section class="tab-content-panel" id="tab-share" role="tabpanel" hidden></section>
       </div>
 
-      <!-- Mobile Bottom Navigation Bar -->
+      <!-- Mobile Bottom Navigation Bar (Ultra-Compact 8 Items) -->
       <nav id="mobile-nav" class="mobile-nav-bar" aria-label="Mobile Navigation">
         <button class="mobile-nav-item active" data-tab="itinerary">
           <span class="nav-icon">🗓</span>
-          <span class="nav-label">Itinerary</span>
+          <span class="nav-label">Itin</span>
         </button>
         <button class="mobile-nav-item" data-tab="accommodation">
           <span class="nav-icon">🏨</span>
-          <span class="nav-label">Stay</span>
+          <span class="nav-label">Stays</span>
         </button>
         <button class="mobile-nav-item" data-tab="expenses">
           <span class="nav-icon">💰</span>
-          <span class="nav-label">Expenses</span>
+          <span class="nav-label">Spend</span>
         </button>
         <button class="mobile-nav-item" data-tab="decisions">
-          <span class="nav-icon">🗳</span>
-          <span class="nav-label">Decisions</span>
+          <span class="nav-icon">⚖️</span>
+          <span class="nav-label">Decide</span>
         </button>
-        <button class="mobile-nav-item" data-tab="more" id="mobile-more-btn">
-          <span class="nav-icon">⋯</span>
-          <span class="nav-label">More</span>
+        <button class="mobile-nav-item" data-tab="packing">
+          <span class="nav-icon">🎒</span>
+          <span class="nav-label">Pack</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="recommendations">
+          <span class="nav-icon">💡</span>
+          <span class="nav-label">Ideas</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="travellers">
+          <span class="nav-icon">🛂</span>
+          <span class="nav-label">Pass</span>
+        </button>
+        <button class="mobile-nav-item" data-tab="share">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">Team</span>
         </button>
       </nav>
 

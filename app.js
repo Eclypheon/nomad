@@ -34,6 +34,11 @@ var STATE = {
   recSearch: '',
   stayArea: 'all',
   expenseCategory: 'all',
+  staySortMode: 'night',       /* 'night' (group by night) or 'location' */
+  expandedNightGroups: {},     /* { [groupId]: boolean } for collapsed alternatives */
+  expenseSort: 'cost-desc',    /* 'cost-desc', 'cost-asc', 'cat', 'name' */
+  expenseFilterCat: 'all',     /* 'all', 'accommodation', 'transport', 'food', 'activities', 'misc' */
+  recLocation: 'all',          /* 'all', 'Hanoi', 'Ha Giang', 'Ninh Binh' */
   activeTripId: null,
   trips: [],
   trip: null,               /* active trip record */
@@ -106,11 +111,126 @@ function hideLoading() {
 
 /* ----------------------------------------------------------- SAFE ACCESSORS */
 
+function applyDecisionsToSchedule(days) {
+  if (!Array.isArray(days) || !days.length) return days;
+
+  var cloned = days.map(function (d) {
+    return Object.assign({}, d, {
+      items: Array.isArray(d.items) ? d.items.map(function (it) { return Object.assign({}, it); }) : []
+    });
+  });
+
+  var decDatesPick = getActivePick({ id: 'dec-dates' });
+  var decNyePick = getActivePick({ id: 'dec-nye' });
+  var decRidePick = getActivePick({ id: 'dec-ride' });
+  var decBoatPick = getActivePick({ id: 'dec-boat' });
+  var decFoodPick = getActivePick({ id: 'dec-food' });
+
+  // 1. Shift dates if dec-dates is shifted (+2 days: 26 Dec - 3 Jan)
+  if (decDatesPick === 'opt-dates-shifted') {
+    cloned.forEach(function (d) {
+      if (d.date) {
+        var baseDate = new Date(d.date);
+        if (!isNaN(baseDate.getTime())) {
+          baseDate.setDate(baseDate.getDate() + 2);
+          var m = String(baseDate.getMonth() + 1).padStart(2, '0');
+          var dayNum = String(baseDate.getDate()).padStart(2, '0');
+          d.date = baseDate.getFullYear() + '-' + m + '-' + dayNum;
+        }
+      }
+    });
+  }
+
+  // 2. dec-nye: Tam Coc vs Hanoi New Year's Eve
+  if (decNyePick === 'opt-tamcoc-nye') {
+    var day8 = cloned.find(function (d, i) { return (d.day || i + 1) === 8; });
+    if (day8) {
+      day8.base = 'Tam Coc';
+      day8.title = 'Tam Coc — Countryside New Year\'s Eve';
+      day8.lodging = 'acc-015 — Tam Coc Garden Resort';
+      if (day8.items) {
+        day8.items.forEach(function (it) {
+          var w = (it.what || '').toLowerCase();
+          if (w.includes('la siesta') || w.includes('hoan kiem') || w.includes('fireworks')) {
+            it.what = 'Peaceful countryside New Year countdown & dinner in Tam Coc';
+            it.notes = 'Quiet NYE surrounded by limestone karsts; avoiding Hanoi lake crowds';
+          }
+        });
+      }
+    }
+    var day9 = cloned.find(function (d, i) { return (d.day || i + 1) === 9; });
+    if (day9) {
+      day9.title = 'Tam Coc → Noi Bai Airport (Evening Departure)';
+      day9.transit = 'Private minivan Tam Coc → Noi Bai (2h) for flight back to Singapore';
+    }
+  }
+
+  // 3. dec-ride: Easy Rider vs Self-Drive
+  var isSelfDrive = (decRidePick === 'opt-ride-self-drive');
+  cloned.forEach(function (d) {
+    if (d.items) {
+      d.items.forEach(function (it) {
+        var w = (it.what || '').toLowerCase();
+        if (w.includes('easy rider') && isSelfDrive) {
+          it.what = it.what.replace(/Easy Rider.*?\)/i, 'Self-drive motorbike)');
+          it.notes = (it.notes || '') + ' (Self-riding 125cc semi-automatic; riding with group)';
+        } else if (w.includes('self-drive') && !isSelfDrive) {
+          it.what = it.what.replace(/Self-drive.*?\)/i, 'Easy Rider pillion)');
+        }
+      });
+    }
+  });
+
+  // 4. dec-boat: Trang An vs Tam Coc vs Both
+  if (decBoatPick === 'opt-boat-tamcoc-only') {
+    cloned.forEach(function (d) {
+      if (d.items) {
+        d.items.forEach(function (it) {
+          if ((it.what || '').toLowerCase().includes('trang an boat')) {
+            it.what = 'Tam Coc 3 Caves Sampan Boat Tour (Ngô Đồng River)';
+            it.notes = 'Rowed through Ca, Hai, Ba caves amongst rice fields';
+          }
+        });
+      }
+    });
+  } else if (decBoatPick === 'opt-boat-trangan-only') {
+    cloned.forEach(function (d) {
+      if (d.items) {
+        d.items.forEach(function (it) {
+          if ((it.what || '').toLowerCase().includes('tam coc boat') || (it.what || '').toLowerCase().includes('tam coc sampan')) {
+            it.what = 'Tràng An UNESCO World Heritage Boat Route #3';
+            it.notes = '1,000m Dot Cave and scenic karst grottos';
+          }
+        });
+      }
+    });
+  }
+
+  // 5. dec-food: Guided Street Food Tour vs Self-Guided Walk
+  if (decFoodPick === 'opt-food-diy') {
+    var day1 = cloned.find(function (d, i) { return (d.day || i + 1) === 1; });
+    if (day1 && day1.items) {
+      day1.items.forEach(function (it) {
+        if ((it.what || '').toLowerCase().includes('street food')) {
+          it.what = 'Old Quarter Self-Guided Street Food Walk';
+          it.cost = 12;
+          it.notes = 'Self-guided stops at Phở Thìn, Bún Chả Đắc Kim, Egg Coffee';
+        }
+      });
+    }
+  }
+
+  return cloned;
+}
+
 function getItineraryDays() {
   var d = STATE.docs.itinerary;
-  if (!d) return [];
-  if (Array.isArray(d)) return d;
-  return d.days || d.itinerary || [];
+  var raw = [];
+  if (d) {
+    if (Array.isArray(d)) raw = d;
+    else raw = d.days || d.itinerary || [];
+  }
+  return applyDecisionsToSchedule(raw);
 }
 
 function getAccommodations() {
@@ -704,48 +824,30 @@ function calculateBudget() {
 
 function renderTripBanner() {
   var t = STATE.docs.trip || STATE.trip || {};
-  $('#current-trip-name').textContent = t.title || t.name || 'Current Trip';
-  $('#banner-title').textContent = t.title || t.name || 'Trip';
 
-  var roleBadge = $('#banner-role-badge');
-  roleBadge.textContent = STATE.role.toUpperCase();
-  roleBadge.className = 'badge ' + (STATE.role === 'owner' ? 'badge-good' : '');
-
-  // Dates
+  var dest = (t.destination || t.city || 'Vietnam').split('(')[0].trim();
   var datesStr = '';
   if (t.start && t.end) {
     datesStr = t.start + ' – ' + t.end;
   } else if (t.start_date && t.end_date) {
-    datesStr = t.start_date.slice(0, 10) + ' – ' + t.end_date.slice(0, 10);
+    datesStr = t.start_date.slice(5) + '–' + t.end_date.slice(5);
+  } else {
+    datesStr = 'End 2026';
   }
-  $('#banner-dates').textContent = datesStr || 'Dates TBD';
 
-  // Bases
-  var basesBox = $('#banner-bases');
-  clear(basesBox);
-  var bases = t.bases || [];
-  if (typeof bases === 'string') bases = bases.split(',').map(function (s) { return s.trim(); });
-  bases.forEach(function (b) {
-    basesBox.appendChild(ce('span', 'base-pill', b));
-  });
-
-  // Budget
-  var b = calculateBudget();
-  $('#budget-headroom-val').textContent = b.headroom != null ? sgd(b.headroom) : '—';
-  $('#budget-spent-lbl').textContent = 'Planned: ' + sgd(b.net) + (b.delta !== 0 ? ' (' + (b.delta > 0 ? '+' : '') + sgd(b.delta) + ')' : '');
-  $('#budget-total-lbl').textContent = 'Cap: ' + (b.cap != null ? sgd(b.cap) : '—');
-
-  var pct = (b.cap && b.net) ? Math.min(100, Math.round((b.net / b.cap) * 100)) : 0;
-  $('#budget-progress-fill').style.width = pct + '%';
+  var nameEl = $('#current-trip-name');
+  if (nameEl) nameEl.textContent = dest + ' · ' + datesStr;
 
   // Decisions count badge
   var decs = getDecisions();
   var decBadge = $('#decisions-pill-badge');
-  if (decs.length > 0) {
-    decBadge.textContent = decs.length;
-    decBadge.hidden = false;
-  } else {
-    decBadge.hidden = true;
+  if (decBadge) {
+    if (decs.length > 0) {
+      decBadge.textContent = decs.length;
+      decBadge.hidden = false;
+    } else {
+      decBadge.hidden = true;
+    }
   }
 }
 
@@ -906,12 +1008,6 @@ function renderItineraryGlanceTable(root, days) {
     renderItinerary();
   });
   leftTools.appendChild(orientBtn);
-
-  var addActBtn = ce('button', 'btn btn-secondary small', '➕ Add Activity');
-  addActBtn.addEventListener('click', function () {
-    openItemEditor(1, -1, null);
-  });
-  leftTools.appendChild(addActBtn);
   toolbar.appendChild(leftTools);
 
   var rightTools = ce('div', 'table-toolbar-right');
@@ -952,7 +1048,19 @@ function renderFlippedMatrix(table, days) {
     var th = ce('th', 'glance-th glance-col-day-th');
 
     var headWrap = ce('div', 'glance-day-header');
-    headWrap.appendChild(ce('div', 'glance-day-num', 'Day ' + dayNum));
+    
+    var titleRow = ce('div', 'glance-day-title-row');
+    titleRow.appendChild(ce('div', 'glance-day-num', 'Day ' + dayNum));
+
+    var addActBtn = ce('button', 'btn-day-add-act', '+');
+    addActBtn.title = 'Add activity to Day ' + dayNum;
+    addActBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openItemEditor(dayNum, -1, null);
+    });
+    titleRow.appendChild(addActBtn);
+    headWrap.appendChild(titleRow);
+
     if (d.date) headWrap.appendChild(ce('div', 'glance-day-date', d.date.slice(5)));
     if (d.base) headWrap.appendChild(ce('span', 'glance-day-base', d.base));
     th.appendChild(headWrap);
@@ -975,8 +1083,8 @@ function renderFlippedMatrix(table, days) {
     return { day: d, dayNum: d.day || (dayIdx + 1), dayIdx: dayIdx, slots: slots };
   });
 
-  // Row 1: Focus
-  var trBase = ce('tr', 'glance-tr');
+  // Row 1: Focus (Sticky Row)
+  var trBase = ce('tr', 'glance-tr glance-tr-focus');
   trBase.appendChild(ce('td', 'glance-dimension-cell', '📍 Route & Focus'));
   daySlots.forEach(function (ds) {
     var td = ce('td', 'glance-col-day-cell');
@@ -1036,7 +1144,7 @@ function renderFlippedMatrix(table, days) {
       var lodgingShort = ds.day.lodging.split('—')[0].replace('acc-', 'Acc-');
       if (ds.day.lodging.includes('—')) lodgingShort = ds.day.lodging.split('—')[1].split(',')[0].trim();
 
-      var stayPill = ce('div', 'glance-stay-pill');
+      var stayPill = ce('div', 'glance-stay-pill pill-type-stay');
       stayPill.appendChild(ce('span', null, '🏨 ' + lodgingShort));
 
       var allStays = getAccommodations();
@@ -1054,7 +1162,7 @@ function renderFlippedMatrix(table, days) {
       }
       box.appendChild(stayPill);
     } else if (ds.day.transit && ds.day.transit.toLowerCase().includes('sleeper')) {
-      var busPill = ce('div', 'glance-stay-pill');
+      var busPill = ce('div', 'glance-stay-pill pill-type-stay');
       busPill.appendChild(ce('span', null, '🚌 Sleeper Bus'));
       var busLink = ce('a', 'glance-booking-link', '12Go ↗');
       busLink.href = 'https://12go.asia/en/travel/hanoi/ha-giang';
@@ -1085,39 +1193,6 @@ function renderFlippedMatrix(table, days) {
   });
   tbody.appendChild(trCost);
 
-  // Row 7: Actions
-  var trActions = ce('tr', 'glance-tr');
-  trActions.appendChild(ce('td', 'glance-dimension-cell', '⚡ Actions'));
-  daySlots.forEach(function (ds) {
-    var td = ce('td', 'glance-col-day-cell');
-    var actBox = ce('div', null);
-    actBox.style.display = 'flex';
-    actBox.style.gap = '4px';
-
-    var addBtn = ce('button', 'btn btn-secondary tiny', '+ Add');
-    addBtn.title = 'Add activity to Day ' + ds.dayNum;
-    addBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      openItemEditor(ds.dayNum, -1, null);
-    });
-    actBox.appendChild(addBtn);
-
-    var detBtn = ce('button', 'btn btn-secondary tiny', 'Deep →');
-    detBtn.title = 'Open Day ' + ds.dayNum + ' breakdown';
-    detBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      STATE.itineraryViewMode = 'deep-dive';
-      STATE.activeDay = ds.dayNum;
-      renderItinerary();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-    actBox.appendChild(detBtn);
-
-    td.appendChild(actBox);
-    trActions.appendChild(td);
-  });
-  tbody.appendChild(trActions);
-
   table.appendChild(tbody);
 }
 
@@ -1140,7 +1215,16 @@ function renderStandardMatrix(table, days) {
     var tr = ce('tr', 'glance-tr');
 
     var dayCell = ce('td', 'glance-day-cell');
-    dayCell.appendChild(ce('div', 'glance-day-num', 'Day ' + dayNum));
+    var dTitleRow = ce('div', 'glance-day-title-row');
+    dTitleRow.appendChild(ce('div', 'glance-day-num', 'Day ' + dayNum));
+    var addActBtn = ce('button', 'btn-day-add-act', '+');
+    addActBtn.title = 'Add activity to Day ' + dayNum;
+    addActBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openItemEditor(dayNum, -1, null);
+    });
+    dTitleRow.appendChild(addActBtn);
+    dayCell.appendChild(dTitleRow);
     if (d.date) dayCell.appendChild(ce('div', 'glance-day-date', d.date.slice(5)));
     if (d.base) dayCell.appendChild(ce('span', 'glance-day-base', d.base));
     tr.appendChild(dayCell);
@@ -1181,11 +1265,11 @@ function renderStandardMatrix(table, days) {
     if (d.lodging) {
       var lodgingShort = d.lodging.split('—')[0].replace('acc-', 'Acc-');
       if (d.lodging.includes('—')) lodgingShort = d.lodging.split('—')[1].split(',')[0].trim();
-      var stayPill = ce('div', 'glance-stay-pill');
+      var stayPill = ce('div', 'glance-stay-pill pill-type-stay');
       stayPill.appendChild(ce('span', null, '🏨 ' + lodgingShort));
       nightBox.appendChild(stayPill);
     } else if (d.transit && d.transit.toLowerCase().includes('sleeper')) {
-      var busPill = ce('div', 'glance-stay-pill', '🚌 Sleeper Bus');
+      var busPill = ce('div', 'glance-stay-pill pill-type-stay', '🚌 Sleeper Bus');
       nightBox.appendChild(busPill);
     }
 
@@ -1221,6 +1305,24 @@ function renderStandardMatrix(table, days) {
 function createEventPill(dayNum, itemIdx, it) {
   var pill = ce('div', 'glance-event-pill');
   pill.title = 'Click to edit: ' + (it.what || it.title || 'Activity');
+
+  // Explicit color-coding classification
+  var titleText = (it.what || it.title || it.activity || it.name || '').toLowerCase();
+  var catText = (it.category || it.type || '').toLowerCase();
+  var notesText = (it.notes || '').toLowerCase();
+  var combined = titleText + ' ' + catText + ' ' + notesText;
+
+  var pillType = 'activity';
+  if (combined.includes('hotel') || combined.includes('resort') || combined.includes('homestay') || combined.includes('hostel') || combined.includes('check-in') || combined.includes('check in') || combined.includes('lodging') || combined.includes('sleeper bus') || combined.includes('overnight')) {
+    pillType = 'stay';
+  } else if (combined.includes('food') || combined.includes('dinner') || combined.includes('lunch') || combined.includes('breakfast') || combined.includes('eat') || combined.includes('phở') || combined.includes('pho') || combined.includes('bún') || combined.includes('bun') || combined.includes('bánh') || combined.includes('banh') || combined.includes('coffee') || combined.includes('café') || combined.includes('cafe') || combined.includes('beer') || combined.includes('restaurant') || combined.includes('dining') || combined.includes('tasting') || combined.includes('snack')) {
+    pillType = 'food';
+  } else if (combined.includes('bus') || combined.includes('train') || combined.includes('flight') || combined.includes('limousine') || combined.includes('transit') || combined.includes('transfer') || combined.includes('minivan') || combined.includes('drive to') || combined.includes('ride to') || combined.includes('departure') || combined.includes('arrival')) {
+    pillType = 'transit';
+  } else {
+    pillType = 'activity';
+  }
+  pill.classList.add('pill-type-' + pillType);
 
   var header = ce('div', 'glance-pill-header');
   if (it.time && it.time !== '—') {
@@ -1520,6 +1622,20 @@ function saveItineraryDoc() {
   });
 }
 
+function saveAccommodationDoc() {
+  if (!STATE.activeTripId) return;
+  TripAuth.saveDocs(STATE.activeTripId, { accommodation: STATE.docs.accommodation }).catch(function (e) {
+    console.warn('Failed to save accommodation update:', e);
+  });
+}
+
+function savePackingDoc() {
+  if (!STATE.activeTripId) return;
+  TripAuth.saveDocs(STATE.activeTripId, { packing: STATE.docs.packing }).catch(function (e) {
+    console.warn('Failed to save packing update:', e);
+  });
+}
+
 /* ==========================================================================
    SWAP / ADD IDEA MODAL
    ========================================================================== */
@@ -1627,80 +1743,230 @@ function renderSwapIdeasList(filterText, filterCategory) {
    2. ACCOMMODATION TAB (Route at a Glance & 23-Stay Directory)
    ========================================================================== */
 
-var PLANNED_ROUTE = [
-  {
-    nights: 'Night 1 (24–25 Dec)',
-    city: 'Hanoi Old Quarter',
-    hotelName: 'Peridot Grand Hotel & Spa',
-    rate: '2,400,000 VND (~S$ 59/person)',
-    status: 'Planned',
-    notes: 'Christmas Eve peak window: 300m from Hoan Kiem, inner courtyard, spa. Book 2-4 weeks out.',
-    alts: ['acc-001 (La Siesta Splurge)', 'acc-002 (Emerald Waters)', 'acc-006 (Hanoi Pearl)']
-  },
-  {
-    nights: 'Night 2 (25–26 Dec)',
-    city: 'Hanoi → Ha Giang (Transit)',
-    hotelName: '21:00 Sleeper Bus to Ha Giang',
-    rate: 'Included in Transit Leg',
-    status: 'Scheduled',
-    notes: 'Overnight sleeper berth; hotel stores bags during the day after morning checkout.',
-    alts: ['Daytime limousine van on 26 Dec (see dec-loop-start)']
-  },
-  {
-    nights: 'Night 3 (26–27 Dec)',
-    city: 'Ha Giang Loop (Quản Bạ)',
-    hotelName: 'Dao Lodge Nam Dam / H\'Mong Village Resort',
-    rate: 'Included in Easy Rider Tour',
-    status: 'Tour Homestay',
-    notes: 'Mountain homestay dinner, clay lodge, herbal footbath, corn wine.',
-    alts: ['acc-018 H\'Mong Village Resort', 'acc-022 Dao Lodge Nam Dam']
-  },
-  {
-    nights: 'Night 4 (27–28 Dec)',
-    city: 'Ha Giang Loop (Đồng Văn / Mèo Vạc)',
-    hotelName: 'Auberge de Meo Vac / Ancient Town Guesthouse',
-    rate: 'Included in Easy Rider Tour',
-    status: 'Tour Homestay',
-    notes: 'Century-old H\'Mong stone architecture at the gateway to Mã Pí Lèng pass.',
-    alts: ['acc-019 Ancient Town Guesthouse', 'acc-020 Lo Lo Eco Lodge']
-  },
-  {
-    nights: 'Night 5 (28–29 Dec)',
-    city: 'Ha Giang City',
-    hotelName: 'Yen Bien Luxury Hotel',
-    rate: '1,065,000 VND (~S$ 26/person)',
-    status: 'Planned',
-    notes: 'Post-loop reset night: rooftop pool, river view, laundry before 10h transit.',
-    alts: ['acc-016 P\'apiu Resort (Ultra Splurge)', 'acc-017 Ha Giang Historic Hotel']
-  },
-  {
-    nights: 'Nights 6–7 (29–31 Dec)',
-    city: 'Tam Coc / Ninh Binh (2 nights)',
-    hotelName: 'Tam Coc Garden Resort',
-    rate: '1,170,000 VND / night (~S$ 29/person)',
-    status: 'Planned',
-    notes: 'Surrounded by limestone karst & paddies; 10 min bicycle from Tam Coc boat dock.',
-    alts: ['acc-014 Tam Coc Sunshine Homestay (Budget ~S$9)', 'acc-011 Emeralda Resort']
-  },
-  {
-    nights: 'Night 8 (31 Dec – 1 Jan)',
-    city: 'Hanoi Old Quarter',
-    hotelName: 'Hanoi La Siesta Premium Hang Be',
-    rate: '2,860,000 VND (~S$ 70/person)',
-    status: 'Planned',
-    notes: 'New Year\'s Eve lake fireworks: within 300m walking distance so no taxis needed after midnight.',
-    alts: ['acc-006 Hanoi Pearl (Fallback -S$19)', 'acc-004 O\'Gallery Premier', 'Tam Coc NYE (see dec-nye)']
-  },
-  {
-    nights: 'Day 9 (1 Jan)',
-    city: 'Flight HAN → SIN',
-    hotelName: 'Noi Bai International Airport (HAN)',
-    rate: 'Outbound Flight',
-    status: 'Return Leg',
-    notes: 'Direct flight back to Singapore Changi.',
-    alts: []
+function getPlannedRoute() {
+  var decNyePick = (STATE.picks['dec-nye'] && STATE.picks['dec-nye'].option_id) || 'opt-hanoi-nye';
+
+  var route = [
+    {
+      id: 'leg-1',
+      stayId: 'acc-003',
+      nights: 'Night 1 (24–25 Dec)',
+      city: 'Hanoi Old Quarter',
+      hotelName: 'Peridot Grand Hotel & Spa',
+      rate: '2,400,000 VND (~S$ 59/person)',
+      status: 'Planned',
+      notes: 'Christmas Eve peak window: 300m from Hoan Kiem, inner courtyard, spa. Book 2-4 weeks out.',
+      alts: ['acc-001 (La Siesta Splurge)', 'acc-002 (Emerald Waters)', 'acc-006 (Hanoi Pearl)']
+    },
+    {
+      id: 'leg-2',
+      stayId: null,
+      nights: 'Night 2 (25–26 Dec)',
+      city: 'Hanoi → Ha Giang (Transit)',
+      hotelName: '21:00 Sleeper Bus to Ha Giang',
+      rate: 'Included in Transit Leg',
+      status: 'Planned',
+      notes: 'Overnight sleeper berth; hotel stores bags during the day after morning checkout.',
+      alts: ['Daytime limousine van on 26 Dec (see dec-loop-start)']
+    },
+    {
+      id: 'leg-3',
+      stayId: 'acc-018',
+      nights: 'Night 3 (26–27 Dec)',
+      city: 'Ha Giang Loop (Quản Bạ)',
+      hotelName: 'Dao Lodge Nam Dam / H\'Mong Village Resort',
+      rate: 'Included in Easy Rider Tour',
+      status: 'Planned',
+      notes: 'Mountain homestay dinner, clay lodge, herbal footbath, corn wine.',
+      alts: ['acc-018 H\'Mong Village Resort', 'acc-022 Dao Lodge Nam Dam']
+    },
+    {
+      id: 'leg-4',
+      stayId: 'acc-019',
+      nights: 'Night 4 (27–28 Dec)',
+      city: 'Ha Giang Loop (Đồng Văn / Mèo Vạc)',
+      hotelName: 'Auberge de Meo Vac / Ancient Town Guesthouse',
+      rate: 'Included in Easy Rider Tour',
+      status: 'Planned',
+      notes: 'Century-old H\'Mong stone architecture at the gateway to Mã Pí Lèng pass.',
+      alts: ['acc-019 Ancient Town Guesthouse', 'acc-020 Lo Lo Eco Lodge']
+    },
+    {
+      id: 'leg-5',
+      stayId: 'acc-023',
+      nights: 'Night 5 (28–29 Dec)',
+      city: 'Ha Giang City',
+      hotelName: 'Yen Bien Luxury Hotel',
+      rate: '1,065,000 VND (~S$ 26/person)',
+      status: 'Planned',
+      notes: 'Post-loop reset night: rooftop pool, river view, laundry before 10h transit.',
+      alts: ['acc-016 P\'apiu Resort (Ultra Splurge)', 'acc-017 Ha Giang Historic Hotel']
+    },
+    {
+      id: 'leg-6',
+      stayId: 'acc-015',
+      nights: 'Nights 6–7 (29–31 Dec)',
+      city: 'Tam Coc / Ninh Binh (2 nights)',
+      hotelName: 'Tam Coc Garden Resort',
+      rate: '1,170,000 VND / night (~S$ 29/person)',
+      status: 'Planned',
+      notes: 'Surrounded by limestone karst & paddies; 10 min bicycle from Tam Coc boat dock.',
+      alts: ['acc-014 Tam Coc Sunshine Homestay (Budget ~S$9)', 'acc-011 Emeralda Resort']
+    },
+    {
+      id: 'leg-7',
+      stayId: 'acc-009',
+      nights: 'Night 8 (31 Dec – 1 Jan)',
+      city: 'Hanoi Old Quarter',
+      hotelName: 'Hanoi La Siesta Premium Hang Be',
+      rate: '2,860,000 VND (~S$ 70/person)',
+      status: 'Planned',
+      notes: 'New Year\'s Eve lake fireworks: within 300m walking distance so no taxis needed after midnight.',
+      alts: ['acc-006 Hanoi Pearl (Fallback -S$19)', 'acc-004 O\'Gallery Premier', 'Tam Coc NYE (see dec-nye)']
+    },
+    {
+      id: 'leg-8',
+      stayId: null,
+      nights: 'Day 9 (1 Jan)',
+      city: 'Flight HAN → SIN',
+      hotelName: 'Noi Bai International Airport (HAN)',
+      rate: 'Outbound Flight',
+      status: 'Planned',
+      notes: 'Direct flight back to Singapore Changi.',
+      alts: []
+    }
+  ];
+
+  if (decNyePick === 'opt-tamcoc-nye') {
+    route[6] = {
+      id: 'leg-7',
+      stayId: 'acc-015',
+      nights: 'Night 8 (31 Dec – 1 Jan)',
+      city: 'Tam Coc / Ninh Binh',
+      hotelName: 'Tam Coc Garden Resort',
+      rate: '1,170,000 VND / night (~S$ 29/person)',
+      status: 'Planned',
+      notes: 'Peaceful countryside New Year countdown surrounded by karst cliffs; avoiding Hanoi lake crowds.',
+      alts: ['acc-014 Tam Coc Sunshine Homestay', 'acc-011 Emeralda Resort']
+    };
+    route[7] = {
+      id: 'leg-8',
+      stayId: null,
+      nights: 'Day 9 (1 Jan)',
+      city: 'Tam Coc → Noi Bai Airport (HAN)',
+      hotelName: 'Noi Bai International Airport (HAN)',
+      rate: 'Outbound Flight',
+      status: 'Planned',
+      notes: 'Private minivan Tam Coc → Noi Bai (2h) for evening flight back to Singapore.',
+      alts: []
+    };
   }
+
+  var stays = getAccommodations();
+  route.forEach(function (leg) {
+    if (leg.stayId) {
+      var found = stays.find(function (s) { return s.id === leg.stayId; });
+      if (found && found.status) {
+        leg.status = found.status.charAt(0).toUpperCase() + found.status.slice(1);
+      }
+    }
+  });
+
+  return route;
+}
+
+var NIGHT_GROUPS = [
+  { id: 'night-1', label: 'Night 1: 24–25 Dec · Hanoi Old Quarter' },
+  { id: 'night-2', label: 'Night 2: 25–26 Dec · Transit: Overnight Sleeper Bus' },
+  { id: 'night-3', label: 'Night 3: 26–27 Dec · Ha Giang Loop (Quản Bạ / Yên Minh)' },
+  { id: 'night-4', label: 'Night 4: 27–28 Dec · Ha Giang Loop (Đồng Văn / Mèo Vạc)' },
+  { id: 'night-5', label: 'Night 5: 28–29 Dec · Ha Giang City Reset' },
+  { id: 'nights-6-7', label: 'Nights 6–7: 29–31 Dec · Tam Coc / Ninh Binh (2 Nights)' },
+  { id: 'night-8', label: 'Night 8: 31 Dec – 1 Jan · Hanoi Old Quarter (NYE)' }
 ];
+
+function getStayNightId(s) {
+  var id = s.id || '';
+  var checkin = s.checkin || s.check_in || '';
+  var area = (s.area || s.location || '').toLowerCase();
+  var name = (s.name || s.hotel || '').toLowerCase();
+
+  if (checkin === '2026-12-31' || ['acc-007', 'acc-008', 'acc-009', 'acc-010'].includes(id)) {
+    return 'night-8';
+  }
+  if (checkin === '2026-12-24' || ['acc-001', 'acc-002', 'acc-003', 'acc-004', 'acc-005', 'acc-006'].includes(id)) {
+    return 'night-1';
+  }
+  if (checkin === '2026-12-26' || ['acc-018', 'acc-021', 'acc-022'].includes(id) || area.includes('quản bạ') || area.includes('quan ba') || area.includes('yên minh') || area.includes('nam dam')) {
+    return 'night-3';
+  }
+  if (checkin === '2026-12-27' || ['acc-019', 'acc-020', 'acc-023'].includes(id) || area.includes('đồng văn') || area.includes('dong van') || area.includes('mèo vạc') || area.includes('meo vac')) {
+    return 'night-4';
+  }
+  if (checkin === '2026-12-28' || ['acc-016', 'acc-017'].includes(id) || name.includes('yen bien') || area.includes('ha giang city')) {
+    return 'night-5';
+  }
+  if (checkin === '2026-12-29' || ['acc-011', 'acc-012', 'acc-013', 'acc-014', 'acc-015'].includes(id) || area.includes('tam coc') || area.includes('ninh binh') || area.includes('tràng an') || area.includes('trang an')) {
+    return 'nights-6-7';
+  }
+  return 'other';
+}
+
+function createStayStatusToggle(status, onSelect) {
+  var wrap = ce('div', 'stay-status-toggle');
+  var cur = (status || 'planned').toLowerCase();
+  if (cur.includes('book')) cur = 'booked';
+  else if (cur.includes('plan')) cur = 'planned';
+  else if (cur.includes('wish')) cur = 'wishlist';
+
+  var statuses = [
+    { key: 'planned', label: 'Planned' },
+    { key: 'booked', label: 'Booked' },
+    { key: 'wishlist', label: 'Wishlist' }
+  ];
+
+  statuses.forEach(function (st) {
+    var isActive = (cur === st.key);
+    var btn = ce('button', 'stay-status-btn' + (isActive ? ' active' : '') + ' status-' + st.key, st.label);
+    btn.type = 'button';
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      onSelect(st.key);
+    });
+    wrap.appendChild(btn);
+  });
+  return wrap;
+}
+
+function setStayStatus(stayId, newStatus) {
+  var stays = getAccommodations();
+  var target = stays.find(function (s) { return s.id === stayId; });
+  if (!target) return;
+
+  if (newStatus === 'booked') {
+    var nightId = getStayNightId(target);
+    stays.forEach(function (s) {
+      if (s.id !== target.id && getStayNightId(s) === nightId && (s.status || '').toLowerCase() === 'booked') {
+        s.status = 'wishlist';
+      }
+    });
+  }
+  target.status = newStatus;
+  saveAccommodationDoc();
+  renderAccommodation();
+  showToast('Status updated: ' + (target.name || 'Stay') + ' → ' + newStatus.toUpperCase());
+}
+
+function swapToStay(newStayId, previousBookedStayId) {
+  var stays = getAccommodations();
+  var newStay = stays.find(function (s) { return s.id === newStayId; });
+  var oldStay = stays.find(function (s) { return s.id === previousBookedStayId; });
+  if (oldStay) oldStay.status = 'wishlist';
+  if (newStay) newStay.status = 'booked';
+  saveAccommodationDoc();
+  renderAccommodation();
+  showToast('Swapped booking to: ' + (newStay ? newStay.name : 'New Stay'));
+}
 
 function renderAccommodation() {
   var root = $('#tab-accommodation');
@@ -1744,37 +2010,48 @@ function renderAccommodation() {
 }
 
 function renderAccommodationRouteTable(root, stays) {
+  var route = getPlannedRoute();
   var container = ce('div', 'glance-table-container');
-  var table = ce('table', 'stay-route-table');
+  var table = ce('table', 'glance-table flipped stay-route-table');
 
   var thead = ce('thead');
   var hrow = ce('tr');
-  hrow.appendChild(ce('th', 'glance-th', 'Night & Dates'));
-  hrow.appendChild(ce('th', 'glance-th', 'Base / Region'));
-  hrow.appendChild(ce('th', 'glance-th', 'Active Planned Stay'));
-  hrow.appendChild(ce('th', 'glance-th', 'Estimated Rate'));
-  hrow.appendChild(ce('th', 'glance-th', 'Status'));
-  hrow.appendChild(ce('th', 'glance-th', 'Strategic Booking Notes'));
+  var thCorner = ce('th', 'glance-th glance-dimension-cell', 'Night & Dates');
+  hrow.appendChild(thCorner);
+
+  route.forEach(function (leg) {
+    var th = ce('th', 'glance-th glance-col-day-th');
+    var headWrap = ce('div', 'glance-day-header');
+    headWrap.appendChild(ce('div', 'glance-day-num', leg.nights));
+    th.appendChild(headWrap);
+    hrow.appendChild(th);
+  });
   thead.appendChild(hrow);
   table.appendChild(thead);
 
   var tbody = ce('tbody');
-  PLANNED_ROUTE.forEach(function (leg) {
-    var tr = ce('tr', 'stay-route-tr');
 
-    var nCell = ce('td', 'stay-route-cell');
-    nCell.appendChild(ce('div', 'glance-day-num', leg.nights));
-    tr.appendChild(nCell);
+  // Row 1: Region / Base
+  var trRegion = ce('tr', 'stay-route-tr glance-tr glance-tr-focus');
+  trRegion.appendChild(ce('td', 'glance-dimension-cell', '📍 Region / Base'));
+  route.forEach(function (leg) {
+    var td = ce('td', 'glance-col-day-cell');
+    td.appendChild(ce('span', 'glance-day-base', leg.city));
+    trRegion.appendChild(td);
+  });
+  tbody.appendChild(trRegion);
 
-    var cCell = ce('td', 'stay-route-cell');
-    cCell.appendChild(ce('span', 'glance-day-base', leg.city));
-    tr.appendChild(cCell);
+  // Row 2: Active Planned Stay
+  var trStay = ce('tr', 'stay-route-tr glance-tr');
+  trStay.appendChild(ce('td', 'glance-dimension-cell', '🏨 Active Stay'));
+  route.forEach(function (leg) {
+    var td = ce('td', 'glance-col-day-cell');
+    var hotelBox = ce('div', 'stay-hotel-name', '🏨 ' + leg.hotelName);
+    td.appendChild(hotelBox);
 
-    var hCell = ce('td', 'stay-route-cell');
-    hCell.appendChild(ce('div', 'stay-hotel-name', '🏨 ' + leg.hotelName));
     if (leg.alts && leg.alts.length > 0) {
-      var altBox = ce('div', 'stay-alts-tag', '⇄ Alts: ' + leg.alts.join(' · '));
-      hCell.appendChild(altBox);
+      var altBox = ce('div', 'stay-alts-tag', '⇄ ' + leg.alts.join(' · '));
+      td.appendChild(altBox);
     }
 
     var matchedStay = stays.find(function (s) {
@@ -1784,36 +2061,65 @@ function renderAccommodationRouteTable(root, stays) {
     });
     var bookUrl = (matchedStay && (matchedStay.booking_url || matchedStay.link)) || leg.booking_url;
     if (bookUrl) {
-      var plat = (matchedStay && matchedStay.booking_platform) || (bookUrl.includes('booking.com') ? 'Booking.com' : (bookUrl.includes('airbnb') ? 'Airbnb' : 'Online'));
+      var plat = (matchedStay && matchedStay.booking_platform) || (bookUrl.includes('booking.com') ? 'Booking.com' : (bookUrl.includes('airbnb') ? 'Airbnb' : (bookUrl.includes('12go') ? '12Go' : 'Online')));
       var bLink = ce('a', 'glance-booking-link', 'Book (' + plat + ') ↗');
       bLink.href = bookUrl;
       bLink.target = '_blank';
       bLink.rel = 'noopener';
       bLink.style.display = 'inline-block';
       bLink.style.marginTop = '4px';
-      hCell.appendChild(bLink);
+      td.appendChild(bLink);
     }
-    tr.appendChild(hCell);
 
-    var rCell = ce('td', 'stay-route-cell');
-    rCell.appendChild(ce('div', 'stay-hotel-rate', leg.rate));
-    tr.appendChild(rCell);
-
-    var sCell = ce('td', 'stay-route-cell');
-    var badgeCls = leg.status.includes('Tour') ? 'badge-good' : (leg.status.includes('Planned') ? 'badge' : 'badge-warn');
-    sCell.appendChild(ce('span', 'badge ' + badgeCls, leg.status));
-    tr.appendChild(sCell);
-
-    var notesCell = ce('td', 'stay-route-cell');
-    notesCell.appendChild(ce('p', 'small muted', leg.notes));
-    tr.appendChild(notesCell);
-
-    tbody.appendChild(tr);
+    trStay.appendChild(td);
   });
+  tbody.appendChild(trStay);
+
+  // Row 3: Status (Toggleable Buttons)
+  var trStatus = ce('tr', 'stay-route-tr glance-tr');
+  trStatus.appendChild(ce('td', 'glance-dimension-cell', '📌 Status'));
+  route.forEach(function (leg) {
+    var td = ce('td', 'glance-col-day-cell');
+    if (leg.stayId) {
+      var curStay = stays.find(function (s) { return s.id === leg.stayId; });
+      var curStatus = (curStay && curStay.status) || leg.status || 'planned';
+      td.appendChild(createStayStatusToggle(curStatus, function (newSt) {
+        setStayStatus(leg.stayId, newSt);
+      }));
+    } else {
+      var bCls = leg.status.includes('Planned') ? 'badge' : 'badge-good';
+      td.appendChild(ce('span', 'badge ' + bCls, leg.status));
+    }
+    trStatus.appendChild(td);
+  });
+  tbody.appendChild(trStatus);
+
+  // Row 4: Estimated Rate
+  var trRate = ce('tr', 'stay-route-tr glance-tr');
+  trRate.appendChild(ce('td', 'glance-dimension-cell', '💰 Est. Rate'));
+  route.forEach(function (leg) {
+    var td = ce('td', 'glance-col-day-cell');
+    td.appendChild(ce('div', 'stay-hotel-rate', leg.rate));
+    trRate.appendChild(td);
+  });
+  tbody.appendChild(trRate);
+
+  // Row 5: Strategic Notes
+  var trNotes = ce('tr', 'stay-route-tr glance-tr');
+  trNotes.appendChild(ce('td', 'glance-dimension-cell', '📝 Strategic Notes'));
+  route.forEach(function (leg) {
+    var td = ce('td', 'glance-col-day-cell');
+    td.appendChild(ce('p', 'small muted', leg.notes));
+    trNotes.appendChild(td);
+  });
+  tbody.appendChild(trNotes);
 
   table.appendChild(tbody);
   container.appendChild(table);
   root.appendChild(container);
+
+  var tip = ce('p', 'muted small text-center', '💡 Nights are arranged horizontally across. Swipe horizontally to view all legs.');
+  root.appendChild(tip);
 
   var switchNotice = ce('div', 'card-panel text-center');
   switchNotice.appendChild(ce('p', 'muted small', 'Want to explore or compare all 23 lodging options with photos and links?'));
@@ -1826,14 +2132,126 @@ function renderAccommodationRouteTable(root, stays) {
   root.appendChild(switchNotice);
 }
 
+function renderStayCard(s, isAlternative, bookedStayId) {
+  var card = ce('div', 'stay-card');
+  var top = ce('div', 'stay-card-header');
+  top.appendChild(ce('div', 'stay-name', s.name || s.hotel || 'Stay'));
+
+  var actionsBox = ce('div', null);
+  actionsBox.style.display = 'flex';
+  actionsBox.style.alignItems = 'center';
+  actionsBox.style.gap = '6px';
+  actionsBox.style.flexWrap = 'wrap';
+
+  if (isAlternative && bookedStayId) {
+    var swapBtn = ce('button', 'btn-swap-stay', '⇄ Swap');
+    swapBtn.title = 'Swap this option into active booked lodging';
+    swapBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      swapToStay(s.id, bookedStayId);
+    });
+    actionsBox.appendChild(swapBtn);
+  }
+
+  actionsBox.appendChild(createStayStatusToggle(s.status || 'wishlist', function (newSt) {
+    setStayStatus(s.id, newSt);
+  }));
+
+  top.appendChild(actionsBox);
+  card.appendChild(top);
+
+  var checkin = s.checkin || s.check_in || '';
+  var checkout = s.checkout || s.check_out || '';
+  var dates = (checkin && checkout) ? (checkin + ' → ' + checkout) : '';
+  if (s.nights) dates += ' (' + s.nights + ' night' + (s.nights > 1 ? 's' : '') + ')';
+  if (dates) card.appendChild(ce('div', 'stay-dates', '🗓 ' + dates));
+
+  var details = ce('div', 'stay-details muted');
+  if (s.area || s.location) details.appendChild(ce('div', null, '📍 ' + (s.area || s.location)));
+  if (s.notes) details.appendChild(ce('p', 'small', s.notes));
+  card.appendChild(details);
+
+  var priceLine = ce('div', 'stay-price-line');
+  var rateStr = '';
+  if (s.price_per_night) {
+    rateStr = new Intl.NumberFormat().format(s.price_per_night) + ' ' + (s.currency || 'VND') + ' / night';
+  } else if (s.cost_sgd) {
+    rateStr = sgd(s.cost_sgd) + ' / night';
+  } else {
+    rateStr = 'Check booking';
+  }
+  priceLine.appendChild(ce('span', 'muted small', 'Estimated Rate'));
+  priceLine.appendChild(ce('span', null, rateStr));
+  card.appendChild(priceLine);
+
+  var bookingUrl = s.booking_url || s.link || s.source_url;
+  if (bookingUrl) {
+    var linkRow = ce('div', 'stay-price-line');
+    linkRow.style.marginTop = '8px';
+    linkRow.style.display = 'flex';
+    linkRow.style.alignItems = 'center';
+    linkRow.style.gap = '8px';
+    linkRow.style.flexWrap = 'wrap';
+
+    var plat = s.booking_platform || (bookingUrl.includes('booking.com') ? 'Booking.com' : (bookingUrl.includes('airbnb') ? 'Airbnb' : 'Online Listing'));
+    var aTag = ce('a', 'btn btn-secondary small', '🏨 Book on ' + plat + ' ↗');
+    aTag.href = bookingUrl;
+    aTag.target = '_blank';
+    aTag.rel = 'noopener';
+    aTag.style.textDecoration = 'none';
+    linkRow.appendChild(aTag);
+
+    if (s.direct_url) {
+      var dirTag = ce('a', 'muted small', 'Official Hotel Site ↗');
+      dirTag.href = s.direct_url;
+      dirTag.target = '_blank';
+      dirTag.rel = 'noopener';
+      dirTag.style.marginLeft = '4px';
+      linkRow.appendChild(dirTag);
+    }
+    card.appendChild(linkRow);
+  }
+
+  return card;
+}
+
 function renderAccommodationDirectory(root, stays) {
-  var areas = ['all'];
-  stays.forEach(function (s) {
-    var a = s.area || s.location || '';
-    var baseWord = a.split('(')[0].split(',')[0].trim();
-    if (baseWord && !areas.includes(baseWord)) areas.push(baseWord);
+  var toolbar = ce('div', 'card-panel');
+  toolbar.style.padding = '8px 12px';
+  toolbar.style.marginBottom = '12px';
+
+  // Sort & Group Mode Toggle
+  var sortRow = ce('div', null);
+  sortRow.style.display = 'flex';
+  sortRow.style.alignItems = 'center';
+  sortRow.style.justifyContent = 'space-between';
+  sortRow.style.gap = '8px';
+  sortRow.style.flexWrap = 'wrap';
+  sortRow.style.marginBottom = '8px';
+
+  var sortLabel = ce('span', 'muted small', 'Directory Grouping:');
+  sortRow.appendChild(sortLabel);
+
+  var sortGroup = ce('div', 'view-toggle-group');
+  var byNightBtn = ce('button', 'view-toggle-btn' + (STATE.staySortMode === 'night' ? ' active' : ''), '🗓️ By Night');
+  var byLocBtn = ce('button', 'view-toggle-btn' + (STATE.staySortMode === 'location' ? ' active' : ''), '📍 By Location');
+
+  byNightBtn.addEventListener('click', function () {
+    STATE.staySortMode = 'night';
+    renderAccommodation();
+  });
+  byLocBtn.addEventListener('click', function () {
+    STATE.staySortMode = 'location';
+    renderAccommodation();
   });
 
+  sortGroup.appendChild(byNightBtn);
+  sortGroup.appendChild(byLocBtn);
+  sortRow.appendChild(sortGroup);
+  toolbar.appendChild(sortRow);
+
+  // Location filter pills
+  var areas = ['all', 'Hanoi', 'Ha Giang', 'Ninh Binh'];
   var filterBar = ce('div', 'filter-pills-row');
   areas.forEach(function (area) {
     var pill = ce('button', 'filter-pill' + (STATE.stayArea === area ? ' active' : ''), area === 'all' ? 'All Stays' : area);
@@ -1843,85 +2261,99 @@ function renderAccommodationDirectory(root, stays) {
     });
     filterBar.appendChild(pill);
   });
-  root.appendChild(filterBar);
+  toolbar.appendChild(filterBar);
+  root.appendChild(toolbar);
 
-  var grid = ce('div', 'stay-grid');
-  var count = 0;
+  if (STATE.staySortMode === 'night') {
+    var hasAny = false;
 
-  stays.forEach(function (s) {
-    var a = (s.area || s.location || '').toLowerCase();
-    if (STATE.stayArea !== 'all' && !a.includes(STATE.stayArea.toLowerCase())) return;
-    count++;
+    NIGHT_GROUPS.forEach(function (ng) {
+      var groupStays = stays.filter(function (s) {
+        return getStayNightId(s) === ng.id;
+      });
 
-    var card = ce('div', 'stay-card');
-    var top = ce('div', 'stay-card-header');
-    top.appendChild(ce('div', 'stay-name', s.name || s.hotel || 'Stay'));
-
-    var status = s.status || 'planning';
-    var badgeCls = status === 'booked' ? 'badge-good' : (status === 'wishlist' ? 'badge-warn' : '');
-    top.appendChild(ce('span', 'badge ' + badgeCls, status.toUpperCase()));
-    card.appendChild(top);
-
-    var checkin = s.checkin || s.check_in || '';
-    var checkout = s.checkout || s.check_out || '';
-    var dates = (checkin && checkout) ? (checkin + ' → ' + checkout) : '';
-    if (s.nights) dates += ' (' + s.nights + ' night' + (s.nights > 1 ? 's' : '') + ')';
-    if (dates) card.appendChild(ce('div', 'stay-dates', '🗓 ' + dates));
-
-    var details = ce('div', 'stay-details muted');
-    if (s.area || s.location) details.appendChild(ce('div', null, '📍 ' + (s.area || s.location)));
-    if (s.notes) details.appendChild(ce('p', 'small', s.notes));
-    card.appendChild(details);
-
-    var priceLine = ce('div', 'stay-price-line');
-    var rateStr = '';
-    if (s.price_per_night) {
-      rateStr = new Intl.NumberFormat().format(s.price_per_night) + ' ' + (s.currency || 'VND') + ' / night';
-    } else if (s.cost_sgd) {
-      rateStr = sgd(s.cost_sgd) + ' / night';
-    } else {
-      rateStr = 'Check booking';
-    }
-    priceLine.appendChild(ce('span', 'muted small', 'Estimated Rate'));
-    priceLine.appendChild(ce('span', null, rateStr));
-    card.appendChild(priceLine);
-
-    var bookingUrl = s.booking_url || s.link || s.source_url;
-    if (bookingUrl) {
-      var linkRow = ce('div', 'stay-price-line');
-      linkRow.style.marginTop = '8px';
-      linkRow.style.display = 'flex';
-      linkRow.style.alignItems = 'center';
-      linkRow.style.gap = '8px';
-      linkRow.style.flexWrap = 'wrap';
-
-      var plat = s.booking_platform || (bookingUrl.includes('booking.com') ? 'Booking.com' : (bookingUrl.includes('airbnb') ? 'Airbnb' : 'Online Listing'));
-      var aTag = ce('a', 'btn btn-secondary small', '🏨 Book on ' + plat + ' ↗');
-      aTag.href = bookingUrl;
-      aTag.target = '_blank';
-      aTag.rel = 'noopener';
-      aTag.style.textDecoration = 'none';
-      linkRow.appendChild(aTag);
-
-      if (s.direct_url) {
-        var dirTag = ce('a', 'muted small', 'Official Hotel Site ↗');
-        dirTag.href = s.direct_url;
-        dirTag.target = '_blank';
-        dirTag.rel = 'noopener';
-        dirTag.style.marginLeft = '4px';
-        linkRow.appendChild(dirTag);
+      if (STATE.stayArea !== 'all') {
+        groupStays = groupStays.filter(function (s) {
+          var a = (s.area || s.location || '').toLowerCase();
+          return a.includes(STATE.stayArea.toLowerCase());
+        });
       }
-      card.appendChild(linkRow);
+
+      if (groupStays.length === 0) return;
+      hasAny = true;
+
+      var sec = ce('div', 'card-panel');
+      sec.style.marginBottom = '14px';
+
+      var h = ce('h3', null, ng.label);
+      h.style.marginBottom = '10px';
+      sec.appendChild(h);
+
+      var bookedStay = groupStays.find(function (s) {
+        return (s.status || '').toLowerCase() === 'booked';
+      });
+
+      if (bookedStay) {
+        // Booked stay is shown prominently
+        sec.appendChild(renderStayCard(bookedStay, false, null));
+
+        var alternatives = groupStays.filter(function (s) {
+          return s.id !== bookedStay.id;
+        });
+
+        if (alternatives.length > 0) {
+          var isExpanded = !!STATE.expandedNightGroups[ng.id];
+          var toggleBtn = ce('button', 'btn-toggle-alts');
+          toggleBtn.innerHTML = (isExpanded ? '▴ Hide ' : '▾ View ') + alternatives.length + ' alternative' + (alternatives.length > 1 ? 's' : '') + ' (Swap available)';
+          toggleBtn.addEventListener('click', function () {
+            STATE.expandedNightGroups[ng.id] = !STATE.expandedNightGroups[ng.id];
+            renderAccommodation();
+          });
+          sec.appendChild(toggleBtn);
+
+          if (isExpanded) {
+            var altGrid = ce('div', 'stay-grid');
+            altGrid.style.marginTop = '10px';
+            alternatives.forEach(function (alt) {
+              altGrid.appendChild(renderStayCard(alt, true, bookedStay.id));
+            });
+            sec.appendChild(altGrid);
+          }
+        }
+      } else {
+        // No stay is booked yet: show all options
+        var grid = ce('div', 'stay-grid');
+        groupStays.forEach(function (s) {
+          grid.appendChild(renderStayCard(s, false, null));
+        });
+        sec.appendChild(grid);
+      }
+
+      root.appendChild(sec);
+    });
+
+    if (!hasAny) {
+      root.appendChild(ce('p', 'muted small text-center', 'No stays matching this filter.'));
     }
 
-    grid.appendChild(card);
-  });
+  } else {
+    // Group by Location
+    var locGrid = ce('div', 'stay-grid');
+    var count = 0;
 
-  if (count === 0) {
-    grid.appendChild(ce('p', 'muted small text-center', 'No stays matching this filter.'));
+    stays.forEach(function (s) {
+      var a = (s.area || s.location || '').toLowerCase();
+      if (STATE.stayArea !== 'all' && !a.includes(STATE.stayArea.toLowerCase())) return;
+      count++;
+      locGrid.appendChild(renderStayCard(s, false, null));
+    });
+
+    if (count === 0) {
+      root.appendChild(ce('p', 'muted small text-center', 'No stays matching this filter.'));
+    } else {
+      root.appendChild(locGrid);
+    }
   }
-
-  root.appendChild(grid);
 }
 
 /* ==========================================================================
@@ -1934,27 +2366,49 @@ function renderExpenses() {
   var b = calculateBudget();
   var plannedItems = getExpensesPlanned();
 
-  // Top Summary Metric Cards
-  var stats = ce('div', 'stats-row');
+  // 1. Budget Headroom Visual Card (Moved from global trip banner)
+  var headroomCard = ce('div', 'budget-headroom-banner');
+  var hTop = ce('div', null);
+  hTop.style.display = 'flex';
+  hTop.style.justifyContent = 'space-between';
+  hTop.style.alignItems = 'flex-start';
+  hTop.style.marginBottom = '8px';
 
-  var b1 = ce('div', 'stat-box');
-  b1.appendChild(ce('div', 'stat-box-title', 'Budget Cap'));
-  b1.appendChild(ce('div', 'stat-box-num', sgd(b.cap)));
-  stats.appendChild(b1);
+  var hLeft = ce('div', null);
+  hLeft.appendChild(ce('div', 'muted small', 'Remaining Headroom'));
+  var hVal = ce('div', null, b.headroom != null ? sgd(b.headroom) : '—');
+  hVal.style.fontSize = '1.6rem';
+  hVal.style.fontWeight = '800';
+  hVal.style.color = (b.headroom != null && b.headroom >= 0) ? 'var(--good)' : 'var(--warn)';
+  hLeft.appendChild(hVal);
+  hTop.appendChild(hLeft);
 
-  var b2 = ce('div', 'stat-box');
-  b2.appendChild(ce('div', 'stat-box-title', 'Net Planned Spend'));
-  b2.appendChild(ce('div', 'stat-box-num', sgd(b.net)));
-  stats.appendChild(b2);
+  var hRight = ce('div', null);
+  hRight.style.textAlign = 'right';
+  hRight.style.fontSize = '0.78rem';
+  hRight.appendChild(ce('div', null, 'Cap: ' + (b.cap != null ? sgd(b.cap) : '—')));
+  var spentLine = ce('div', 'muted', 'Planned: ' + sgd(b.net) + (b.delta !== 0 ? ' (' + (b.delta > 0 ? '+' : '') + sgd(b.delta) + ')' : ''));
+  hRight.appendChild(spentLine);
+  hTop.appendChild(hRight);
+  headroomCard.appendChild(hTop);
 
-  var b3 = ce('div', 'stat-box');
-  b3.appendChild(ce('div', 'stat-box-title', 'Remaining Headroom'));
-  b3.appendChild(ce('div', 'stat-box-num', sgd(b.headroom)));
-  stats.appendChild(b3);
+  var track = ce('div', 'budget-progress-track');
+  track.style.height = '6px';
+  track.style.background = 'rgba(255, 255, 255, 0.08)';
+  track.style.borderRadius = '999px';
+  track.style.overflow = 'hidden';
 
-  root.appendChild(stats);
+  var pct = (b.cap && b.net) ? Math.min(100, Math.round((b.net / b.cap) * 100)) : 0;
+  var fill = ce('div', 'budget-progress-fill');
+  fill.style.height = '100%';
+  fill.style.width = pct + '%';
+  fill.style.background = pct > 90 ? 'var(--warn)' : 'var(--good)';
+  fill.style.borderRadius = '999px';
+  track.appendChild(fill);
+  headroomCard.appendChild(track);
+  root.appendChild(headroomCard);
 
-  // Active Decision Deltas Summary Card
+  // 2. Active Decision Deltas Summary Card
   var decs = getDecisions();
   var activeAdjustments = [];
   decs.forEach(function (d) {
@@ -1990,7 +2444,7 @@ function renderExpenses() {
     root.appendChild(adjCard);
   }
 
-  // Category breakdown
+  // 3. Category Breakdown
   var catTotals = {};
   var totalValid = 0;
   plannedItems.forEach(function (it) {
@@ -2007,51 +2461,124 @@ function renderExpenses() {
   var catBoxes = ce('div', 'category-bars-box');
   Object.keys(catTotals).forEach(function (cat) {
     var amt = catTotals[cat];
-    var pct = totalValid > 0 ? Math.round((amt / totalValid) * 100) : 0;
+    var p = totalValid > 0 ? Math.round((amt / totalValid) * 100) : 0;
     var bar = ce('div', 'cat-bar-item');
     var h = ce('div', 'cat-bar-header');
-    h.appendChild(ce('span', null, cat.toUpperCase() + ' (' + pct + '%)'));
+    h.appendChild(ce('span', null, cat.toUpperCase() + ' (' + p + '%)'));
     h.appendChild(ce('span', 'muted', sgd(amt)));
     bar.appendChild(h);
 
-    var track = ce('div', 'cat-bar-track');
-    var fill = ce('div', 'cat-bar-fill');
-    fill.style.width = pct + '%';
-    fill.style.background = cat === 'accommodation' ? '#38bdf8' : (cat === 'activities' ? '#34d399' : '#818cf8');
-    track.appendChild(fill);
-    bar.appendChild(track);
+    var cTrack = ce('div', 'cat-bar-track');
+    var cFill = ce('div', 'cat-bar-fill');
+    cFill.style.width = p + '%';
+    cFill.style.background = cat === 'accommodation' ? '#38bdf8' : (cat === 'activities' ? '#34d399' : '#818cf8');
+    cTrack.appendChild(cFill);
+    bar.appendChild(cTrack);
     catBoxes.appendChild(bar);
   });
   catCard.appendChild(catBoxes);
   root.appendChild(catCard);
 
-  // Itemized Expenses
+  // 4. Space-Saving Itemized Expenses with Sort & Filter Toolbar
   var listCard = ce('div', 'card-panel');
   listCard.appendChild(ce('h3', null, 'Itemized Planning Records'));
 
-  if (plannedItems.length > 0) {
-    var list = ce('div', 'timeline');
-    plannedItems.forEach(function (it) {
-      var row = ce('div', 'timeline-item');
-      var top = ce('div', 'item-top');
-      top.appendChild(ce('div', 'item-title', it.description || it.item || it.name || it.category));
+  // Filter & Sort Toolbar
+  var filterWrap = ce('div', 'expense-filters-toolbar');
+
+  // Category filter pills
+  var filterRow = ce('div', 'filter-pills-row');
+  filterRow.style.margin = '0';
+  var expCats = ['all', 'accommodation', 'transport', 'food', 'activities', 'misc'];
+  expCats.forEach(function (c) {
+    var pill = ce('button', 'filter-pill' + (STATE.expenseFilterCat === c ? ' active' : ''), c === 'all' ? 'All' : c.slice(0, 5).toUpperCase());
+    pill.addEventListener('click', function () {
+      STATE.expenseFilterCat = c;
+      renderExpenses();
+    });
+    filterRow.appendChild(pill);
+  });
+  filterWrap.appendChild(filterRow);
+
+  // Sort buttons
+  var sortRow = ce('div', 'view-toggle-group');
+  var sorts = [
+    { key: 'cost-desc', label: '💰 Cost ↓' },
+    { key: 'cost-asc', label: '💰 Cost ↑' },
+    { key: 'cat', label: '🏷️ Cat' },
+    { key: 'name', label: '🔤 Name' }
+  ];
+  sorts.forEach(function (s) {
+    var sBtn = ce('button', 'view-toggle-btn' + (STATE.expenseSort === s.key ? ' active' : ''), s.label);
+    sBtn.style.fontSize = '0.68rem';
+    sBtn.style.padding = '3px 7px';
+    sBtn.addEventListener('click', function () {
+      STATE.expenseSort = s.key;
+      renderExpenses();
+    });
+    sortRow.appendChild(sBtn);
+  });
+  filterWrap.appendChild(sortRow);
+  listCard.appendChild(filterWrap);
+
+  // Filter items
+  var filtered = plannedItems.filter(function (it) {
+    if (STATE.expenseFilterCat === 'all') return true;
+    var c = (it.category || 'misc').toLowerCase();
+    return c.includes(STATE.expenseFilterCat.toLowerCase());
+  });
+
+  // Sort items
+  filtered.sort(function (a, b) {
+    var costA = num(a.amount != null ? a.amount : (a.cost_sgd || a.amount_sgd)) || 0;
+    var costB = num(b.amount != null ? b.amount : (b.cost_sgd || b.amount_sgd)) || 0;
+    if (STATE.expenseSort === 'cost-desc') return costB - costA;
+    if (STATE.expenseSort === 'cost-asc') return costA - costB;
+    if (STATE.expenseSort === 'cat') return (a.category || '').localeCompare(b.category || '');
+    if (STATE.expenseSort === 'name') {
+      var nameA = (a.description || a.item || a.name || '');
+      var nameB = (b.description || b.item || b.name || '');
+      return nameA.localeCompare(nameB);
+    }
+    return 0;
+  });
+
+  if (filtered.length > 0) {
+    var table = ce('div', 'compact-expense-table');
+    filtered.forEach(function (it) {
+      var row = ce('div', 'compact-expense-row');
+
+      var left = ce('div', 'compact-expense-left');
+      var catLabel = it.category ? it.category.slice(0, 4).toUpperCase() : 'MISC';
+      left.appendChild(ce('span', 'compact-expense-cat', catLabel));
+
+      var info = ce('div', null);
+      info.style.minWidth = '0';
+      info.style.overflow = 'hidden';
+      info.appendChild(ce('div', 'compact-expense-name', it.description || it.item || it.name || it.category));
+
+      var subMeta = [];
+      if (it.paid_by) subMeta.push('Paid: ' + it.paid_by);
+      if (it.status) subMeta.push(it.status);
+      if (it.notes) subMeta.push(it.notes.slice(0, 40) + (it.notes.length > 40 ? '...' : ''));
+      if (subMeta.length > 0) {
+        var subDiv = ce('div', 'muted tiny', subMeta.join(' · '));
+        subDiv.style.textOverflow = 'ellipsis';
+        subDiv.style.overflow = 'hidden';
+        subDiv.style.whiteSpace = 'nowrap';
+        info.appendChild(subDiv);
+      }
+      left.appendChild(info);
+      row.appendChild(left);
 
       var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
-      top.appendChild(ce('span', 'badge', cost != null ? sgd(cost) : String(it.amount || '—')));
-      row.appendChild(top);
+      row.appendChild(ce('div', 'compact-expense-cost', cost != null ? sgd(cost) : '—'));
 
-      var meta = [];
-      if (it.category) meta.push(it.category);
-      if (it.paid_by) meta.push('paid: ' + it.paid_by);
-      if (it.status) meta.push(it.status);
-      row.appendChild(ce('div', 'item-meta', meta.join(' · ')));
-
-      if (it.notes) row.appendChild(ce('p', 'small muted', it.notes));
-      list.appendChild(row);
+      table.appendChild(row);
     });
-    listCard.appendChild(list);
+    listCard.appendChild(table);
   } else {
-    listCard.appendChild(ce('p', 'muted', 'No expense items listed.'));
+    listCard.appendChild(ce('p', 'muted small text-center', 'No expense items matching this filter.'));
   }
 
   root.appendChild(listCard);
@@ -2122,6 +2649,9 @@ function renderDecisions() {
 
         renderTripBanner();
         renderDecisions();
+        if (STATE.activeTab === 'itinerary') renderItinerary();
+        if (STATE.activeTab === 'accommodation') renderAccommodation();
+        if (STATE.activeTab === 'expenses') renderExpenses();
         showToast('Choice updated: ' + (opt.label ? opt.label.slice(0, 35) + '...' : 'Saved'));
       });
 
@@ -2135,13 +2665,19 @@ function renderDecisions() {
 }
 
 /* ==========================================================================
-   5. PACKING TAB (Checklist with Persistence)
+   5. PACKING TAB (Exact 6 Categories, Interactive + / - / Edit)
    ========================================================================== */
 function renderPacking() {
   var root = $('#tab-packing');
   clear(root);
 
   var cats = getPackingCategories();
+  // Filter out any photo category
+  cats = cats.filter(function (c) {
+    var catName = (c.category || c.name || '').toLowerCase();
+    return !catName.includes('photo');
+  });
+
   if (!cats.length) {
     root.appendChild(renderEmpty('No packing checklist configured.'));
     return;
@@ -2151,34 +2687,143 @@ function renderPacking() {
   var checkedState = JSON.parse(localStorage.getItem(lsKey) || '{}');
 
   cats.forEach(function (cat) {
+    var catKey = cat.category || cat.name || 'items';
     var cBox = ce('div', 'packing-category');
-    cBox.appendChild(ce('h3', null, cat.category || cat.name || 'Items'));
+
+    var headerRow = ce('div', 'packing-cat-header');
+
+    var titleBox = ce('div');
+    titleBox.style.display = 'flex';
+    titleBox.style.alignItems = 'center';
+    titleBox.style.gap = '8px';
+
+    var hTitle = ce('h3', null, cat.name || cat.category || 'Items');
+    hTitle.style.margin = '0';
+    titleBox.appendChild(hTitle);
+
+    var totalItems = (cat.items || []).length;
+    var packedCount = (cat.items || []).filter(function (it, idx) {
+      var itemText = typeof it === 'string' ? it : (it.item || it.name || '');
+      var itemId = catKey + '_' + itemText;
+      return !!checkedState[itemId];
+    }).length;
+
+    var countBadge = ce('span', 'badge' + (packedCount === totalItems && totalItems > 0 ? ' badge-good' : ''), packedCount + '/' + totalItems + ' packed');
+    titleBox.appendChild(countBadge);
+    headerRow.appendChild(titleBox);
+
+    // + Add Item Button
+    var addBtn = ce('button', 'btn-cat-add-item', '+');
+    addBtn.type = 'button';
+    addBtn.title = 'Add item to ' + (cat.name || cat.category);
+    addBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var newItemName = prompt('Add item to ' + (cat.name || cat.category) + ':');
+      if (newItemName && newItemName.trim()) {
+        if (!cat.items) cat.items = [];
+        cat.items.push({ item: newItemName.trim(), notes: '' });
+        savePackingDoc();
+        renderPacking();
+        showToast('Added: ' + newItemName.trim());
+      }
+    });
+    headerRow.appendChild(addBtn);
+    cBox.appendChild(headerRow);
 
     var list = ce('div', 'checklist');
     (cat.items || []).forEach(function (it, idx) {
       var itemText = typeof it === 'string' ? it : (it.item || it.name || '');
-      var itemId = (cat.category || '') + '_' + idx;
+      var itemNotes = typeof it === 'string' ? '' : (it.notes || '');
+      var itemId = catKey + '_' + itemText;
       var isDone = !!checkedState[itemId];
 
       var row = ce('div', 'check-item' + (isDone ? ' done' : ''));
-      var box = ce('div', 'check-box', isDone ? '✓' : '');
-      row.appendChild(box);
-      row.appendChild(ce('span', 'check-text', itemText));
 
-      row.addEventListener('click', function () {
+      var box = ce('div', 'check-box', isDone ? '✓' : '');
+      box.addEventListener('click', function (e) {
+        e.stopPropagation();
         checkedState[itemId] = !checkedState[itemId];
         localStorage.setItem(lsKey, JSON.stringify(checkedState));
         renderPacking();
       });
+      row.appendChild(box);
+
+      var textWrap = ce('div', null);
+      textWrap.style.flex = '1';
+      textWrap.style.minWidth = '0';
+      textWrap.addEventListener('click', function () {
+        checkedState[itemId] = !checkedState[itemId];
+        localStorage.setItem(lsKey, JSON.stringify(checkedState));
+        renderPacking();
+      });
+
+      var span = ce('span', 'check-text', itemText);
+      textWrap.appendChild(span);
+      if (itemNotes) {
+        var nEl = ce('div', 'muted tiny', itemNotes);
+        textWrap.appendChild(nEl);
+      }
+      row.appendChild(textWrap);
+
+      // Actions: Edit (✏️) and Delete (−)
+      var actions = ce('div', 'packing-item-actions');
+
+      var editBtn = ce('button', 'btn-item-action', '✏️');
+      editBtn.type = 'button';
+      editBtn.title = 'Edit item';
+      editBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var updated = prompt('Edit item:', itemText);
+        if (updated && updated.trim()) {
+          var wasDone = checkedState[itemId];
+          delete checkedState[itemId];
+
+          if (typeof it === 'string') {
+            cat.items[idx] = updated.trim();
+          } else {
+            it.item = updated.trim();
+          }
+
+          var newId = catKey + '_' + updated.trim();
+          if (wasDone) checkedState[newId] = true;
+          localStorage.setItem(lsKey, JSON.stringify(checkedState));
+
+          savePackingDoc();
+          renderPacking();
+          showToast('Updated: ' + updated.trim());
+        }
+      });
+      actions.appendChild(editBtn);
+
+      var delBtn = ce('button', 'btn-item-action', '−');
+      delBtn.type = 'button';
+      delBtn.title = 'Delete item';
+      delBtn.style.fontWeight = '800';
+      delBtn.style.color = 'var(--warn)';
+      delBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (confirm('Delete "' + itemText + '"?')) {
+          cat.items.splice(idx, 1);
+          delete checkedState[itemId];
+          localStorage.setItem(lsKey, JSON.stringify(checkedState));
+          savePackingDoc();
+          renderPacking();
+          showToast('Deleted item');
+        }
+      });
+      actions.appendChild(delBtn);
+
+      row.appendChild(actions);
       list.appendChild(row);
     });
+
     cBox.appendChild(list);
     root.appendChild(cBox);
   });
 }
 
 /* ==========================================================================
-   6. IDEAS / RECOMMENDATIONS TAB (Curated Pool, Filter & Add to Day)
+   6. IDEAS / RECOMMENDATIONS TAB (Curated Pool, Filter by Location & Cat)
    ========================================================================== */
 function renderRecommendations() {
   var root = $('#tab-recommendations');
@@ -2203,11 +2848,25 @@ function renderRecommendations() {
   });
   searchBar.appendChild(searchInp);
 
+  // Location filter pills
+  var locRow = ce('div', 'filter-pills-row');
+  locRow.style.marginBottom = '6px';
+  var locs = ['all', 'Hanoi', 'Ha Giang', 'Ninh Binh'];
+  locs.forEach(function (loc) {
+    var pill = ce('button', 'filter-pill' + (STATE.recLocation === loc ? ' active' : ''), loc === 'all' ? 'All Locations' : loc);
+    pill.addEventListener('click', function () {
+      STATE.recLocation = loc;
+      renderRecommendations();
+    });
+    locRow.appendChild(pill);
+  });
+  searchBar.appendChild(locRow);
+
   // Category filter pills
   var catRow = ce('div', 'filter-pills-row');
   var cats = ['all', 'food', 'coffee', 'culture', 'nature', 'nightlife'];
   cats.forEach(function (c) {
-    var pill = ce('button', 'filter-pill' + (STATE.recCategory === c ? ' active' : ''), c.toUpperCase());
+    var pill = ce('button', 'filter-pill' + (STATE.recCategory === c ? ' active' : ''), c === 'all' ? 'All Types' : c.toUpperCase());
     pill.addEventListener('click', function () {
       STATE.recCategory = c;
       renderRecommendations();
@@ -2227,6 +2886,10 @@ function renderRecList(recs, days, container) {
 
   var filtered = recs.filter(function (r) {
     if (STATE.recCategory !== 'all' && (r.category || '').toLowerCase() !== STATE.recCategory.toLowerCase()) return false;
+    if (STATE.recLocation !== 'all') {
+      var locMatch = ((r.area || '') + ' ' + (r.location || '') + ' ' + (r.title || '')).toLowerCase();
+      if (!locMatch.includes(STATE.recLocation.toLowerCase())) return false;
+    }
     if (STATE.recSearch) {
       var blob = ((r.title || '') + ' ' + (r.why || '') + ' ' + (r.area || '')).toLowerCase();
       if (!blob.includes(STATE.recSearch)) return false;
