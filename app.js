@@ -1878,9 +1878,6 @@ function renderItineraryGlanceTable(root, days) {
 
   container.appendChild(table);
   root.appendChild(container);
-
-  var tip = ce('p', 'muted small text-center', '💡 Tap any activity to edit schedule, details, or direct booking links. Swipe horizontally to view all days.');
-  root.appendChild(tip);
 }
 
 function updateTableStickyOffsets(table) {
@@ -2708,19 +2705,8 @@ function renderSwapIdeasList(filterText, filterCategory) {
 
     var insertBtn = ce('button', 'btn btn-secondary small', '+ Insert');
     insertBtn.addEventListener('click', function () {
-      if (!targetDay.items) targetDay.items = [];
-      targetDay.items.push({
-        what: r.title || r.name,
-        notes: (r.why || '') + (r.cost_estimate ? ' (' + r.cost_estimate + ')' : ''),
-        time: '~flexible',
-        cost: 0,
-        currency: 'SGD',
-        refs: r.source_url ? [r.source_url] : []
-      });
-      saveItineraryDoc();
       closeSwapModal();
-      renderItinerary();
-      showToast('Inserted "' + (r.title || r.name) + '" into Day ' + (targetDay.day || ''));
+      openAddIdeaToDayModal(r, targetDay ? targetDay.day : 1);
     });
     card.appendChild(insertBtn);
 
@@ -3614,6 +3600,179 @@ function getExpenseDayShort(it) {
   return '';
 }
 
+function getExpenseLinkInfo(it) {
+  if (!it) return null;
+  if (it.linked_type === 'decision' || it.linked_decision_id) {
+    return { type: 'decision', title: it.linked_title || 'Linked Group Decision' };
+  }
+  if (it.linked_type === 'activity' || it.linked_activity_id) {
+    return { type: 'activity', title: it.linked_title || it.description || 'Linked Itinerary Activity' };
+  }
+  if (it.linked_type === 'accommodation') {
+    return { type: 'accommodation', title: it.linked_title || it.description || 'Linked Accommodation' };
+  }
+  if (it.linked_type === 'custom') return null;
+
+  // Auto-detect if matched to an activity in itinerary
+  var days = getItineraryDays();
+  for (var i = 0; i < days.length; i++) {
+    var d = days[i];
+    var acts = d.items || d.events || [];
+    for (var j = 0; j < acts.length; j++) {
+      var a = acts[j];
+      var aTitle = (a.what || a.title || '').toLowerCase();
+      var expDesc = (it.description || '').toLowerCase();
+      if (aTitle && expDesc && (expDesc.includes(aTitle.slice(0, 15)) || aTitle.includes(expDesc.slice(0, 15)))) {
+        return { type: 'activity', title: a.what || a.title, day: d.day, actIdx: j };
+      }
+    }
+  }
+
+  // Auto-detect if matched to a decision
+  var decs = getDecisions();
+  for (var k = 0; k < decs.length; k++) {
+    var dec = decs[k];
+    var decTitle = (dec.title || '').toLowerCase();
+    var expDesc2 = (it.description || '').toLowerCase();
+    if (decTitle && expDesc2 && (expDesc2.includes(decTitle.slice(0, 12)) || decTitle.includes(expDesc2.slice(0, 12)))) {
+      return { type: 'decision', title: dec.title, decId: dec.id };
+    }
+  }
+  return null;
+}
+
+function openEditExpenseAmountModal(it) {
+  var currentAmount = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd)) || 0;
+  var inputVal = prompt('Edit dollar amount (SGD) for "' + (it.description || it.name || 'Expense') + '":', currentAmount);
+  if (inputVal === null) return;
+  var newAmount = Number(inputVal);
+  if (isNaN(newAmount) || newAmount < 0) {
+    alert('Please enter a valid non-negative number.');
+    return;
+  }
+
+  it.amount = newAmount;
+  it.cost_sgd = newAmount;
+
+  // If linked to an activity, update that activity in itinerary too!
+  var link = getExpenseLinkInfo(it);
+  if (link && link.type === 'activity') {
+    var rawItin = STATE.docs.itinerary;
+    var itinDays = Array.isArray(rawItin) ? rawItin : (rawItin && rawItin.days ? rawItin.days : []);
+    itinDays.forEach(function (d) {
+      (d.items || []).forEach(function (act) {
+        var aTitle = (act.what || act.title || '').toLowerCase();
+        var lTitle = (link.title || '').toLowerCase();
+        var expDesc = (it.description || '').toLowerCase();
+        if (aTitle && (aTitle.includes(lTitle.slice(0, 12)) || lTitle.includes(aTitle.slice(0, 12)) || expDesc.includes(aTitle.slice(0, 12)))) {
+          act.cost = newAmount;
+        }
+      });
+      var sum = 0;
+      (d.items || []).forEach(function (it) { if (it.cost) sum += Number(it.cost); });
+      d.day_cost = sum;
+      d.day_cost_estimate = sum;
+    });
+    saveItineraryDoc();
+  }
+
+  saveExpensesDoc();
+  renderExpenses();
+  showToast('Updated amount to ' + sgd(newAmount));
+}
+
+function openExpenseEditorModal(it) {
+  var modal = $('#expense-editor-modal');
+  if (!modal) return;
+  var isEdit = !!it;
+  $('#expense-editor-title').textContent = isEdit ? 'Edit Custom Expense' : 'Add Custom Expense';
+  $('#expense-editor-id').value = isEdit ? (it.id || '') : '';
+  $('#expense-editor-desc').value = isEdit ? (it.description || it.item || '') : '';
+  $('#expense-editor-amount').value = isEdit ? (it.amount != null ? it.amount : (it.cost_sgd || '')) : '';
+  $('#expense-editor-category').value = isEdit ? (it.category || 'misc') : 'misc';
+  $('#expense-editor-notes').value = isEdit ? (it.notes || '') : '';
+  $('#expense-editor-split').value = isEdit ? ((it.split_type || 'shared').toLowerCase() === 'indiv' ? 'indiv' : 'shared') : 'shared';
+
+  var daySel = $('#expense-editor-day');
+  clear(daySel);
+  daySel.appendChild(new Option('All Days', 'all', !isEdit || it.day === 'all', !isEdit || it.day === 'all'));
+  daySel.appendChild(new Option('Pre-trip', 'pre', isEdit && it.day === 'pre', isEdit && it.day === 'pre'));
+  var rawItin = STATE.docs.itinerary;
+  var itinDays = Array.isArray(rawItin) ? rawItin : (rawItin && rawItin.days ? rawItin.days : []);
+  for (var i = 1; i <= Math.max(9, itinDays.length); i++) {
+    var isSel = isEdit && Number(it.day) === i;
+    daySel.appendChild(new Option('Day ' + i, String(i), isSel, isSel));
+  }
+
+  var delBtn = $('#expense-editor-delete-btn');
+  delBtn.hidden = !isEdit;
+  delBtn.onclick = function () {
+    if (confirm('Delete this expense?')) {
+      var plan = (STATE.docs.expenses && STATE.docs.expenses.planned) || [];
+      var idx = plan.indexOf(it);
+      if (idx !== -1) plan.splice(idx, 1);
+      saveExpensesDoc();
+      modal.hidden = true;
+      renderExpenses();
+      showToast('Deleted expense');
+    }
+  };
+
+  $('#expense-editor-cancel-btn').onclick = function () { modal.hidden = true; };
+  $('#expense-editor-close').onclick = function () { modal.hidden = true; };
+
+  $('#expense-editor-form').onsubmit = function (e) {
+    e.preventDefault();
+    var desc = $('#expense-editor-desc').value.trim();
+    var amt = Number($('#expense-editor-amount').value);
+    var cat = $('#expense-editor-category').value;
+    var dayVal = $('#expense-editor-day').value;
+    var split = $('#expense-editor-split').value;
+    var notes = $('#expense-editor-notes').value.trim();
+
+    if (!desc) return;
+    if (isNaN(amt) || amt < 0) amt = 0;
+
+    if (!STATE.docs.expenses) STATE.docs.expenses = { planned: [] };
+    if (!Array.isArray(STATE.docs.expenses.planned)) STATE.docs.expenses.planned = [];
+
+    if (isEdit) {
+      it.description = desc;
+      it.amount = amt;
+      it.cost_sgd = amt;
+      it.category = cat;
+      it.day = dayVal === 'all' ? null : (dayVal === 'pre' ? 'pre' : Number(dayVal));
+      it.days = dayVal === 'all' || dayVal === 'pre' ? [] : [Number(dayVal)];
+      it.split_type = split;
+      it.notes = notes;
+    } else {
+      var newExp = {
+        id: 'exp-c-' + Date.now(),
+        date: 'plan',
+        category: cat,
+        description: desc,
+        amount: amt,
+        currency: 'SGD',
+        day: dayVal === 'all' ? null : (dayVal === 'pre' ? 'pre' : Number(dayVal)),
+        days: dayVal === 'all' || dayVal === 'pre' ? [] : [Number(dayVal)],
+        split_type: split,
+        is_paid: false,
+        paid_users: {},
+        linked_type: 'custom',
+        notes: notes
+      };
+      STATE.docs.expenses.planned.push(newExp);
+    }
+
+    saveExpensesDoc();
+    modal.hidden = true;
+    renderExpenses();
+    showToast(isEdit ? 'Updated expense' : 'Added expense');
+  };
+
+  modal.hidden = false;
+}
+
 function openExpenseDetailModal(it) {
   var modal = $('#expense-detail-modal');
   if (!modal) return;
@@ -3718,8 +3877,78 @@ function openExpenseDetailModal(it) {
     detailsBox.appendChild(bookLink);
   }
 
-  body.appendChild(detailsBox);
+  // Linked vs Unlinked Expense Action Buttons
+  var linkInfo = getExpenseLinkInfo(it);
+  var actionsBox = ce('div', null);
+  actionsBox.style.display = 'flex';
+  actionsBox.style.flexDirection = 'column';
+  actionsBox.style.gap = '8px';
+  actionsBox.style.marginTop = '14px';
 
+  if (linkInfo) {
+    var linkBanner = ce('div', 'card-panel');
+    linkBanner.style.background = 'rgba(56, 189, 248, 0.08)';
+    linkBanner.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+    linkBanner.style.padding = '10px 12px';
+    linkBanner.style.marginBottom = '4px';
+
+    var linkHead = ce('div', 'small', '🔗 Linked to ' + (linkInfo.type === 'decision' ? 'Decision: ' : 'Activity: ') + '<strong>' + escapeHtml(linkInfo.title) + '</strong>');
+    linkBanner.appendChild(linkHead);
+    var linkNote = ce('p', 'tiny muted', 'This expense is synced with the ' + (linkInfo.type === 'decision' ? 'Decisions' : 'Itinerary') + ' tab. You can freely edit its dollar amount here. To modify its description, schedule, or remove it, please use the ' + (linkInfo.type === 'decision' ? 'Decisions' : 'Itinerary') + ' tab.');
+    linkNote.style.margin = '4px 0 0 0';
+    linkBanner.appendChild(linkNote);
+    actionsBox.appendChild(linkBanner);
+
+    var btnRow = ce('div', null);
+    btnRow.style.display = 'flex';
+    btnRow.style.gap = '8px';
+
+    var editAmtBtn = ce('button', 'btn btn-primary small', '✏️ Edit Dollar Amount');
+    editAmtBtn.onclick = function () {
+      modal.hidden = true;
+      openEditExpenseAmountModal(it);
+    };
+    btnRow.appendChild(editAmtBtn);
+
+    var navBtn = ce('button', 'btn btn-secondary small', 'Go to ' + (linkInfo.type === 'decision' ? 'Decisions' : 'Itinerary') + ' →');
+    navBtn.onclick = function () {
+      modal.hidden = true;
+      STATE.activeTab = (linkInfo.type === 'decision' ? 'decisions' : 'itinerary');
+      renderActiveTab();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    btnRow.appendChild(navBtn);
+    actionsBox.appendChild(btnRow);
+  } else {
+    var btnRow = ce('div', null);
+    btnRow.style.display = 'flex';
+    btnRow.style.gap = '8px';
+
+    var editFullBtn = ce('button', 'btn btn-primary small', '✏️ Edit Expense');
+    editFullBtn.onclick = function () {
+      modal.hidden = true;
+      openExpenseEditorModal(it);
+    };
+    btnRow.appendChild(editFullBtn);
+
+    var delBtn = ce('button', 'btn btn-danger small', '🗑️ Delete Expense');
+    delBtn.onclick = function () {
+      if (confirm('Delete expense "' + (it.description || '') + '"?')) {
+        var plan = (STATE.docs.expenses && STATE.docs.expenses.planned) || [];
+        var idx = plan.indexOf(it);
+        if (idx !== -1) plan.splice(idx, 1);
+        saveExpensesDoc();
+        modal.hidden = true;
+        renderExpenses();
+        showToast('Deleted expense');
+      }
+    };
+    btnRow.appendChild(delBtn);
+    actionsBox.appendChild(btnRow);
+  }
+
+  detailsBox.appendChild(actionsBox);
+  body.appendChild(detailsBox);
   modal.hidden = false;
 }
 
@@ -3730,7 +3959,7 @@ function renderExpenses() {
   var b = calculateBudget();
   var plannedItems = getExpensesPlanned();
 
-  // 1. Budget Headroom Visual Card (Moved from global trip banner)
+  // 1. Budget Headroom Visual Card
   var headroomCard = ce('div', 'budget-headroom-banner');
   var hTop = ce('div', null);
   hTop.style.display = 'flex';
@@ -3772,43 +4001,7 @@ function renderExpenses() {
   headroomCard.appendChild(track);
   root.appendChild(headroomCard);
 
-  // 2. Active Decision Deltas Summary Card
-  var decs = getDecisions();
-  var activeAdjustments = [];
-  decs.forEach(function (d) {
-    var pickedOptId = getActivePick(d);
-    var opt = (d.options || []).find(function (o) { return o.id === pickedOptId; });
-    if (opt && opt.cost_delta_sgd != null && opt.cost_delta_sgd !== 0) {
-      activeAdjustments.push({
-        decision: d.title || d.question,
-        choice: opt.label,
-        delta: opt.cost_delta_sgd
-      });
-    }
-  });
-
-  if (activeAdjustments.length > 0) {
-    var adjCard = ce('div', 'card-panel');
-    adjCard.appendChild(ce('h3', null, 'Active Decision Budget Adjustments'));
-    adjCard.appendChild(ce('p', 'muted small', 'Your choices in the Decisions tab dynamically adjust the committed budget:'));
-
-    var adjTable = ce('div', 'timeline');
-    activeAdjustments.forEach(function (adj) {
-      var row = ce('div', 'timeline-item');
-      var top = ce('div', 'item-top');
-      top.appendChild(ce('div', 'item-title', adj.decision));
-      var sign = adj.delta > 0 ? '+' : '';
-      var badgeCls = adj.delta < 0 ? 'badge-good' : 'badge-warn';
-      top.appendChild(ce('span', 'badge ' + badgeCls, sign + sgd(adj.delta)));
-      row.appendChild(top);
-      row.appendChild(ce('p', 'small muted', 'Selected: ' + adj.choice));
-      adjTable.appendChild(row);
-    });
-    adjCard.appendChild(adjTable);
-    root.appendChild(adjCard);
-  }
-
-  // 3. Category Breakdown
+  // 2. Category Breakdown
   var catTotals = {};
   var totalValid = 0;
   plannedItems.forEach(function (it) {
@@ -3843,9 +4036,27 @@ function renderExpenses() {
   catCard.appendChild(catBoxes);
   root.appendChild(catCard);
 
-  // 4. Space-Saving Itemized Expenses with Sort & Filter Toolbar
+  // 3. Space-Saving Itemized Expenses with + Add Expense Button, Sort & Filter Toolbar
   var listCard = ce('div', 'card-panel');
-  listCard.appendChild(ce('h3', null, 'Itemized Planning Records'));
+
+  var listHeader = ce('div', null);
+  listHeader.style.display = 'flex';
+  listHeader.style.justifyContent = 'space-between';
+  listHeader.style.alignItems = 'center';
+  listHeader.style.marginBottom = '8px';
+
+  var listTitle = ce('h3', null, 'Itemized Planning Records');
+  listTitle.style.margin = '0';
+  listHeader.appendChild(listTitle);
+
+  var addExpBtn = ce('button', 'btn-add-expense', '+ Add Expense');
+  addExpBtn.type = 'button';
+  addExpBtn.title = 'Add an unlinked custom expense';
+  addExpBtn.onclick = function () {
+    openExpenseEditorModal(null);
+  };
+  listHeader.appendChild(addExpBtn);
+  listCard.appendChild(listHeader);
 
   // Filter & Sort Toolbar
   var filterWrap = ce('div', 'expense-filters-toolbar');
@@ -3991,7 +4202,13 @@ function renderExpenses() {
       var right = ce('div', 'compact-expense-right');
 
       var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
-      right.appendChild(ce('div', 'compact-expense-cost', cost != null ? sgd(cost) : '—'));
+      var costEl = ce('div', 'compact-expense-cost editable', cost != null ? sgd(cost) : '—');
+      costEl.title = 'Click to edit dollar amount directly';
+      costEl.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openEditExpenseAmountModal(it);
+      });
+      right.appendChild(costEl);
 
       var isShared = (it.split_type || 'shared').toLowerCase() === 'shared';
       var splitBtn = ce('button', 'expense-pill ' + (isShared ? 'pill-shared' : 'pill-indiv'), isShared ? 'Shared' : 'Indiv');
@@ -4235,6 +4452,68 @@ function setTravellerPackingState(travellerId, checkedState) {
   savePackingDoc();
 }
 
+function openPackingItemModal(cat, it, idx, catKey) {
+  var modal = $('#packing-item-modal');
+  if (!modal) return;
+
+  var isEdit = (idx >= 0 && it != null);
+  var itemText = isEdit ? (typeof it === 'string' ? it : (it.item || it.name || '')) : '';
+  var itemNotes = isEdit ? (typeof it === 'string' ? '' : (it.notes || '')) : '';
+  var oldItemId = isEdit ? (catKey + '_' + itemText) : '';
+
+  $('#packing-modal-title').textContent = isEdit ? 'Edit Packing Item' : 'Add Item to ' + (cat.name || cat.category || 'List');
+  $('#packing-modal-cat-key').value = catKey;
+  $('#packing-modal-item-idx').value = String(idx);
+  $('#packing-modal-name').value = itemText;
+  $('#packing-modal-notes').value = itemNotes;
+
+  $('#packing-modal-cancel-btn').onclick = function () { modal.hidden = true; };
+  $('#packing-modal-close').onclick = function () { modal.hidden = true; };
+
+  var form = $('#packing-item-form');
+  form.onsubmit = function (e) {
+    e.preventDefault();
+    var newName = $('#packing-modal-name').value.trim();
+    var newNotes = $('#packing-modal-notes').value.trim();
+    if (!newName) return;
+
+    if (!cat.items) cat.items = [];
+
+    if (isEdit) {
+      var newItemObj = { item: newName, notes: newNotes };
+      cat.items[idx] = newItemObj;
+
+      // Migrate checked states for all travellers if title changed
+      if (newName !== itemText && oldItemId) {
+        var newId = catKey + '_' + newName;
+        var pDoc = STATE.docs.packing;
+        if (pDoc && pDoc.traveller_checks) {
+          Object.keys(pDoc.traveller_checks).forEach(function (tId) {
+            var tMap = pDoc.traveller_checks[tId];
+            if (tMap && tMap[oldItemId]) {
+              tMap[newId] = true;
+              delete tMap[oldItemId];
+            }
+          });
+        }
+      }
+    } else {
+      cat.items.push({ item: newName, notes: newNotes });
+    }
+
+    savePackingDoc();
+    modal.hidden = true;
+    renderPacking();
+    showToast(isEdit ? 'Updated item' : 'Added item');
+  };
+
+  modal.hidden = false;
+  setTimeout(function () {
+    var nameInput = $('#packing-modal-name');
+    if (nameInput) nameInput.focus();
+  }, 50);
+}
+
 function renderPacking() {
   var root = $('#tab-packing');
   clear(root);
@@ -4329,14 +4608,7 @@ function renderPacking() {
     addBtn.title = 'Add item to ' + (cat.name || cat.category);
     addBtn.addEventListener('click', function (e) {
       e.stopPropagation();
-      var newItemName = prompt('Add item to ' + (cat.name || cat.category) + ':');
-      if (newItemName && newItemName.trim()) {
-        if (!cat.items) cat.items = [];
-        cat.items.push({ item: newItemName.trim(), notes: '' });
-        savePackingDoc();
-        renderPacking();
-        showToast('Added: ' + newItemName.trim());
-      }
+      openPackingItemModal(cat, null, -1, catKey);
     });
     headerRow.appendChild(addBtn);
     cBox.appendChild(headerRow);
@@ -4348,69 +4620,58 @@ function renderPacking() {
       var itemId = catKey + '_' + itemText;
       var isDone = !!checkedState[itemId];
 
-      var row = ce('div', 'check-item' + (isDone ? ' done' : ''));
+      var row = ce('div', 'packing-compact-row' + (isDone ? ' done' : ''));
 
-      var box = ce('div', 'check-box', isDone ? '✓' : '');
+      var mainRow = ce('div', 'packing-row-main');
+
+      var box = ce('div', 'packing-check-box', isDone ? '✓' : '');
+      box.title = isDone ? 'Mark as unpacked' : 'Mark as packed';
       box.addEventListener('click', function (e) {
         e.stopPropagation();
         checkedState[itemId] = !checkedState[itemId];
         setTravellerPackingState(STATE.activePackingTravellerId, checkedState);
         renderPacking();
       });
-      row.appendChild(box);
+      mainRow.appendChild(box);
 
-      var textWrap = ce('div', null);
-      textWrap.style.flex = '1';
-      textWrap.style.minWidth = '0';
-      textWrap.addEventListener('click', function () {
-        checkedState[itemId] = !checkedState[itemId];
-        setTravellerPackingState(STATE.activePackingTravellerId, checkedState);
-        renderPacking();
-      });
-
-      var span = ce('span', 'check-text', itemText);
-      textWrap.appendChild(span);
+      var titleSpan = ce('span', 'packing-item-title', itemText);
+      titleSpan.title = itemNotes ? 'Click to view / hide details' : 'Click to view details or tap ✏️ to edit';
       if (itemNotes) {
-        var nEl = ce('div', 'muted tiny', itemNotes);
-        textWrap.appendChild(nEl);
+        var noteIndicator = ce('span', 'packing-has-notes', '📝');
+        titleSpan.appendChild(noteIndicator);
       }
-      row.appendChild(textWrap);
+
+      var detailsBox = ce('div', 'packing-item-details-expanded');
+      detailsBox.style.display = 'none';
+      if (itemNotes) {
+        detailsBox.textContent = itemNotes;
+      } else {
+        var noNotes = ce('span', 'muted', 'No extra notes. Tap ✏️ to add details.');
+        detailsBox.appendChild(noNotes);
+      }
+
+      titleSpan.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isHidden = (detailsBox.style.display === 'none');
+        detailsBox.style.display = isHidden ? 'block' : 'none';
+      });
+      mainRow.appendChild(titleSpan);
 
       // Actions: Edit (✏️) and Delete (−)
       var actions = ce('div', 'packing-item-actions');
 
       var editBtn = ce('button', 'btn-item-action', '✏️');
       editBtn.type = 'button';
-      editBtn.title = 'Edit item';
+      editBtn.title = 'Edit item title and details';
       editBtn.addEventListener('click', function (e) {
         e.stopPropagation();
-        var updated = prompt('Edit item:', itemText);
-        if (updated && updated.trim()) {
-          var wasDone = checkedState[itemId];
-          delete checkedState[itemId];
-
-          if (typeof it === 'string') {
-            cat.items[idx] = updated.trim();
-          } else {
-            it.item = updated.trim();
-          }
-
-          var newId = catKey + '_' + updated.trim();
-          if (wasDone) checkedState[newId] = true;
-          setTravellerPackingState(STATE.activePackingTravellerId, checkedState);
-
-          savePackingDoc();
-          renderPacking();
-          showToast('Updated: ' + updated.trim());
-        }
+        openPackingItemModal(cat, it, idx, catKey);
       });
       actions.appendChild(editBtn);
 
-      var delBtn = ce('button', 'btn-item-action', '−');
+      var delBtn = ce('button', 'btn-item-action delete', '−');
       delBtn.type = 'button';
       delBtn.title = 'Delete item';
-      delBtn.style.fontWeight = '800';
-      delBtn.style.color = 'var(--warn)';
       delBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         if (confirm('Delete "' + itemText + '"?')) {
@@ -4424,7 +4685,9 @@ function renderPacking() {
       });
       actions.appendChild(delBtn);
 
-      row.appendChild(actions);
+      mainRow.appendChild(actions);
+      row.appendChild(mainRow);
+      row.appendChild(detailsBox);
       list.appendChild(row);
     });
 
@@ -4492,6 +4755,515 @@ function renderRecommendations() {
   root.appendChild(listContainer);
 }
 
+function isDayLocationMatch(day, idea) {
+  if (!day || !idea) return false;
+  var dayText = ((day.base || '') + ' ' + (day.title || '') + ' ' + (day.lodging || '')).toLowerCase();
+  var ideaLoc = ((idea.location || '') + ' ' + (idea.area || '')).toLowerCase();
+
+  var regions = [
+    { key: 'hanoi', terms: ['hanoi', 'ha noi', 'noi bai', 'old quarter', 'hoan kiem', 'west lake', 'ba dinh', 'tay ho'] },
+    { key: 'hagiang', terms: ['ha giang', 'dong van', 'meo vac', 'yen minh', 'du gia', 'lung cu', 'ma pi leng', 'loop', 'quan ba'] },
+    { key: 'ninhbinh', terms: ['ninh binh', 'tam coc', 'trang an', 'hang mua', 'hoa lu', 'bich dong'] }
+  ];
+
+  for (var i = 0; i < regions.length; i++) {
+    var r = regions[i];
+    var ideaHas = r.terms.some(function (t) { return ideaLoc.includes(t); });
+    if (ideaHas) {
+      return r.terms.some(function (t) { return dayText.includes(t); });
+    }
+  }
+
+  // Fallback word matching
+  var words = (idea.location || '').toLowerCase().split(/[^a-z0-9]+/).filter(function (w) { return w.length > 3; });
+  if (words.length > 0) {
+    return words.some(function (w) { return dayText.includes(w); });
+  }
+  return true;
+}
+
+function openAddIdeaToDayModal(idea, optPreselectDay) {
+  var modal = $('#add-idea-modal');
+  if (!modal) return;
+
+  var titleEl = $('#add-idea-modal-title');
+  var subEl = $('#add-idea-modal-subtitle');
+  var body = $('#add-idea-modal-body');
+  clear(body);
+
+  var ideaCost = Number(idea.cost_sgd != null ? idea.cost_sgd : (num(idea.cost_estimate) || 0));
+  var duration = idea.duration || '1-2h';
+  var areaStr = idea.area || idea.location || 'Curated Spot';
+
+  if (titleEl) titleEl.textContent = 'Add "' + (idea.title || idea.name) + '" to Day';
+  if (subEl) {
+    subEl.textContent = '📍 ' + areaStr + ' · ⏱ Duration: ' + duration + ' · 💰 Fixed Cost: ' + sgd(ideaCost);
+  }
+
+  var closeBtn = $('#add-idea-modal-close');
+  if (closeBtn) closeBtn.onclick = function () { modal.hidden = true; };
+
+  var days = getItineraryDays();
+  if (!days.length) {
+    body.appendChild(ce('p', 'muted small text-center', 'No itinerary days configured.'));
+    modal.hidden = false;
+    return;
+  }
+
+  // Find compatible days
+  var validIndices = [];
+  days.forEach(function (d, idx) {
+    if (isDayLocationMatch(d, idea)) validIndices.push(idx);
+  });
+
+  var selectedDayIdx = -1;
+  if (optPreselectDay != null) {
+    var preIdx = days.findIndex(function (d) { return d.day === optPreselectDay; });
+    if (preIdx !== -1 && validIndices.includes(preIdx)) {
+      selectedDayIdx = preIdx;
+    }
+  }
+  if (selectedDayIdx === -1) {
+    selectedDayIdx = validIndices.length > 0 ? validIndices[0] : 0;
+  }
+
+  // 1. Location & Day Selector
+  var daySelectSection = ce('div', null);
+  var dayHead = ce('div', 'small', '<strong>1. Select Itinerary Day</strong> <span class="muted tiny">(Location-matched)</span>');
+  dayHead.style.marginBottom = '6px';
+  daySelectSection.appendChild(dayHead);
+
+  var daySelector = ce('div', 'idea-day-selector');
+  daySelectSection.appendChild(daySelector);
+  body.appendChild(daySelectSection);
+
+  // 2. Day Schedule Preview Box
+  var previewSection = ce('div', null);
+  var previewHead = ce('div', 'small', '<strong>2. Day Schedule & Planned Activities</strong>');
+  previewHead.style.marginBottom = '4px';
+  previewSection.appendChild(previewHead);
+
+  var previewBox = ce('div', 'day-schedule-preview');
+  previewSection.appendChild(previewBox);
+  body.appendChild(previewSection);
+
+  // 3. Scheduling Mode Tabs & Controls
+  var modeSection = ce('div', null);
+  var modeHead = ce('div', 'small', '<strong>3. Choose Schedule Placement</strong>');
+  modeHead.style.marginBottom = '4px';
+  modeSection.appendChild(modeHead);
+
+  var modeTabs = ce('div', 'idea-mode-tabs');
+  var tabAdd = ce('button', 'idea-mode-tab active', '➕ Insert at Timeslot');
+  tabAdd.type = 'button';
+  var tabReplace = ce('button', 'idea-mode-tab', '🔄 Replace an Existing Activity');
+  tabReplace.type = 'button';
+  modeTabs.appendChild(tabAdd);
+  modeTabs.appendChild(tabReplace);
+  modeSection.appendChild(modeTabs);
+
+  var currentMode = 'add'; // 'add' or 'replace'
+
+  // Add Mode Pane
+  var addPane = ce('div', null);
+  addPane.style.marginTop = '8px';
+
+  var timeLabel = ce('label', 'muted tiny', 'CHOOSE TIME / SLOT:');
+  timeLabel.style.display = 'block';
+  timeLabel.style.fontWeight = '700';
+  timeLabel.style.marginBottom = '3px';
+  addPane.appendChild(timeLabel);
+
+  var presetsRow = ce('div', 'timeslot-presets-row');
+  var presets = [
+    { label: '🌅 09:00', time: '09:00' },
+    { label: '☀️ 12:30', time: '12:30' },
+    { label: '☕ 15:00', time: '15:00' },
+    { label: '🌆 17:30', time: '17:30' },
+    { label: '🌙 19:30', time: '19:30' },
+    { label: '~ Flexible', time: '~flexible' }
+  ];
+
+  var timeInput = ce('input', 'search-input');
+  timeInput.type = 'text';
+  timeInput.value = '15:00';
+  timeInput.style.maxWidth = '180px';
+  timeInput.style.marginBottom = '6px';
+
+  presets.forEach(function (p) {
+    var pBtn = ce('button', 'timeslot-preset-btn', p.label);
+    pBtn.type = 'button';
+    pBtn.onclick = function () {
+      timeInput.value = p.time;
+      checkConflict();
+    };
+    presetsRow.appendChild(pBtn);
+  });
+  addPane.appendChild(presetsRow);
+  addPane.appendChild(timeInput);
+
+  var conflictBox = ce('div', 'conflict-alert-box');
+  conflictBox.style.display = 'none';
+  addPane.appendChild(conflictBox);
+  modeSection.appendChild(addPane);
+
+  // Replace Mode Pane
+  var replacePane = ce('div', null);
+  replacePane.style.marginTop = '8px';
+  replacePane.style.display = 'none';
+
+  var repLabel = ce('label', 'muted tiny', 'SELECT ACTIVITY TO REPLACE:');
+  repLabel.style.display = 'block';
+  repLabel.style.fontWeight = '700';
+  repLabel.style.marginBottom = '4px';
+  replacePane.appendChild(repLabel);
+
+  var repSelect = ce('select', 'search-input');
+  repSelect.style.width = '100%';
+  replacePane.appendChild(repSelect);
+
+  var repDeltaBox = ce('div', 'card-panel');
+  repDeltaBox.style.background = 'rgba(56, 189, 248, 0.06)';
+  repDeltaBox.style.border = '1px solid rgba(56, 189, 248, 0.25)';
+  repDeltaBox.style.padding = '8px 10px';
+  repDeltaBox.style.marginTop = '8px';
+  replacePane.appendChild(repDeltaBox);
+  modeSection.appendChild(replacePane);
+
+  tabAdd.onclick = function () {
+    currentMode = 'add';
+    tabAdd.className = 'idea-mode-tab active';
+    tabReplace.className = 'idea-mode-tab';
+    addPane.style.display = 'block';
+    replacePane.style.display = 'none';
+    updateFooterBtn();
+  };
+
+  tabReplace.onclick = function () {
+    currentMode = 'replace';
+    tabReplace.className = 'idea-mode-tab active';
+    tabAdd.className = 'idea-mode-tab';
+    addPane.style.display = 'none';
+    replacePane.style.display = 'block';
+    updateReplaceDelta();
+    updateFooterBtn();
+  };
+
+  body.appendChild(modeSection);
+
+  // 4. Budget & Spend Sync Summary
+  var budgetNotice = ce('div', 'card-panel');
+  budgetNotice.style.background = 'rgba(52, 211, 153, 0.08)';
+  budgetNotice.style.border = '1px solid rgba(52, 211, 153, 0.3)';
+  budgetNotice.style.padding = '10px 12px';
+  budgetNotice.style.fontSize = '0.74rem';
+  budgetNotice.innerHTML = '💰 <strong>Spend Sync:</strong> Adding this idea creates/links an itemized expense of <strong>' + sgd(ideaCost) + '</strong> in your <em>Spend</em> tab and updates your day cost.';
+  body.appendChild(budgetNotice);
+
+  // 5. Modal Footer
+  var footer = ce('div', null);
+  footer.style.display = 'flex';
+  footer.style.gap = '8px';
+  footer.style.justifyContent = 'flex-end';
+  footer.style.marginTop = '12px';
+
+  var cancelBtn = ce('button', 'btn btn-secondary small', 'Cancel');
+  cancelBtn.onclick = function () { modal.hidden = true; };
+  footer.appendChild(cancelBtn);
+
+  var confirmBtn = ce('button', 'btn btn-primary small', 'Add to Schedule');
+  footer.appendChild(confirmBtn);
+  body.appendChild(footer);
+
+  function updateFooterBtn() {
+    var targetDay = days[selectedDayIdx];
+    var dayNum = targetDay ? targetDay.day : (selectedDayIdx + 1);
+    if (currentMode === 'replace') {
+      confirmBtn.textContent = '🔄 Replace & Update Day ' + dayNum;
+    } else {
+      confirmBtn.textContent = '➕ Add to Day ' + dayNum;
+    }
+  }
+
+  function checkConflict() {
+    conflictBox.style.display = 'none';
+    clear(conflictBox);
+    var targetDay = days[selectedDayIdx];
+    if (!targetDay || !targetDay.items || !targetDay.items.length) return;
+
+    var val = timeInput.value.trim().toLowerCase();
+    if (!val || val.includes('flexible')) return;
+
+    var matchedItem = null;
+    targetDay.items.forEach(function (act) {
+      var actTime = (act.time || '').toLowerCase();
+      if (actTime && (actTime.includes(val) || val.includes(actTime))) {
+        matchedItem = act;
+      }
+    });
+
+    if (matchedItem) {
+      conflictBox.style.display = 'block';
+      var warnMsg = ce('div', null, '⚠️ <strong>Timeslot Conflict:</strong> "' + escapeHtml(matchedItem.what || matchedItem.title) + '" is already scheduled at ' + escapeHtml(matchedItem.time) + '.');
+      conflictBox.appendChild(warnMsg);
+
+      var switchBtn = ce('button', 'btn btn-secondary small', 'Switch to Replace this activity');
+      switchBtn.style.marginTop = '6px';
+      switchBtn.style.fontSize = '0.70rem';
+      switchBtn.onclick = function () {
+        tabReplace.click();
+        var idxToSelect = targetDay.items.indexOf(matchedItem);
+        if (idxToSelect !== -1) {
+          repSelect.value = String(idxToSelect);
+          updateReplaceDelta();
+        }
+      };
+      conflictBox.appendChild(switchBtn);
+    }
+  }
+
+  timeInput.addEventListener('input', checkConflict);
+
+  function updateReplaceDelta() {
+    clear(repDeltaBox);
+    var targetDay = days[selectedDayIdx];
+    var selIdx = parseInt(repSelect.value, 10);
+    if (isNaN(selIdx) || !targetDay || !targetDay.items || !targetDay.items[selIdx]) {
+      repDeltaBox.innerHTML = '<span class="muted tiny">No activity selected to replace.</span>';
+      return;
+    }
+    var oldAct = targetDay.items[selIdx];
+    var oldCost = Number(oldAct.cost || 0);
+    var delta = ideaCost - oldCost;
+    var deltaSign = delta > 0 ? '+' : '';
+    var deltaBadge = delta === 0 ? '±$0' : (delta > 0 ? '+' + sgd(delta) : '-' + sgd(Math.abs(delta)));
+
+    repDeltaBox.innerHTML = '<div>Replacing: <strong>' + escapeHtml(oldAct.what || oldAct.title) + '</strong> (' + sgd(oldCost) + ')</div>' +
+      '<div>With: <strong>' + escapeHtml(idea.title || idea.name) + '</strong> (' + sgd(ideaCost) + ')</div>' +
+      '<div style="margin-top: 4px; font-weight: 600;">Day Cost Delta: <span class="badge ' + (delta <= 0 ? 'badge-good' : 'badge-warn') + '">' + deltaBadge + '</span></div>';
+  }
+
+  repSelect.addEventListener('change', updateReplaceDelta);
+
+  function renderDaySelection() {
+    clear(daySelector);
+    days.forEach(function (d, idx) {
+      var isMatch = validIndices.includes(idx);
+      var isSel = (idx === selectedDayIdx);
+      var pill = ce('button', 'idea-day-pill' + (isSel ? ' active' : '') + (isMatch ? '' : ' disabled'));
+      pill.type = 'button';
+      pill.innerHTML = '<strong>Day ' + (d.day || idx + 1) + '</strong> <span style="font-size:0.7em;">(' + escapeHtml(d.base || '') + ')</span>';
+
+      if (!isMatch) {
+        pill.title = 'Location mismatch: Idea is in ' + areaStr + ', but Day ' + (d.day || idx + 1) + ' is based in ' + (d.base || 'another area');
+      } else {
+        pill.onclick = function () {
+          selectedDayIdx = idx;
+          renderDaySelection();
+          renderSchedulePreview();
+        };
+      }
+      daySelector.appendChild(pill);
+    });
+  }
+
+  function renderSchedulePreview() {
+    clear(previewBox);
+    clear(repSelect);
+
+    var targetDay = days[selectedDayIdx];
+    if (!targetDay) return;
+
+    var acts = targetDay.items || [];
+    if (!acts.length) {
+      previewBox.appendChild(ce('div', 'muted tiny text-center', 'No activities scheduled yet for this day.'));
+      repSelect.appendChild(new Option('(No activities to replace)', '-1'));
+      repSelect.disabled = true;
+    } else {
+      repSelect.disabled = false;
+      acts.forEach(function (act, aIdx) {
+        var row = ce('div', 'slot-preview-row');
+
+        var left = ce('div', null);
+        left.style.display = 'flex';
+        left.style.alignItems = 'center';
+        left.style.gap = '6px';
+        left.style.minWidth = '0';
+
+        var tSpan = ce('span', 'badge', act.time || '~');
+        tSpan.style.fontSize = '0.66rem';
+        left.appendChild(tSpan);
+
+        var titleSpan = ce('span', null, '<strong>' + escapeHtml(act.what || act.title) + '</strong>');
+        titleSpan.style.whiteSpace = 'nowrap';
+        titleSpan.style.overflow = 'hidden';
+        titleSpan.style.textOverflow = 'ellipsis';
+        left.appendChild(titleSpan);
+
+        row.appendChild(left);
+
+        var right = ce('div', null);
+        right.style.display = 'flex';
+        right.style.alignItems = 'center';
+        right.style.gap = '6px';
+        right.style.flexShrink = '0';
+
+        var costVal = Number(act.cost || 0);
+        right.appendChild(ce('span', 'muted tiny', costVal > 0 ? sgd(costVal) : '—'));
+
+        var quickSwapBtn = ce('button', 'btn-item-action', '🔄');
+        quickSwapBtn.title = 'Replace this activity';
+        quickSwapBtn.onclick = function () {
+          tabReplace.click();
+          repSelect.value = String(aIdx);
+          updateReplaceDelta();
+        };
+        right.appendChild(quickSwapBtn);
+
+        row.appendChild(right);
+        previewBox.appendChild(row);
+
+        // Populate replace dropdown
+        var optLabel = (act.time ? act.time + ' — ' : '') + (act.what || act.title) + ' (' + sgd(costVal) + ')';
+        repSelect.appendChild(new Option(optLabel, String(aIdx)));
+      });
+    }
+
+    checkConflict();
+    updateReplaceDelta();
+    updateFooterBtn();
+  }
+
+  confirmBtn.onclick = function () {
+    var targetDay = days[selectedDayIdx];
+    if (!targetDay) return;
+
+    var dayNum = targetDay.day;
+    var chosenTime = timeInput.value.trim() || '~flexible';
+    var repIdx = parseInt(repSelect.value, 10);
+
+    executeAddIdeaToDay(idea, dayNum, chosenTime, currentMode, repIdx);
+    modal.hidden = true;
+  };
+
+  renderDaySelection();
+  renderSchedulePreview();
+  modal.hidden = false;
+}
+
+function executeAddIdeaToDay(idea, dayNum, chosenTime, actionType, replaceActIndex) {
+  var rawItin = STATE.docs.itinerary;
+  var itinDays = Array.isArray(rawItin) ? rawItin : (rawItin && rawItin.days ? rawItin.days : []);
+  var realDay = itinDays.find(function (d) { return d.day === dayNum; });
+  if (!realDay) {
+    alert('Day ' + dayNum + ' could not be found.');
+    return;
+  }
+  if (!realDay.items) realDay.items = [];
+
+  var newCost = Number(idea.cost_sgd != null ? idea.cost_sgd : (num(idea.cost_estimate) || 0));
+  var newAct = {
+    time: chosenTime || '~flexible',
+    what: idea.title || idea.name,
+    duration: idea.duration || '1-2h',
+    cost: newCost,
+    currency: 'SGD',
+    notes: (idea.why || '') + (idea.tips ? ' · ' + idea.tips : ''),
+    status: 'planned',
+    refs: idea.source_url ? [idea.source_url] : []
+  };
+
+  if (!STATE.docs.expenses) STATE.docs.expenses = { planned: [] };
+  if (!Array.isArray(STATE.docs.expenses.planned)) STATE.docs.expenses.planned = [];
+  var expList = STATE.docs.expenses.planned;
+
+  if (actionType === 'replace' && replaceActIndex >= 0 && replaceActIndex < realDay.items.length) {
+    var oldAct = realDay.items[replaceActIndex];
+    var oldTitle = (oldAct.what || oldAct.title || '').toLowerCase();
+
+    // Replace the activity in schedule
+    realDay.items[replaceActIndex] = newAct;
+
+    // Find if the replaced activity had a linked expense
+    var replacedExp = expList.find(function (exp) {
+      var desc = (exp.description || '').toLowerCase();
+      var lTitle = (exp.linked_title || '').toLowerCase();
+      var matchDay = (exp.day === dayNum || (Array.isArray(exp.days) && exp.days.includes(dayNum)));
+      return matchDay && (desc.includes(oldTitle.slice(0, 15)) || oldTitle.includes(desc.slice(0, 15)) ||
+                          lTitle.includes(oldTitle.slice(0, 15)) || oldTitle.includes(lTitle.slice(0, 15)));
+    });
+
+    if (replacedExp) {
+      replacedExp.description = idea.title + (idea.area ? ' (' + idea.area + ')' : '');
+      replacedExp.amount = newCost;
+      replacedExp.cost_sgd = newCost;
+      replacedExp.linked_type = 'activity';
+      replacedExp.linked_title = idea.title;
+      replacedExp.notes = 'Replaced "' + (oldAct.what || '') + '". ' + (idea.why || '');
+    } else if (newCost > 0) {
+      expList.push({
+        id: 'exp-idea-' + Date.now(),
+        date: 'plan',
+        category: (idea.category && ['food', 'activities', 'transport', 'accommodation'].includes(idea.category.toLowerCase())) ? idea.category.toLowerCase() : 'activities',
+        description: idea.title + (idea.area ? ' (' + idea.area + ')' : ''),
+        amount: newCost,
+        cost_sgd: newCost,
+        currency: 'SGD',
+        day: dayNum,
+        days: [dayNum],
+        split_type: 'shared',
+        is_paid: false,
+        paid_users: {},
+        linked_type: 'activity',
+        linked_title: idea.title,
+        notes: 'Added from curated ideas (replaced ' + (oldAct.what || 'activity') + '): ' + (idea.why || '')
+      });
+    }
+  } else {
+    // Add alongside
+    realDay.items.push(newAct);
+
+    if (newCost > 0) {
+      expList.push({
+        id: 'exp-idea-' + Date.now(),
+        date: 'plan',
+        category: (idea.category && ['food', 'activities', 'transport', 'accommodation'].includes(idea.category.toLowerCase())) ? idea.category.toLowerCase() : 'activities',
+        description: idea.title + (idea.area ? ' (' + idea.area + ')' : ''),
+        amount: newCost,
+        cost_sgd: newCost,
+        currency: 'SGD',
+        day: dayNum,
+        days: [dayNum],
+        split_type: 'shared',
+        is_paid: false,
+        paid_users: {},
+        linked_type: 'activity',
+        linked_title: idea.title,
+        notes: 'Added from curated ideas: ' + (idea.why || '')
+      });
+    }
+  }
+
+  // Recalculate day cost
+  var sumCost = 0;
+  realDay.items.forEach(function (act) {
+    if (act.cost) sumCost += Number(act.cost) || 0;
+  });
+  realDay.day_cost = sumCost;
+  realDay.day_cost_estimate = sumCost;
+
+  // Persist documents
+  saveItineraryDoc();
+  saveExpensesDoc();
+
+  // Re-render active views
+  if (STATE.activeTab === 'itinerary') renderItinerary();
+  else if (STATE.activeTab === 'expenses') renderExpenses();
+  else if (STATE.activeTab === 'recommendations') renderRecommendations();
+
+  showToast('Saved to Day ' + dayNum + ' schedule & synced Spend (' + sgd(newCost) + ')');
+}
+
 function renderRecList(recs, days, container) {
   clear(container);
 
@@ -4520,7 +5292,9 @@ function renderRecList(recs, days, container) {
     var meta = [];
     if (r.area) meta.push('📍 ' + r.area);
     if (r.category) meta.push('🏷 ' + r.category);
-    if (r.cost_estimate) meta.push('💰 ' + r.cost_estimate);
+    var costNum = Number(r.cost_sgd != null ? r.cost_sgd : (num(r.cost_estimate) || 0));
+    meta.push('💰 ' + sgd(costNum));
+    if (r.duration) meta.push('⏱ ' + r.duration);
     card.appendChild(ce('div', 'stay-dates', meta.join(' · ')));
 
     if (r.why) card.appendChild(ce('p', 'small muted', r.why));
@@ -4536,38 +5310,14 @@ function renderRecList(recs, days, container) {
       card.appendChild(a);
     }
 
-    // Interactive "Add to Itinerary Day" dropdown control
-    if (days.length > 0) {
-      var addControl = ce('div', 'add-to-day-control');
-      var sel = ce('select', 'day-select-input');
-      days.forEach(function (d, idx) {
-        var opt = ce('option', null, 'Day ' + (d.day || idx + 1) + ' (' + (d.base || '') + ')');
-        opt.value = idx;
-        sel.appendChild(opt);
-      });
-      addControl.appendChild(sel);
-
-      var btn = ce('button', 'btn-swap', '+ Add to Day');
-      btn.addEventListener('click', function () {
-        var dayIdx = parseInt(sel.value, 10);
-        var targetDay = days[dayIdx];
-        if (targetDay) {
-          if (!targetDay.items) targetDay.items = [];
-          targetDay.items.push({
-            what: r.title || r.name,
-            notes: (r.why || '') + (r.cost_estimate ? ' (' + r.cost_estimate + ')' : ''),
-            time: '~flexible',
-            cost: 0,
-            currency: 'SGD',
-            refs: r.source_url ? [r.source_url] : []
-          });
-          saveItineraryDoc();
-          showToast('Added "' + (r.title || r.name) + '" to Day ' + (targetDay.day || (dayIdx + 1)));
-        }
-      });
-      addControl.appendChild(btn);
-      card.appendChild(addControl);
-    }
+    // Interactive "Add to Day" button
+    var addBtn = ce('button', 'btn-swap', '+ Add to Day');
+    addBtn.type = 'button';
+    addBtn.title = 'Add this spot to an itinerary day schedule';
+    addBtn.addEventListener('click', function () {
+      openAddIdeaToDayModal(r);
+    });
+    card.appendChild(addBtn);
 
     container.appendChild(card);
   });

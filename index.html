@@ -361,6 +361,111 @@
     </div>
   </div>
 
+  <!-- Custom Expense Add / Edit Modal -->
+  <div id="expense-editor-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" style="max-width: 460px;">
+      <div class="modal-header">
+        <div>
+          <h2 id="expense-editor-title" class="modal-title">Add Expense</h2>
+          <p class="muted small" id="expense-editor-sub">Custom itemized planning expense</p>
+        </div>
+        <button class="modal-close-btn" id="expense-editor-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="expense-editor-form" class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="expense-editor-id" value="" />
+        <div>
+          <label class="form-label small">Description / Expense Name *</label>
+          <input type="text" id="expense-editor-desc" class="search-input" placeholder="e.g. eSIM card / Local SIM" required />
+        </div>
+        <div class="form-row-2">
+          <div>
+            <label class="form-label small">Amount (SGD) *</label>
+            <input type="number" id="expense-editor-amount" class="search-input" min="0" step="any" placeholder="e.g. 15" required />
+          </div>
+          <div>
+            <label class="form-label small">Category</label>
+            <select id="expense-editor-category" class="search-input">
+              <option value="misc">Misc / Logistics</option>
+              <option value="food">Food & Drink</option>
+              <option value="activities">Activities & Entry</option>
+              <option value="transport">Local Transport</option>
+              <option value="accommodation">Accommodation</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div>
+            <label class="form-label small">Day Assigned</label>
+            <select id="expense-editor-day" class="search-input">
+              <option value="all">All Days</option>
+              <option value="pre">Pre-trip</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label small">Split Type</label>
+            <select id="expense-editor-split" class="search-input">
+              <option value="shared">Shared (Split between group)</option>
+              <option value="indiv">Individual (Self only)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="form-label small">Planning Notes (Optional)</label>
+          <textarea id="expense-editor-notes" class="search-input" rows="2" placeholder="e.g. Bought via Airalo online, 5GB data"></textarea>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button type="button" id="expense-editor-delete-btn" class="btn btn-danger small" hidden>Delete</button>
+          <button type="button" id="expense-editor-cancel-btn" class="btn btn-secondary small">Cancel</button>
+          <button type="submit" id="expense-editor-save-btn" class="btn btn-primary small">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Packing Item Add / Edit Modal -->
+  <div id="packing-item-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" style="max-width: 440px;">
+      <div class="modal-header">
+        <div>
+          <h2 id="packing-modal-title" class="modal-title">Edit Packing Item</h2>
+          <p class="muted small">Update item name and packing notes</p>
+        </div>
+        <button class="modal-close-btn" id="packing-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="packing-item-form" class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="hidden" id="packing-modal-cat-key" value="" />
+        <input type="hidden" id="packing-modal-item-idx" value="" />
+        <div>
+          <label class="form-label small">Item Title *</label>
+          <input type="text" id="packing-modal-name" class="search-input" placeholder="e.g. Universal travel adapter" required />
+        </div>
+        <div>
+          <label class="form-label small">Details & Packing Notes (Optional)</label>
+          <textarea id="packing-modal-notes" class="search-input" rows="3" placeholder="e.g. Type C / G plugs, bring 2-pin adapter as backup"></textarea>
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button type="button" id="packing-modal-cancel-btn" class="btn btn-secondary small">Cancel</button>
+          <button type="submit" id="packing-modal-save-btn" class="btn btn-primary small">Save Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Interactive Add Idea to Day Modal -->
+  <div id="add-idea-modal" class="modal-backdrop" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" style="max-width: 520px; max-height: 85vh;">
+      <div class="modal-header">
+        <div>
+          <h2 id="add-idea-modal-title" class="modal-title">Add Idea to Day</h2>
+          <p class="muted small" id="add-idea-modal-subtitle">Pick day, inspect schedule, and choose slot</p>
+        </div>
+        <button class="modal-close-btn" id="add-idea-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" id="add-idea-modal-body" style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto;">
+      </div>
+    </div>
+  </div>
+
   <!-- 4. Swap / Add Idea to Itinerary Modal -->
   <div id="swap-idea-modal" class="modal-backdrop" hidden>
     <div class="modal-sheet" role="dialog" aria-modal="true">

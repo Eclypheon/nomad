@@ -12,7 +12,7 @@
       "id": "exp-a1",
       "date": "plan",
       "category": "accommodation",
-      "description": "Hanoi Old Quarter, 1 night 24-25 Dec (acc-003 Peridot Grand; 2,400,000 VND per room \u00f7 2)",
+      "description": "Hanoi Old Quarter, 1 night 24-25 Dec (acc-003 Peridot Grand; 2,400,000 VND per room ÷ 2)",
       "amount": 59,
       "currency": "SGD",
       "paid_by": "shared",
@@ -24,13 +24,15 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 59,
+      "linked_type": "accommodation"
     },
     {
       "id": "exp-a2",
       "date": "plan",
       "category": "accommodation",
-      "description": "Ha Giang city, 1 night 28-29 Dec (acc-015 Yen Bien Luxury Hotel; 1,065,000 VND per room \u00f7 2)",
+      "description": "Ha Giang city, 1 night 28-29 Dec (acc-015 Yen Bien Luxury Hotel; 1,065,000 VND per room ÷ 2)",
       "amount": 26,
       "currency": "SGD",
       "paid_by": "shared",
@@ -42,13 +44,15 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 26,
+      "linked_type": "accommodation"
     },
     {
       "id": "exp-a3",
       "date": "plan",
       "category": "accommodation",
-      "description": "Tam Coc / Ninh Binh, 2 nights 29-31 Dec (acc-010 Tam Coc Garden Resort; 1,170,000 VND per room per night \u00f7 2)",
+      "description": "Tam Coc / Ninh Binh, 2 nights 29-31 Dec (acc-010 Tam Coc Garden Resort; 1,170,000 VND per room per night ÷ 2)",
       "amount": 58,
       "currency": "SGD",
       "paid_by": "shared",
@@ -61,13 +65,15 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 58,
+      "linked_type": "accommodation"
     },
     {
       "id": "exp-a4",
       "date": "plan",
       "category": "accommodation",
-      "description": "Hanoi Old Quarter, 1 night 31 Dec (acc-009 La Siesta Premium Hang Be; 2,860,000 VND per room \u00f7 2)",
+      "description": "Hanoi Old Quarter, 1 night 31 Dec (acc-009 La Siesta Premium Hang Be; 2,860,000 VND per room ÷ 2)",
       "amount": 70,
       "currency": "SGD",
       "paid_by": "shared",
@@ -79,13 +85,15 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 70,
+      "linked_type": "accommodation"
     },
     {
       "id": "exp-t1",
       "date": "plan",
       "category": "activities",
-      "description": "Ha Giang 3-day / 2-night EASY RIDER loop tour, all-inclusive, per person (US$210 \u2248 5,452,000 VND)",
+      "description": "Ha Giang 3-day / 2-night EASY RIDER loop tour, all-inclusive, per person (US$210 ≈ 5,452,000 VND)",
       "amount": 269,
       "currency": "SGD",
       "paid_by": "shared",
@@ -99,7 +107,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 269,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t2",
@@ -117,7 +127,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 37,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t3",
@@ -135,7 +147,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 20,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t4",
@@ -152,7 +166,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 12,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t5",
@@ -170,7 +186,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 7,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t6",
@@ -188,7 +206,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 11,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t7",
@@ -205,7 +225,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 2,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t8",
@@ -223,7 +245,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 2,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t9",
@@ -241,7 +265,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 2,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t10",
@@ -259,7 +285,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 30,
+      "linked_type": "activity"
     },
     {
       "id": "exp-t11",
@@ -277,7 +305,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 5,
+      "linked_type": "activity"
     },
     {
       "id": "exp-f1",
@@ -296,7 +326,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 43,
+      "linked_type": "custom"
     },
     {
       "id": "exp-f2",
@@ -316,7 +348,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 25,
+      "linked_type": "custom"
     },
     {
       "id": "exp-f3",
@@ -335,7 +369,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 59,
+      "linked_type": "custom"
     },
     {
       "id": "exp-f4",
@@ -353,7 +389,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 42,
+      "linked_type": "custom"
     },
     {
       "id": "exp-x1",
@@ -372,7 +410,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 14,
+      "linked_type": "custom"
     },
     {
       "id": "exp-x2",
@@ -390,7 +430,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 17,
+      "linked_type": "custom"
     },
     {
       "id": "exp-x3",
@@ -408,7 +450,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 22,
+      "linked_type": "custom"
     },
     {
       "id": "exp-x4",
@@ -426,7 +470,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 17,
+      "linked_type": "custom"
     },
     {
       "id": "exp-x5",
@@ -444,7 +490,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 7,
+      "linked_type": "custom"
     },
     {
       "id": "exp-x6",
@@ -465,7 +513,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 20,
+      "linked_type": "custom"
     },
     {
       "id": "exp-m1",
@@ -483,7 +533,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 50,
+      "linked_type": "custom"
     },
     {
       "id": "exp-m2",
@@ -501,7 +553,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 15,
+      "linked_type": "custom"
     },
     {
       "id": "exp-m3",
@@ -528,7 +582,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 25,
+      "linked_type": "custom"
     },
     {
       "id": "exp-m4",
@@ -545,7 +601,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 5,
+      "linked_type": "custom"
     },
     {
       "id": "exp-m5",
@@ -562,7 +620,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": 7,
+      "linked_type": "custom"
     },
     {
       "id": "exp-fl1",
@@ -583,7 +643,9 @@
       ],
       "split_type": "shared",
       "is_paid": false,
-      "paid_users": {}
+      "paid_users": {},
+      "cost_sgd": "SGD 450-700 (excluded from the S$1,500/person cap)",
+      "linked_type": "custom"
     }
   ],
   "actuals": []

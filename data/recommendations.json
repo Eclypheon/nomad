@@ -9,7 +9,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/where-to-eat-the-best-pho-bun-cha-and-noodle-soups-in-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-002",
@@ -21,7 +23,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/where-to-eat-the-best-pho-bun-cha-and-noodle-soups-in-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-003",
@@ -33,7 +37,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/where-to-eat-the-best-pho-bun-cha-and-noodle-soups-in-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 4,
+    "duration": "1h"
   },
   {
     "id": "rec-004",
@@ -45,7 +51,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 5,
+    "duration": "1h"
   },
   {
     "id": "rec-005",
@@ -57,7 +65,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-006",
@@ -69,7 +79,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-007",
@@ -81,7 +93,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 7,
+    "duration": "1h"
   },
   {
     "id": "rec-008",
@@ -93,7 +107,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-009",
@@ -105,7 +121,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/where-to-eat-the-best-pho-bun-cha-and-noodle-soups-in-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 5,
+    "duration": "1h"
   },
   {
     "id": "rec-010",
@@ -117,7 +135,9 @@
     "source_url": "https://wanderinvietnam.com/guides/famous-food-in-hanoi-what-to-buy-taste-avoid-in-2026",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 2,
+    "duration": "1h"
   },
   {
     "id": "rec-011",
@@ -129,7 +149,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-012",
@@ -141,7 +163,9 @@
     "source_url": "https://daytripsvietnam.com/guides/vietnam-beer-price-index-2026/",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 1,
+    "duration": "1h"
   },
   {
     "id": "rec-013",
@@ -153,7 +177,9 @@
     "source_url": "https://chrisandwrensworld.com/hanoi-train-street/",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1.5h"
   },
   {
     "id": "rec-014",
@@ -165,7 +191,9 @@
     "source_url": "https://guide.michelin.com/vn/en/article/dining-out/13-bib-gourmand-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "1.5h"
   },
   {
     "id": "rec-015",
@@ -177,7 +205,9 @@
     "source_url": "https://www.mfa.gov.sg/travelling-overseas/travel-advisories-notices-and-visa-information/vietnam/",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "1.5h"
   },
   {
     "id": "rec-016",
@@ -189,7 +219,9 @@
     "source_url": "https://www.bestpricetravel.com/travel-guide/hoa-lo-prison.html",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 2,
+    "duration": "1.5h"
   },
   {
     "id": "rec-017",
@@ -201,7 +233,9 @@
     "source_url": "https://wanderinvietnam.com/guides/famous-food-in-hanoi-what-to-buy-taste-avoid-in-2026",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 4,
+    "duration": "1.5h"
   },
   {
     "id": "rec-018",
@@ -213,7 +247,9 @@
     "source_url": "https://wanderinvietnam.com/guides/street-food-in-hanoi-where-to-eat-what-costs-2026",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-019",
@@ -225,7 +261,9 @@
     "source_url": "https://www.getyourguide.com/explorer/hanoi-ttd205/new-years-eve-in-hanoi/",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "1.5h"
   },
   {
     "id": "rec-020",
@@ -237,7 +275,9 @@
     "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 118,
+    "duration": "Overnight"
   },
   {
     "id": "rec-021",
@@ -249,7 +289,9 @@
     "source_url": "https://hanoitourism.org/old-quarter-accommodation",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 141,
+    "duration": "Overnight"
   },
   {
     "id": "rec-022",
@@ -261,7 +303,9 @@
     "source_url": "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 12,
+    "duration": "2.5h"
   },
   {
     "id": "rec-023",
@@ -273,7 +317,9 @@
     "source_url": "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 10,
+    "duration": "1.5h"
   },
   {
     "id": "rec-024",
@@ -285,7 +331,9 @@
     "source_url": "https://vietpeep.com/ninh-binh-on-a-budget-2026-vietnam-travel-cost-boat-tours-and-homestay-prices",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 10,
+    "duration": "2.5h"
   },
   {
     "id": "rec-025",
@@ -297,7 +345,9 @@
     "source_url": "https://bestofninhbinh.com/ninh-binh-homestay-guide",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 2,
+    "duration": "1.5h"
   },
   {
     "id": "rec-026",
@@ -309,7 +359,9 @@
     "source_url": "https://ninhbinhtouristcenter.com/where-to-taste-ninh-binhs-signature-goat-meat-and-local-cuisine/",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-027",
@@ -321,7 +373,9 @@
     "source_url": "https://www.tripadvisor.com/ShowUserReviews-g12866457-d6780989-r741267040-Father_Cooking_Restaurant-Ninh_Hai_Hoa_Lu_District_Ninh_Binh_Province.html",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1h"
   },
   {
     "id": "rec-028",
@@ -333,7 +387,9 @@
     "source_url": "https://bestofninhbinh.com/best-ninh-binh-hotels",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 58,
+    "duration": "Overnight"
   },
   {
     "id": "rec-029",
@@ -345,7 +401,9 @@
     "source_url": "https://hagiangmotorventures.com/blogs/best-ha-giang-loop-tour-companies-recommendations",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 270,
+    "duration": "3h"
   },
   {
     "id": "rec-030",
@@ -357,7 +415,9 @@
     "source_url": "https://www.lonelyplanet.com/articles/ultimate-itinerary-ha-giang-loop-vietnam",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "1.5h"
   },
   {
     "id": "rec-031",
@@ -369,7 +429,9 @@
     "source_url": "https://hagiangmotorventures.com/blogs/best-ha-giang-loop-tour-companies-recommendations",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "2.5h"
   },
   {
     "id": "rec-032",
@@ -381,7 +443,9 @@
     "source_url": "https://www.lonelyplanet.com/articles/ultimate-itinerary-ha-giang-loop-vietnam",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "1.5h"
   },
   {
     "id": "rec-033",
@@ -393,7 +457,9 @@
     "source_url": "https://vietnam.travel/things-to-do/local-unpacked-one-kind-cuisine-ha-giang-karst-plateau",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "1.5h"
   },
   {
     "id": "rec-034",
@@ -405,7 +471,9 @@
     "source_url": "https://www.timeout.com/asia/news/ha-giang-loop-permits-what-travellers-need-to-know-before-riding-vietnams-famous-mountain-route-061426",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1.5h"
   },
   {
     "id": "rec-035",
@@ -417,7 +485,9 @@
     "source_url": "https://hagiangmotorventures.com/blogs/best-ha-giang-loop-tour-companies-recommendations",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "3h"
   },
   {
     "id": "rec-036",
@@ -429,7 +499,9 @@
     "source_url": "https://vietnam.travel/things-to-do/local-unpacked-one-kind-cuisine-ha-giang-karst-plateau",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 2,
+    "duration": "1h"
   },
   {
     "id": "rec-037",
@@ -441,7 +513,9 @@
     "source_url": "https://www.handspan.com/en/foods-in-ha-giang.html",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 2,
+    "duration": "1h"
   },
   {
     "id": "rec-038",
@@ -453,7 +527,9 @@
     "source_url": "https://www.handspan.com/en/foods-in-ha-giang.html",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 2,
+    "duration": "1h"
   },
   {
     "id": "rec-039",
@@ -465,7 +541,9 @@
     "source_url": "https://vietnam.travel/things-to-do/local-unpacked-one-kind-cuisine-ha-giang-karst-plateau",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "1h"
   },
   {
     "id": "rec-040",
@@ -477,7 +555,9 @@
     "source_url": "https://vietdovetravel.com/the-best-homestays-and-hotels-in-ha-giang-for-2025",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 53,
+    "duration": "Overnight"
   },
   {
     "id": "rec-041",
@@ -489,7 +569,9 @@
     "source_url": "https://wherebest.com/en/top10-hotels-ha-giang",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 32,
+    "duration": "Overnight"
   },
   {
     "id": "rec-042",
@@ -501,7 +583,9 @@
     "source_url": "https://vietnamtourism.com/en/hanoi-to-ha-giang-3-routes-compared-sleeper-bus-limousine-van-private-car",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 22,
+    "duration": "1.5h"
   },
   {
     "id": "rec-043",
@@ -513,7 +597,9 @@
     "source_url": "https://vietnamspot.ru/en/blog/ninh-binh-transport",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 17,
+    "duration": "1.5h"
   },
   {
     "id": "rec-044",
@@ -525,7 +611,9 @@
     "source_url": "https://breezevietnam.com/noi-bai-airport-to-hanoi",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 2,
+    "duration": "1.5h"
   },
   {
     "id": "rec-045",
@@ -537,7 +625,9 @@
     "source_url": "https://spendsanity.com/vietnam/hanoi/airport-transfer",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 19,
+    "duration": "1.5h"
   },
   {
     "id": "rec-046",
@@ -549,7 +639,9 @@
     "source_url": "https://hagiangtrips.com/pages/ha-giang-border-permit",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 14,
+    "duration": "1.5h"
   },
   {
     "id": "rec-047",
@@ -561,7 +653,9 @@
     "source_url": "https://aas.com.sg/idp-carnet/",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 4,
+    "duration": "1.5h"
   },
   {
     "id": "rec-048",
@@ -573,7 +667,9 @@
     "source_url": "https://vietnam.gov.vn/visa-exemption-68946",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 0,
+    "duration": "1.5h"
   },
   {
     "id": "rec-049",
@@ -585,7 +681,9 @@
     "source_url": "https://vietnamspot.ru/en/blog/hanoi-hotels",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 141,
+    "duration": "Overnight"
   },
   {
     "id": "rec-050",
@@ -597,6 +695,8 @@
     "source_url": "https://wwwnc.cdc.gov/travel/destinations/traveler/none/vietnam",
     "added_by": "mugger",
     "added_at": "2026-10-07",
-    "status": "idea"
+    "status": "idea",
+    "cost_sgd": 3,
+    "duration": "1.5h"
   }
 ]

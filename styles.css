@@ -1315,12 +1315,12 @@ p { margin: 0 0 10px; }
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: auto;
-  max-height: calc(100vh - var(--header-total-height) - var(--nav-bottom-height) - 90px);
-  max-height: calc(100dvh - var(--header-total-height) - var(--nav-bottom-height) - 90px);
+  max-height: calc(100vh - var(--header-total-height) - var(--nav-bottom-height) - 130px);
+  max-height: calc(100dvh - var(--header-total-height) - var(--nav-bottom-height) - 130px);
   box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
 }
 
 /* Table Toolbar (Orientation Switcher, PDF Export, Add Item) */
@@ -1847,17 +1847,19 @@ p { margin: 0 0 10px; }
     border-radius: 0 !important;
     border-left: none !important;
     border-right: none !important;
-    max-height: calc(100vh - var(--header-total-height) - var(--nav-bottom-height) - env(safe-area-inset-bottom, 0px) - 80px);
-    max-height: calc(100dvh - var(--header-total-height) - var(--nav-bottom-height) - env(safe-area-inset-bottom, 0px) - 80px);
-    min-height: 350px;
+    max-height: calc(100vh - var(--header-total-height) - var(--nav-bottom-height) - env(safe-area-inset-bottom, 0px) - 120px);
+    max-height: calc(100dvh - var(--header-total-height) - var(--nav-bottom-height) - env(safe-area-inset-bottom, 0px) - 120px);
+    min-height: 320px;
+    overscroll-behavior: auto;
   }
 }
 
 @media (min-width: 769px) {
   .glance-table-container {
-    max-height: calc(100vh - var(--header-total-height) - 180px);
-    max-height: calc(100dvh - var(--header-total-height) - 180px);
-    min-height: 420px;
+    max-height: calc(100vh - var(--header-total-height) - 200px);
+    max-height: calc(100dvh - var(--header-total-height) - 200px);
+    min-height: 380px;
+    overscroll-behavior: auto;
   }
 }
 
@@ -2249,27 +2251,27 @@ p { margin: 0 0 10px; }
 }
 
 /* ==========================================================================
-   Packing Tab: Interactive Add, Edit & Delete
+   Packing Tab: Compact Single-Line Items & Expandable Notes
    ========================================================================== */
 .packing-cat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
-  margin-bottom: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
 }
 .btn-cat-add-item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: rgba(56, 189, 248, 0.15);
   color: var(--primary);
   border: 1px solid rgba(56, 189, 248, 0.35);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2278,21 +2280,94 @@ p { margin: 0 0 10px; }
   background: var(--primary);
   color: #fff;
 }
+.packing-compact-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: background 0.12s ease;
+}
+.packing-compact-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+.packing-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.packing-check-box {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-focus);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.packing-compact-row.done .packing-check-box {
+  background: var(--good);
+  border-color: var(--good);
+  color: #fff;
+}
+.packing-item-title {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+}
+.packing-compact-row.done .packing-item-title {
+  text-decoration: line-through;
+  color: var(--fg-muted);
+}
+.packing-item-title:hover {
+  color: var(--primary);
+}
+.packing-has-notes {
+  font-size: 0.65rem;
+  color: var(--primary);
+  opacity: 0.8;
+  margin-left: 4px;
+}
+.packing-item-details-expanded {
+  font-size: 0.70rem;
+  color: var(--fg-muted);
+  padding: 2px 4px 4px 26px;
+  line-height: 1.35;
+  background: rgba(255, 255, 255, 0.015);
+  border-radius: var(--radius-sm);
+  margin-top: 2px;
+}
 .packing-item-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   margin-left: auto;
+  flex-shrink: 0;
 }
 .btn-item-action {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   color: var(--fg-muted);
   padding: 2px 4px;
   border-radius: 3px;
   transition: all 0.12s ease;
+  line-height: 1;
 }
 .btn-item-action:hover {
   color: var(--fg);
@@ -2301,6 +2376,147 @@ p { margin: 0 0 10px; }
 .btn-item-action.delete:hover {
   color: var(--bad);
 }
+
+/* ==========================================================================
+   Spend Tab: Editable Cost & Custom Expense Controls
+   ========================================================================== */
+.compact-expense-cost.editable {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 2px 5px;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+.compact-expense-cost.editable:hover {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+.btn-add-expense {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--primary);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-add-expense:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ==========================================================================
+   Ideas Tab: Add to Day Schedule Preview & Slot Picker
+   ========================================================================== */
+.idea-day-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.idea-day-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.74rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-card-subtle);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.idea-day-pill.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+.idea-day-pill.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+.day-schedule-preview {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  margin: 10px 0;
+  font-size: 0.75rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.slot-preview-row {
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.slot-preview-row:last-child { border-bottom: none; }
+.conflict-alert-box {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 0.74rem;
+  color: #fbbf24;
+  margin: 8px 0;
+}
+.timeslot-presets-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+.timeslot-preset-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 0.70rem;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.timeslot-preset-btn:hover, .timeslot-preset-btn.active {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.idea-mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 6px;
+}
+.idea-mode-tab {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--fg-muted);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.12s ease;
+}
+.idea-mode-tab.active {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 
 /* ==========================================================================
    AI Trip Generator & Structured JSON IO Styles
