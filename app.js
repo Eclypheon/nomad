@@ -418,36 +418,14 @@ function doGoogleSignIn() {
   var waitCard = $('#oauth-waiting-card');
   var waitTitle = $('#oauth-waiting-title');
   var waitSub = $('#oauth-waiting-sub');
-  var blockedBtn = $('#oauth-blocked-btn');
   var errBox = $('#auth-form-error');
 
   if (errBox) errBox.hidden = true;
-  if (blockedBtn) blockedBtn.hidden = true;
   if (waitTitle) waitTitle.textContent = 'Authorizing with Google...';
   if (waitSub) waitSub.textContent = 'Complete sign-in in the secure prompt window.';
   if (waitCard) waitCard.hidden = false;
 
-  TripAuth.signIn({
-    onPopupBlocked: function (url) {
-      if (waitTitle) waitTitle.textContent = 'Pop-up was blocked';
-      if (waitSub) waitSub.textContent = 'Your browser blocked the Google sign-in window. Click below to proceed:';
-      if (blockedBtn) {
-        blockedBtn.hidden = false;
-        blockedBtn.onclick = function () {
-          window.open(url, 'pb_google_auth', 'width=520,height=640,resizable=yes,scrollbars=yes');
-        };
-      }
-    },
-    onPopupClosed: function () {
-      if (waitCard && !waitCard.hidden) {
-        waitCard.hidden = true;
-        if (errBox) {
-          errBox.textContent = 'Google sign-in window was closed.';
-          errBox.hidden = false;
-        }
-      }
-    }
-  }).then(function (res) {
+  TripAuth.signIn().then(function (res) {
     closeSignInModal();
     showToast('Signed in successfully!');
   }).catch(function (e) {

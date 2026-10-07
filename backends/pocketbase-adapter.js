@@ -74,7 +74,15 @@ function msg(e) {
       if (f && f.message) return keys[i] + ': ' + f.message;
     }
   }
-  return e.message || e.msg || e.error_description || e.details || String(e);
+  var orig = '';
+  if (e.originalError) {
+    orig = e.originalError.message || (typeof e.originalError === 'string' ? e.originalError : '');
+  }
+  var m = e.message || e.msg || e.error_description || e.details;
+  if (orig && (!m || m === 'Something went wrong.' || m.indexOf('ClientResponseError') !== -1)) {
+    return orig;
+  }
+  return m || orig || String(e);
 }
 function err(message, code) {
   var e = new Error(message);
@@ -252,98 +260,32 @@ function restoreSession() {
 
 /* ------------------------------------------------------------------- auth */
 
-function signIn(options) {
+function signIn() {
   if (!isConfigured()) return Promise.reject(notConfigured());
-  options = options || {};
 
-  var w = 520, h = 640;
-  var left = Math.max(0, Math.round((window.screen.width - w) / 2));
-  var top = Math.max(0, Math.round((window.screen.height - h) / 2));
-  var popup = null;
-
-  try {
-    popup = window.open('about:blank', 'pb_google_auth',
-      'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',resizable=yes,scrollbars=yes');
-  } catch (e) {
-    popup = null;
+  var p = ST.pb;
+  if (!p && global.PocketBase) {
+    p = ST.pb = new global.PocketBase(BASE);
   }
 
-  var closedCheckInterval = null;
-
-  function closePopup() {
-    if (closedCheckInterval) {
-      clearInterval(closedCheckInterval);
-      closedCheckInterval = null;
-    }
-    if (popup) {
-      try {
-        if (!popup.closed) popup.close();
-      } catch (e) {}
-      popup = null;
-    }
-  }
-
-  // Monitor if user closes popup manually before auth completes
-  if (popup) {
-    closedCheckInterval = setInterval(function () {
-      try {
-        if (popup && popup.closed) {
-          clearInterval(closedCheckInterval);
-          closedCheckInterval = null;
-          if (typeof options.onPopupClosed === 'function') {
-            options.onPopupClosed();
-          }
-        }
-      } catch (e) {}
-    }, 800);
-  }
-
-  return pb().then(function (p) {
-    return p.collection('users').authWithOAuth2({
-      provider: PROVIDER,
-      urlCallback: function (url) {
-        var navigated = false;
-
-        if (popup) {
-          try {
-            popup.location.href = url;
-            try { popup.focus(); } catch (e) {}
-            navigated = true;
-          } catch (e) {
-            navigated = false;
-          }
-        }
-
-        if (!navigated) {
-          try {
-            popup = window.open(url, 'pb_google_auth',
-              'width=' + w + ',height=' + h + ',top=' + top + ',left=' + left + ',resizable=yes,scrollbars=yes');
-            if (popup) {
-              try { popup.focus(); } catch (e) {}
-              navigated = true;
-            }
-          } catch (e) {
-            navigated = false;
-          }
-        }
-
-        // CRITICAL SAFETY: The main Nomad tab must NEVER navigate to url (window.location.href = url).
-        // If the browser popup blocker intercepted the popup, notify the caller to show an inline button.
-        if (!navigated && typeof options.onPopupBlocked === 'function') {
-          options.onPopupBlocked(url);
-        }
-      }
+  function executeAuth(client) {
+    client.autoCancellation(false);
+    return client.collection('users').authWithOAuth2({
+      provider: PROVIDER
     }).then(function (res) {
-      closePopup();
       setUser(userFrom(res && res.record));
       return res;
     }, function (e) {
-      closePopup();
+      console.error('[Nomad Auth Error]:', e);
       throw friendly(e);
     });
-  }).catch(function (e) {
-    closePopup();
-    throw friendly(e);
+  }
+
+  if (p) {
+    return executeAuth(p);
+  }
+  return pb().then(function (p2) {
+    return executeAuth(p2);
   });
 }
 function signInWithPassword(identity, password) {
