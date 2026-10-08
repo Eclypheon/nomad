@@ -4325,38 +4325,61 @@ function renderExpenses() {
     var table = ce('div', 'compact-expense-table');
     filtered.forEach(function (it) {
       var row = ce('div', 'compact-expense-row');
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
       row.title = 'Click to view full details';
       row.addEventListener('click', function () {
         openExpenseDetailModal(it);
       });
+      row.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openExpenseDetailModal(it);
+        }
+      });
 
-      var left = ce('div', 'compact-expense-left');
+      // Row 1: Dedicated Full-width Title of the expense
+      var titleRow = ce('div', 'compact-expense-title-row');
+      var titleText = it.description || it.item || it.name || it.category || 'Expense';
+      var titleEl = ce('div', 'compact-expense-name', titleText);
+      titleEl.title = titleText;
+      titleRow.appendChild(titleEl);
+      row.appendChild(titleRow);
+
+      // Row 2: Details / Notes & Links
+      var detailsRow = ce('div', 'compact-expense-details-row');
+      var subMeta = [];
+      if (it.linked_title) {
+        subMeta.push('🔗 ' + it.linked_title);
+      }
+      if (it.notes) {
+        subMeta.push(it.notes);
+      }
+      if (subMeta.length === 0) {
+        subMeta.push('Planned ' + (it.category || 'expense') + ' · Tap for full details');
+      }
+      var detailText = subMeta.join(' · ');
+      var detailEl = ce('div', 'compact-expense-details-text', detailText);
+      detailEl.title = detailText;
+      detailsRow.appendChild(detailEl);
+      row.appendChild(detailsRow);
+
+      // Row 3: Pills, tags & amount
+      var metaRow = ce('div', 'compact-expense-meta-row');
+
+      // Left: Category badge + Day badge
+      var metaLeft = ce('div', 'compact-expense-meta-left');
       var catLabel = it.category ? it.category.slice(0, 4).toUpperCase() : 'MISC';
-      left.appendChild(ce('span', 'compact-expense-cat', catLabel));
+      metaLeft.appendChild(ce('span', 'compact-expense-cat', catLabel));
 
       var dShort = getExpenseDayShort(it);
       if (dShort) {
-        left.appendChild(ce('span', 'compact-expense-day', dShort));
+        metaLeft.appendChild(ce('span', 'compact-expense-day', dShort));
       }
+      metaRow.appendChild(metaLeft);
 
-      var info = ce('div', null);
-      info.style.minWidth = '0';
-      info.style.overflow = 'hidden';
-      info.appendChild(ce('div', 'compact-expense-name', it.description || it.item || it.name || it.category));
-
-      var subMeta = [];
-      if (it.notes) subMeta.push(it.notes.slice(0, 40) + (it.notes.length > 40 ? '...' : ''));
-      if (subMeta.length > 0) {
-        var subDiv = ce('div', 'muted tiny', subMeta.join(' · '));
-        subDiv.style.textOverflow = 'ellipsis';
-        subDiv.style.overflow = 'hidden';
-        subDiv.style.whiteSpace = 'nowrap';
-        info.appendChild(subDiv);
-      }
-      left.appendChild(info);
-      row.appendChild(left);
-
-      var right = ce('div', 'compact-expense-right');
+      // Right: Cost + Split pill + Paid pill
+      var metaRight = ce('div', 'compact-expense-meta-right');
 
       var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
       var costEl = ce('div', 'compact-expense-cost editable', cost != null ? sgd(cost) : '—');
@@ -4365,7 +4388,7 @@ function renderExpenses() {
         e.stopPropagation();
         openEditExpenseAmountModal(it);
       });
-      right.appendChild(costEl);
+      metaRight.appendChild(costEl);
 
       var isShared = (it.split_type || 'shared').toLowerCase() === 'shared';
       var splitBtn = ce('button', 'expense-pill ' + (isShared ? 'pill-shared' : 'pill-indiv'), isShared ? 'Shared' : 'Indiv');
@@ -4374,7 +4397,7 @@ function renderExpenses() {
         e.stopPropagation();
         toggleExpenseSplit(it);
       });
-      right.appendChild(splitBtn);
+      metaRight.appendChild(splitBtn);
 
       var isPaid = isExpensePaidForCurrentUser(it);
       var paidBtn = ce('button', 'expense-pill ' + (isPaid ? 'pill-paid' : 'pill-unpaid'), isPaid ? '✓ Paid' : 'Unpaid');
@@ -4383,9 +4406,11 @@ function renderExpenses() {
         e.stopPropagation();
         toggleExpensePaid(it);
       });
-      right.appendChild(paidBtn);
+      metaRight.appendChild(paidBtn);
 
-      row.appendChild(right);
+      metaRow.appendChild(metaRight);
+      row.appendChild(metaRow);
+
       table.appendChild(row);
     });
     listCard.appendChild(table);
