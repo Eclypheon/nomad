@@ -5482,46 +5482,50 @@ function renderRecList(recs, days, container) {
     mainRow.setAttribute('aria-expanded', 'false');
     mainRow.title = 'Click to view / hide details';
 
-    var content = ce('div', 'idea-row-content');
+    var rowText = ce('div', 'idea-row-text');
 
-    // 1. Title
-    var title = ce('span', 'idea-title', r.title || r.name || 'Idea');
+    // 1. Title (Row 1)
+    var title = ce('div', 'idea-title', r.title || r.name || 'Idea');
     title.title = r.title || r.name || 'Idea';
-    content.appendChild(title);
+    rowText.appendChild(title);
 
-    // 2. Location
+    // 2. Tags Row (Row 2)
+    var tagsRow = ce('div', 'idea-tags-row');
+
+    // Location
     var locText = r.area || r.location || '';
     if (locText) {
       var locTag = ce('span', 'idea-tag idea-tag-loc', '📍 ' + locText);
       locTag.title = 'Location: ' + locText;
-      content.appendChild(locTag);
+      tagsRow.appendChild(locTag);
     }
 
-    // 3. Category
+    // Category
     var catText = r.category || '';
     if (catText) {
       var catTag = ce('span', 'idea-tag idea-tag-cat', '🏷️ ' + catText);
       catTag.title = 'Category: ' + catText;
-      content.appendChild(catTag);
+      tagsRow.appendChild(catTag);
     }
 
-    // 4. Price
+    // Price
     var costNum = parseVndCostToSgd(r.cost_estimate, r.cost_sgd);
     r.cost_sgd = costNum;
     var priceLabel = costNum > 0 ? sgd(costNum) : 'Free';
     var priceTag = ce('span', 'idea-tag idea-tag-price', '💰 ' + priceLabel);
     priceTag.title = 'Est. Price: ' + priceLabel + (r.cost_estimate ? ' (' + r.cost_estimate + ')' : '');
-    content.appendChild(priceTag);
+    tagsRow.appendChild(priceTag);
 
-    // 5. Duration
+    // Duration
     var durText = r.duration || '1h';
     var durTag = ce('span', 'idea-tag idea-tag-dur', '⏱️ ' + durText);
     durTag.title = 'Duration: ' + durText;
-    content.appendChild(durTag);
+    tagsRow.appendChild(durTag);
 
-    mainRow.appendChild(content);
+    rowText.appendChild(tagsRow);
+    mainRow.appendChild(rowText);
 
-    // 6. Action: "+" Button at end of the line
+    // 3. Action: "+" Button at end of the row
     var addBtn = ce('button', 'btn-idea-add-act', '+');
     addBtn.type = 'button';
     addBtn.title = 'Add to itinerary day';
