@@ -1,1 +1,8 @@
 .DS_Store
+
+# Rendered media (regenerate with tools/trip_video.py; too large for git)
+data/exports/
+
+# Python bytecode
+__pycache__/
+*.pyc

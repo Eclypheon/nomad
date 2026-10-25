@@ -1,0 +1,403 @@
+{
+ "schema": "nomad.trip.video.v1",
+ "slug": "vietnam-2026",
+ "title": "Northern Vietnam",
+ "subtitle": "Christmas to New Year · 9 days · 2 travellers",
+ "currency": "S$",
+ "dates": {
+  "start": "2026-12-24",
+  "end": "2027-01-01",
+  "dates_label": "24 Dec 2026 — 1 Jan 2027 (9 days)"
+ },
+ "flights": {
+  "status": "FLIGHTS — NOT YET BOOKED",
+  "from_name": "SIN  Changi",
+  "to_name": "HAN  Noi Bai",
+  "duration": "3h20m  non-stop",
+  "carriers": "Scoot · VietJet · Vietnam Airlines · Singapore Airlines",
+  "fare": "S$450–700 return per person — peak week, book 1–2 weeks out",
+  "dates_label": "24 Dec 2026 — 1 Jan 2027 (9 days)"
+ },
+ "expenses": "≈ S$883 per person on the ground (S$1,500 cap, flights excluded)",
+ "highlights": [
+  "Ha Giang loop by bike",
+  "Mã Pì Lèng pass",
+  "Ninh Bình karst"
+ ],
+ "intro_beats": [
+  {
+   "text": "Changi to Noi Bai, non-stop, three hours twenty. Scoot, VietJet, Vietnam Airlines or Singapore Airlines all fly it, and Singapore passports enter visa-free for thirty days. Return fares in this week run four hundred and fifty to seven hundred Singapore dollars, and nothing is booked yet — lock the flights first. Here is the trip they hang off.",
+   "focus": "title"
+  }
+ ],
+ "outro": {
+  "heading": "The budget",
+  "text": "Nine days, eight nights, about eight hundred and eighty Singapore dollars per person on the ground, inside a fifteen hundred cap that excludes flights. Book the flights first, then the bike and the permit, then the holiday hotels. Log what you spend as you go — these daily figures are the plan, not the bill."
+ },
+ "days": [
+  {
+   "n": 1,
+   "date": "2026-12-24",
+   "date_label": "24 Dec",
+   "base": "Hanoi",
+   "title": "Arrival + the Old Quarter on foot",
+   "cost": 90,
+   "caveat": "Flights NOT YET BOOKED — S$450–700 return",
+   "transit_note": null,
+   "bullets": [
+    "Changi → Noi Bai (HAN)",
+    "Old Quarter · Hoàn Kiếm",
+    "First pho, bún chả"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "Day one. Changi to Noi Bai, then straight into the Old Quarter on foot — Hoan Kiem first, the lake the city is built around, and the red bridge to the temple island.",
+     "at": "Hanoi",
+     "image": "Hoàn Kiếm Lake",
+     "caption": "Hoàn Kiếm Lake"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "St Joseph's Cathedral at dusk: neo-Gothic, peeling, and the streets around it are where the coffee and the crowds are.",
+     "at": "Hanoi",
+     "image": "St. Joseph's Cathedral, Hanoi",
+     "caption": "St Joseph's Cathedral"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Then Dong Xuan market and a plastic stool — first pho, a cold beer, an early night. Nothing else is planned on purpose: the jet lag is real.",
+     "at": "Hanoi",
+     "image": "Đồng Xuân Market",
+     "caption": "Đồng Xuân Market"
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "date": "2026-12-25",
+   "date_label": "25 Dec",
+   "base": "Hanoi",
+   "title": "Christmas Day in the Old Quarter: Temple of Literature, egg coffee, Long Biên Bridge at sunset",
+   "cost": 69,
+   "caveat": null,
+   "transit_note": null,
+   "bullets": [
+    "Temple of Literature",
+    "Hỏa Lò Prison · egg coffee",
+    "Long Biên Bridge → sleeper bus"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "Christmas Day starts at the Temple of Literature, Vietnam's first university, a thousand years old and quiet if you are there at opening.",
+     "at": "Hanoi",
+     "image": "Temple of Literature, Hanoi",
+     "caption": "Temple of Literature"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Hoa Lo Prison in the afternoon — the Hanoi Hilton — with a street-food walk for lunch in between, and egg coffee somewhere on the way.",
+     "at": "Hanoi",
+     "image": "Hỏa Lò Prison",
+     "caption": "Hỏa Lò Prison"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Long Bien Bridge at golden hour for the classic photograph, then pack a small bag and take the sleeper bus north at nine.",
+     "at": "Hanoi",
+     "image": "Long Biên Bridge",
+     "caption": "Long Biên Bridge"
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "date": "2026-12-26",
+   "date_label": "26 Dec",
+   "base": "Ha Giang",
+   "title": "Loop day 1: Ha Giang → Quản Bạ 'Heaven's Gate' → Thẩm Mã pass → Yên Minh",
+   "cost": 277,
+   "caveat": "Self-ride: SG licence + IDP not valid in VN",
+   "transit_note": "Hà Nội → Hà Giang · 290 km · ~4h",
+   "bullets": [
+    "Hà Nội → Hà Giang (290 km)",
+    "Bike rental + Quản Bạ",
+    "Border permit · licence"
+   ],
+   "beats": [
+    {
+     "kind": "transit",
+     "bullet": 0,
+     "text": "Day three is the transfer: two hundred and ninety kilometres north out of the delta, four hours by limousine van, and the mountains start before Ha Giang.",
+     "leg": [
+      "Hanoi",
+      "Ha Giang"
+     ]
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "In Ha Giang city you collect the bike — a 125cc semi-automatic, brakes, tyres, lights and helmet all checked before you pay — then ride up to Quan Ba's Heaven's Gate.",
+     "at": "Quan Ba",
+     "image": "Quản Bạ District",
+     "caption": "Quản Bạ 'Heaven's Gate'"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Confirm the border permit and the rental paperwork before you ride: the checkpoints are real, and a Singapore licence with an IDP is not valid here — unlicensed means uninsured.",
+     "at": "Ha Giang"
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "date": "2026-12-27",
+   "date_label": "27 Dec",
+   "base": "Ha Giang",
+   "title": "Loop day 2",
+   "cost": 11,
+   "caveat": null,
+   "transit_note": "Đồng Văn → Mèo Vạc · 22 km over Mã Pì Lèng",
+   "bullets": [
+    "Đồng Văn Sunday market",
+    "Mã Pì Lèng pass",
+    "Nho Quế river boat"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "Dong Van on a Sunday: the market, the H'mong King's Palace, and the stone houses of the old town.",
+     "at": "Dong Van"
+    },
+    {
+     "kind": "transit",
+     "bullet": 1,
+     "text": "Then Ma Pi Leng pass — twenty kilometres cut into the cliff above the Nho Que river, and the best road in the country.",
+     "leg": [
+      "Dong Van",
+      "Meo Vac"
+     ],
+     "image": "Mã Pí Lèng Pass",
+     "caption": "Mã Pì Lèng Pass"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Take the boat through the gorge if the water is up, then sleep in Meo Vac with the pass behind you.",
+     "at": "Meo Vac",
+     "image": "Nho Quế River",
+     "caption": "Nho Quế river"
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "date": "2026-12-28",
+   "date_label": "28 Dec",
+   "base": "Ha Giang",
+   "title": "Loop day 3: Mèo Vạc → Dữ Già → back to Ha Giang city",
+   "cost": 74,
+   "caveat": null,
+   "transit_note": "Mèo Vạc → Hà Giang · 154 km",
+   "bullets": [
+    "Mèo Vạc → Hà Giang",
+    "Return the bike",
+    "Early van next morning"
+   ],
+   "beats": [
+    {
+     "kind": "transit",
+     "bullet": 0,
+     "text": "Loop day three: back through Du Gia and its waterfalls, the long way down to Ha Giang city.",
+     "leg": [
+      "Meo Vac",
+      "Ha Giang"
+     ],
+     "image": "Mèo Vạc",
+     "caption": "Mèo Vạc"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Hot shower, laundry, thang co for dinner, and hand the bike back with the tank filled.",
+     "at": "Ha Giang"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Sleep early. The van leaves at half past seven and the next day is all road.",
+     "at": "Ha Giang"
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "date": "2026-12-29",
+   "date_label": "29 Dec",
+   "base": "Ninh Binh (Tam Coc)",
+   "title": "Transit day: Ha Giang → Hanoi → Tam Coc",
+   "cost": 93,
+   "caveat": null,
+   "transit_note": "Hà Giang → Hà Nội · 290 km",
+   "bullets": [
+    "Hà Giang → Hà Nội",
+    "Hà Nội → Tam Coc",
+    "Karst sunset · thịt dê"
+   ],
+   "beats": [
+    {
+     "kind": "transit",
+     "bullet": 0,
+     "text": "Transit day, and the least glamorous one: Ha Giang down to Hanoi, then change vans.",
+     "leg": [
+      "Ha Giang",
+      "Hanoi"
+     ]
+    },
+    {
+     "kind": "transit",
+     "bullet": 1,
+     "text": "South again to Tam Coc — the karst starts at the window before you arrive.",
+     "leg": [
+      "Hanoi",
+      "Tam Coc"
+     ],
+     "image": "Ninh Bình",
+     "caption": "Ninh Bình"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Sunset over the paddies from the homestay roof, mountain goat for dinner. Book the vans a day ahead: the Hanoi change is what goes wrong.",
+     "at": "Tam Coc",
+     "image": "Bái Đính Temple",
+     "caption": "Bái Đính"
+    }
+   ]
+  },
+  {
+   "n": 7,
+   "date": "2026-12-30",
+   "date_label": "30 Dec",
+   "base": "Ninh Binh (Tam Coc)",
+   "title": "Hang Mua sunrise over Tam Coc",
+   "cost": 91,
+   "caveat": null,
+   "transit_note": null,
+   "bullets": [
+    "Hang Mua sunrise",
+    "Tràng An boat",
+    "Bích Động by bicycle"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "Up before six for Hang Mua: five hundred stone steps to the dragon, and the best photograph of the trip looking down the river.",
+     "at": "Tam Coc"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Then the long Trang An boat through the caves — two to three hours, and the short loop skips the best cave.",
+     "at": "Tam Coc",
+     "image": "Tràng An",
+     "caption": "Tràng An"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Bicycles out to Bich Dong in the afternoon, golden hour over the rice on the way back.",
+     "at": "Tam Coc",
+     "image": "Bái Đính Temple",
+     "caption": "Bái Đính Temple"
+    }
+   ]
+  },
+  {
+   "n": 8,
+   "date": "2026-12-31",
+   "date_label": "31 Dec",
+   "base": "Hanoi",
+   "title": "Tam Coc boat at first light → Hanoi by late afternoon → NYE fireworks over Hoan Kiem Lake",
+   "cost": 159,
+   "caveat": null,
+   "transit_note": "Tam Coc → Hà Nội · 102 km",
+   "bullets": [
+    "Tam Coc boat at first light",
+    "Back to Hà Nội",
+    "NYE fireworks, Hoan Kiem"
+   ],
+   "beats": [
+    {
+     "kind": "transit",
+     "bullet": 0,
+     "text": "New Year's Eve. A quiet boat at first light in Tam Coc, then the road back to Hanoi.",
+     "leg": [
+      "Tam Coc",
+      "Hanoi"
+     ]
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Check in, eat early in the Old Quarter, and be at Hoan Kiem for midnight. The crowd is thick: pick a side and stay put.",
+     "at": "Hanoi",
+     "image": "Hoàn Kiếm Lake",
+     "caption": "Hoàn Kiếm, NYE"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Fireworks over the lake at midnight sharp, then walk back. Book the New Year hotel before October, because the Old Quarter fills.",
+     "at": "Hanoi",
+     "image": "Hanoi Opera House",
+     "caption": "Hanoi Opera House"
+    }
+   ]
+  },
+  {
+   "n": 9,
+   "date": "2027-01-01",
+   "date_label": "1 Jan",
+   "base": "Hanoi",
+   "title": "Out",
+   "cost": 19,
+   "caveat": null,
+   "transit_note": "Hà Nội → Nội Bài · 26 km",
+   "bullets": [
+    "Old Quarter → Noi Bai",
+    "Three hours before",
+    "1 Jan public holiday"
+   ],
+   "beats": [
+    {
+     "kind": "transit",
+     "bullet": 0,
+     "text": "And out: Noi Bai, twenty-five kilometres, half an hour on a good morning — leave three hours before the flight.",
+     "leg": [
+      "Hanoi",
+      "Noi Bai"
+     ],
+     "image": "Noi Bai International Airport",
+     "caption": "Noi Bai (HAN)"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "The first of January is a public holiday, so the airport is as busy as it gets. Keep the onward ticket on your phone, because the airline will ask.",
+     "at": "Noi Bai"
+    }
+   ]
+  }
+ ]
+}

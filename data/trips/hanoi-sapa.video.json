@@ -1,0 +1,299 @@
+{
+ "schema": "nomad.trip.video.v1",
+ "slug": "hanoi-sapa-2026",
+ "source": {
+  "bundle": "data/trips/hanoi-sapa-2026.bundle.json",
+  "pocketbase_record": "s2v2jd5685ccp95"
+ },
+ "title": "Hanoi + Sapa",
+ "subtitle": "24–29 Dec 2026 · 6 days · 5 nights · 2 travellers",
+ "currency": "S$",
+ "dates": {
+  "start": "2026-12-24",
+  "end": "2026-12-29",
+  "dates_label": "24–29 Dec 2026 (6 days / 5 nights)"
+ },
+ "flights": {
+  "status": "FLIGHTS — NOT YET BOOKED",
+  "from_name": "SIN  Changi",
+  "to_name": "HAN  Noi Bai",
+  "duration": "3h20m  non-stop",
+  "carriers": "Out 24 Dec 08:00 · return 29 Dec 16:00 · Scoot / VietJet / Vietnam Airlines",
+  "fare": "S$620 return for 2 pax (S$310 each) — book 6–8 weeks ahead",
+  "dates_label": "24–29 Dec 2026 (6 days / 5 nights)"
+ },
+ "expenses": "Planned S$2,285 for two, cap S$2,500 — flights included",
+ "highlights": [
+  "Old Quarter + water puppets",
+  "Fansipan cable car",
+  "Trek Lao Chải → Tả Van"
+ ],
+ "intro_beats": [
+  {
+   "text": "Hanoi and Sapa, six days over Christmas, two travellers. Two nights in the Old Quarter, two in the mountains.",
+   "focus": "title"
+  },
+  {
+   "text": "Changi to Noi Bai at eight on the twenty-fourth, back at four on the twenty-ninth — about six hundred and twenty dollars return for two.",
+   "focus": "flights"
+  },
+  {
+   "text": "Two thousand two hundred and eighty-five dollars planned for two, flights included, inside a twenty-five hundred cap.",
+   "focus": "cost"
+  },
+  {
+   "text": "The Old Quarter: pho, egg coffee, water puppets, bia hoi on Ta Hien.",
+   "focus": "highlight0"
+  },
+  {
+   "text": "Fansipan at three thousand one hundred and forty-three metres, if the cloud lifts.",
+   "focus": "highlight1"
+  },
+  {
+   "text": "And the Muong Hoa valley, trekking Lao Chai to Ta Van.",
+   "focus": "highlight2"
+  }
+ ],
+ "outro": {
+  "heading": "The budget",
+  "text": "Two thousand two hundred and eighty-five dollars for two, inside a twenty-five hundred cap. Book flights and the Fansipan ticket first, then check the Sapa forecast the week you go — late December is fog season."
+ },
+ "days": [
+  {
+   "n": 1,
+   "date": "2026-12-24",
+   "date_label": "24 Dec",
+   "base": "Hanoi",
+   "title": "Arrival, lake walk and water puppets",
+   "cost": 390,
+   "caveat": "Flights NOT YET BOOKED — 6–8 weeks ahead",
+   "bullets": [
+    "SIN 08:00 → HAN 10:30",
+    "Hoàn Kiếm + Ngọc Sơn",
+    "Water puppets · Tạ Hiện"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "The eight o'clock flight lands at half ten; Grab to the Old Quarter, beef pho by one.",
+     "at": "Hanoi",
+     "image": "Noi Bai International Airport",
+     "caption": "Noi Bai → Old Quarter"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Hoan Kiem and Ngoc Son temple, then egg coffee at Cafe Giang.",
+     "at": "Hanoi",
+     "image": "Hoàn Kiếm Lake",
+     "caption": "Hoàn Kiếm · Ngọc Sơn"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Water puppets at seven, then bia hoi and skewers on Ta Hien.",
+     "at": "Hanoi",
+     "image": "Water puppetry",
+     "caption": "Thang Long water puppets"
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "date": "2026-12-25",
+   "date_label": "25 Dec",
+   "base": "Hanoi",
+   "title": "Temples, museums and a food crawl",
+   "cost": 115,
+   "bullets": [
+    "Temple of Literature",
+    "Bún chả · Ethnology",
+    "Food walk · rooftop"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "Christmas is a working day here. Temple of Literature at half eight, then the Imperial Citadel.",
+     "at": "Hanoi",
+     "image": "Temple of Literature, Hanoi",
+     "caption": "Temple of Literature"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Banh cuon first, bun cha at Huong Lien, Museum of Ethnology in the afternoon.",
+     "at": "Hanoi",
+     "image": "Vietnam Museum of Ethnology",
+     "caption": "Museum of Ethnology"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Tran Quoc Pagoda at sunset, then a food walk and rooftop drinks over the lake.",
+     "at": "Hanoi",
+     "image": "West Lake (Hanoi)",
+     "caption": "West Lake"
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "date": "2026-12-26",
+   "date_label": "26 Dec",
+   "base": "Sapa",
+   "title": "Limousine north, town orientation",
+   "cost": 85,
+   "transit_note": "Hà Nội → Sa Pa · ~5h30 limousine · 06:30",
+   "bullets": [
+    "Limousine 06:30 → Sapa",
+    "Pistachio Hotel, Cầu Mây",
+    "Night market · rooftop"
+   ],
+   "beats": [
+    {
+     "kind": "transit",
+     "bullet": 0,
+     "text": "The six-thirty limousine north, five and a half hours, and the temperature drops the whole way.",
+     "leg": [
+      "Hanoi",
+      "Sa Pa"
+     ]
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Check in at the Pistachio on Cau May, salmon pho, then the lake and town viewpoint.",
+     "at": "Sa Pa",
+     "image": "Sa Pa",
+     "caption": "Sa Pa"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Night market for skewers, rooftop pool, early night.",
+     "at": "Sa Pa"
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "date": "2026-12-27",
+   "date_label": "27 Dec",
+   "base": "Sapa",
+   "title": "Fansipan, then the Mường Hoa valley",
+   "cost": 195,
+   "caveat": "Fog is common — the cable car can be a white-out",
+   "bullets": [
+    "Fansipan cable car 08:00",
+    "Trek Lao Chải → Tả Van",
+    "Salmon hotpot"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "Cable car at eight, up to three thousand one hundred and forty-three metres before the queues.",
+     "at": "Fansipan",
+     "image": "Lào Cai Province",
+     "caption": "Fansipan cable car"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Then the trek from Lao Chai to Ta Van, through the Muong Hoa valley.",
+     "at": "Sa Pa"
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Salmon hotpot, and the craft brewery for a nightcap.",
+     "at": "Sa Pa"
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "date": "2026-12-28",
+   "date_label": "28 Dec",
+   "base": "Hanoi",
+   "title": "Hidden trail, then back to Hanoi",
+   "cost": 120,
+   "transit_note": "Sa Pa → Hà Nội · ~5h30 limousine · 12:30",
+   "bullets": [
+    "Y Linh Ho trail",
+    "Limousine back 12:30",
+    "Bánh mì · Hồ Gươm at night"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "Early on the hidden trail to Y Linh Ho, below the tourist path.",
+     "at": "Sa Pa"
+    },
+    {
+     "kind": "transit",
+     "bullet": 1,
+     "text": "Check out at eleven; the twelve-thirty limousine back to Hanoi by half six.",
+     "leg": [
+      "Sa Pa",
+      "Hanoi"
+     ]
+    },
+    {
+     "kind": "place",
+     "bullet": 2,
+     "text": "Banh Mi 25 for dinner, then Hoan Kiem at night and one last egg coffee.",
+     "at": "Hanoi",
+     "image": "Hoàn Kiếm Lake",
+     "caption": "Hồ Gươm at night"
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "date": "2026-12-29",
+   "date_label": "29 Dec",
+   "base": "Hanoi",
+   "title": "Mausoleum morning, market run, flight home",
+   "cost": 400,
+   "caveat": "Leave 3h before the flight",
+   "bullets": [
+    "Mausoleum complex",
+    "Đồng Xuân · last bánh mì",
+    "HAN 16:00 → SIN"
+   ],
+   "beats": [
+    {
+     "kind": "place",
+     "bullet": 0,
+     "text": "The Ho Chi Minh Mausoleum complex early, before the queues.",
+     "at": "Hanoi",
+     "image": "Ho Chi Minh Mausoleum",
+     "caption": "Hồ Chí Minh Mausoleum"
+    },
+    {
+     "kind": "place",
+     "bullet": 1,
+     "text": "Dong Xuan market, a last banh mi, and a Grab to Noi Bai at half one.",
+     "at": "Hanoi",
+     "image": "Đồng Xuân Market",
+     "caption": "Đồng Xuân Market"
+    },
+    {
+     "kind": "transit",
+     "bullet": 2,
+     "text": "Three hours before the four o'clock flight; Changi by nine.",
+     "leg": [
+      "Hanoi",
+      "Noi Bai"
+     ],
+     "image": "Noi Bai International Airport",
+     "caption": "Noi Bai (HAN)"
+    }
+   ]
+  }
+ ]
+}

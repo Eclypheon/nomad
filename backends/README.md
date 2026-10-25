@@ -36,6 +36,7 @@ An adapter registers itself as `window.TripBackends.<id>` and implements:
 | `signIn()` / `signOut()` | `Promise` |
 | `listTrips()` | `Promise<[{id,slug,name,currency,travellers,owner_id}]>` — **only trips this user may see** |
 | `openTrip(key)` | `Promise<{trip, docs, members, role, canEdit}>`; `key` is a trip id or a share link / `#trip=…`; `docs` is `{trip,itinerary,accommodation,expenses,packing,recommendations,decisions}` of parsed JSON; reject with `code === 'not_found'` when the trip does not exist **or is not shared with this user** |
+| `deleteTrip(tripId)` | `Promise` — the owner deletes the trip; the server cascades its documents, memberships and invitations (`pb_hooks/20_cascade_trip_delete.pb.js`) |
 | `pendingInvites()` | `Promise<[{id,trip,trip_title,role,invited_email}]>` — invitations addressed to *my* email, not yet accepted |
 | `acceptInvite(invite)` | `Promise` — the invitee joining (creates their own membership row) |
 | `invite(tripId, email)` | `Promise` — owner only; role is not a parameter (see below) |

@@ -38,7 +38,7 @@ var STATE = {
   expandedNightGroups: {},     /* { [groupId]: boolean } for collapsed alternatives */
   expenseSort: 'cost-desc',    /* 'cost-desc', 'cost-asc', 'cat', 'name' */
   expenseFilterCat: 'all',     /* 'all', 'accommodation', 'transport', 'food', 'activities', 'misc' */
-  recLocation: 'all',          /* 'all', 'Hanoi', 'Ha Giang', 'Ninh Binh' */
+  recLocation: 'all',          /* 'all' plus the location labels found in the ideas pool */
   activeTripId: null,
   trips: [],
   trip: null,               /* active trip record */
@@ -84,8 +84,22 @@ function money(n, cur) {
 }
 function sgd(n) { return money(n, 'S$'); }
 
-var VND_PER_SGD = 20285;
+/* The currency local prices are quoted in: the trip's own, else the trip currency. */
+function getLocalCurrency() {
+  var t = STATE.docs.trip || STATE.trip || {};
+  return t.local_currency || t.local_currency_code || t.currency || 'SGD';
+}
+
+/* Rate of the trip's local currency per SGD unit. Read from the trip when it
+   says so; the VND rate is only the fallback for trips that never declared one. */
+function localRatePerSgd() {
+  var t = STATE.docs.trip || STATE.trip || {};
+  var exp = STATE.docs.expenses || {};
+  return num(t.local_currency_per_sgd || exp.local_currency_per_sgd) || 20285;
+}
+
 function parseVndCostToSgd(costEstimate, existingCostSgd) {
+  var VND_PER_SGD = localRatePerSgd();
   var numVal = typeof existingCostSgd === 'number' ? existingCostSgd : num(existingCostSgd);
   if (numVal != null && numVal >= 0 && numVal <= 1000) {
     return numVal;
@@ -163,8 +177,6 @@ function applyDecisionsToSchedule(days) {
   var decBoatPick = getActivePick('dec-boat');
   var decFoodPick = getActivePick('dec-food');
   var decTransitPick = getActivePick('dec-transit-29');
-  var decLoopStartPick = getActivePick('dec-loop-start');
-  var decLoopLengthPick = getActivePick('dec-loop-length');
   var decBudgetPick = getActivePick('dec-budget');
   var decSplurgePick = getActivePick('dec-splurge');
 
@@ -661,32 +673,22 @@ function getTravellersData() {
   try {
     var raw = localStorage.getItem('nomad_travellers_override_' + (STATE.activeTripId || 'default'));
     if (raw) return JSON.parse(raw);
-  } catch (e) {}
+  } catch {}
+  var curUser = (TripAuth.status && TripAuth.status().user) || STATE.user || null;
   return {
     my_passport: {
-      full_name: 'Kester Neo',
+      full_name: (curUser && curUser.name) || '',
+      email: (curUser && curUser.email) || '',
       passport_number: '',
-      nationality: 'Singapore',
+      nationality: '',
       date_of_birth: '',
       expiry_date: '',
       emergency_contact_name: '',
       emergency_contact_phone: '',
-      notes: 'Singapore passport holders enter Vietnam visa-free for up to 30 days.'
+      notes: ''
     },
-    companions: [
-      {
-        id: 'comp-1',
-        full_name: 'Accompanying Traveller',
-        relationship: 'Companion',
-        passport_number: '',
-        nationality: 'Singapore',
-        date_of_birth: '',
-        expiry_date: '',
-        emergency_contact_name: '',
-        emergency_contact_phone: '',
-        notes: '6+ months validity upon entry required'
-      }
-    ]
+    companions: [],
+    members_passports: {}
   };
 }
 
@@ -705,7 +707,7 @@ function initAuth() {
     if (!incomingTrip) {
       var hashMatch = window.location.hash.match(/(?:trip|join)=([^&]+)/);
       if (hashMatch) {
-        try { incomingTrip = decodeURIComponent(hashMatch[1]); } catch (_) { incomingTrip = hashMatch[1]; }
+        try { incomingTrip = decodeURIComponent(hashMatch[1]); } catch { incomingTrip = hashMatch[1]; }
       }
     }
     if (incomingTrip) {
@@ -782,7 +784,7 @@ function renderLandingInviteBanner() {
     pendingTrip = (sessionStorage && sessionStorage.getItem('nomad_pending_join')) ||
                   (localStorage && localStorage.getItem('nomad_pending_join')) || '';
     pendingTrip = pendingTrip.trim();
-  } catch (_) {}
+  } catch {}
   var banner = $('#landing-invite-banner');
   if (banner) {
     banner.hidden = !pendingTrip;
@@ -1373,7 +1375,7 @@ function openSignInModal() {
     pendingTrip = (sessionStorage && sessionStorage.getItem('nomad_pending_join')) ||
                   (localStorage && localStorage.getItem('nomad_pending_join')) || '';
     pendingTrip = pendingTrip.trim();
-  } catch (_) {}
+  } catch {}
   var inviteBadge = $('#signin-invite-badge');
   if (inviteBadge) {
     inviteBadge.hidden = !pendingTrip;
@@ -1402,7 +1404,7 @@ function doGoogleSignIn() {
   if (waitSub) waitSub.textContent = 'Complete sign-in in the secure prompt window.';
   if (waitCard) waitCard.hidden = false;
 
-  TripAuth.signIn().then(function (res) {
+  TripAuth.signIn().then(function () {
     closeSignInModal();
     showToast('Signed in successfully!');
   }).catch(function (e) {
@@ -1535,31 +1537,60 @@ function calculateDecisionsDelta() {
   return delta;
 }
 
+/* Every expense is either a total for the whole party ('party', the default)
+   or an amount per traveller ('pax'). Budget caps are per traveller. */
+function getTravellerCount() {
+  var t = STATE.docs.trip || STATE.trip || {};
+  var n = Number(t.travellers || 0);
+  if (n > 0) return n;
+  return Math.max(1, getTripTravellersList().length);
+}
+
+function getExpenseBasis(it) {
+  return (it && String(it.per || it.basis || '').toLowerCase() === 'pax') ? 'pax' : 'party';
+}
+
+function expenseAmount(it) {
+  return num(it.amount != null ? it.amount : (it.cost_sgd != null ? it.cost_sgd : (it.amount_sgd != null ? it.amount_sgd : it.cost)));
+}
+
+function expensePartyTotal(it, pax) {
+  var c = expenseAmount(it);
+  if (c == null) return null;
+  return getExpenseBasis(it) === 'pax' ? c * pax : c;
+}
+
 function calculateBudget() {
   var t = STATE.docs.trip || STATE.trip || {};
-  var cap = num(t.budget_cap != null ? t.budget_cap : (t.budget_per_person || t.budget || 1500));
+  var exp = STATE.docs.expenses || {};
+  var pax = getTravellerCount();
+  /* per-traveller cap; every planned item is normalised to a party total */
+  var cap = num(t.budget_per_person || t.budget_cap || t.budget || exp.budget_cap || 1500);
 
   var items = getExpensesPlanned();
   var base = 0;
   if (items.length > 0) {
     items.forEach(function (it) {
-      var c = num(it.amount != null ? it.amount : (it.cost_sgd != null ? it.cost_sgd : (it.amount_sgd != null ? it.amount_sgd : it.cost)));
+      var c = expensePartyTotal(it, pax);
       if (c != null) base += c;
     });
-  } else if (!STATE.trip || STATE.trip.name === 'Vietnam Christmas & New Year' || (t.destination || '').toLowerCase().includes('vietnam')) {
-    base = 978; // Standard baseline if uncalculated on Vietnam trip
   }
 
   var delta = calculateDecisionsDelta();
   var netPlanned = Math.max(0, base + delta);
-  var headroom = cap != null ? Math.max(0, cap - netPlanned) : null;
+  var capTotal = cap * pax;
+  var headroom = Math.max(0, capTotal - netPlanned);
 
   return {
     cap: cap,
+    capTotal: capTotal,
+    pax: pax,
     base: base,
     delta: delta,
     net: netPlanned,
-    headroom: headroom
+    netPerPax: netPlanned / pax,
+    headroom: headroom,
+    headroomPerPax: headroom / pax
   };
 }
 
@@ -1620,7 +1651,6 @@ function getCleanDestination(t) {
   if (!t) return 'Nomad Trip';
   var raw = (t.destination && t.destination !== t.title ? t.destination : '') || t.city || t.title || t.name || t.destination || '';
   raw = String(raw).trim();
-  if (/vietnam/i.test(raw)) return 'Vietnam';
   if (raw.includes('—')) raw = raw.split('—')[0].trim();
   if (raw.includes('–')) raw = raw.split('–')[0].trim();
   if (raw.includes('-')) raw = raw.split('-')[0].trim();
@@ -1647,10 +1677,7 @@ function renderTripBanner() {
   if (!startStr) startStr = t.start_date || t.start || '';
   if (!endStr) endStr = t.end_date || t.end || '';
 
-  // Default fallback for Vietnam trip
-  if (!startStr && /vietnam/i.test(dest)) startStr = '2026-12-24';
-  if (!endStr && /vietnam/i.test(dest)) endStr = '2027-01-01';
-
+  // No date on the itinerary or the trip record: say so rather than invent one
   var datesStr = '';
   if (startStr && endStr) {
     datesStr = formatDdMmm(startStr) + ' to ' + formatDdMmm(endStr);
@@ -1679,13 +1706,51 @@ function renderTripBanner() {
 function openTripModal() {
   var formBox = $('#new-trip-form-box');
   if (formBox) formBox.hidden = true;
+  renderTripCards();
+  $('#trip-modal').hidden = false;
+}
 
+/* Deletes the trip on the backend — documents, memberships and invitations go
+   with it (server-side cascade). Owner only; members see no button. */
+function deleteTrip(tripId, tripName) {
+  if (!confirm('Delete "' + (tripName || 'this trip') + '" for good?\n\nIts itinerary, stays, expenses, packing list and memberships are deleted from the database. This cannot be undone.')) return;
+  showLoading('Deleting trip...');
+  TripAuth.deleteTrip(tripId).then(function () {
+    STATE.trips = (STATE.trips || []).filter(function (t) { return t.id !== tripId; });
+    var wasActive = STATE.activeTripId === tripId;
+    if (wasActive) {
+      STATE.activeTripId = null;
+      STATE.trip = null;
+      STATE.docs = {};
+      localStorage.removeItem(LS_ACTIVE_TRIP);
+    }
+    hideLoading();
+    showToast('🗑️ Deleted "' + (tripName || 'trip') + '"');
+    renderTripCards();
+    if (wasActive) {
+      if (STATE.trips.length) loadUserTrips();
+      else {
+        closeTripModal();
+        renderEmptyTripsView();
+      }
+    }
+  }, function (e) {
+    hideLoading();
+    alert('Could not delete the trip: ' + ((e && e.message) || e));
+  });
+}
+
+function renderTripCards() {
   var list = $('#trips-list-container');
   clear(list);
+  var me = (TripAuth.status() || {}).user || {};
 
   STATE.trips.forEach(function (t) {
+    var isOwner = t.owner_id === me.id;
     var card = ce('div', 'trip-pick-card' + (t.id === STATE.activeTripId ? ' active' : ''));
     var info = ce('div');
+    info.style.flex = '1';
+    info.style.minWidth = '0';
     info.appendChild(ce('div', 'trip-pick-name', t.name || t.title || 'Untitled Trip'));
     var sub = [];
     if (t.start_date) sub.push(formatDdMmm(t.start_date));
@@ -1693,9 +1758,20 @@ function openTripModal() {
     info.appendChild(ce('div', 'trip-pick-dates', sub.join(' · ')));
     card.appendChild(info);
 
-    var badge = ce('span', 'badge ' + (t.owner_id === (TripAuth.status().user || {}).id ? 'badge-good' : ''),
-      t.owner_id === (TripAuth.status().user || {}).id ? 'Owner' : 'Member');
+    var badge = ce('span', 'badge ' + (isOwner ? 'badge-good' : ''), isOwner ? 'Owner' : 'Member');
     card.appendChild(badge);
+
+    if (isOwner) {
+      var delBtn = ce('button', 'btn-icon-danger tiny', '🗑️');
+      delBtn.type = 'button';
+      delBtn.title = 'Delete this trip';
+      delBtn.style.marginLeft = '6px';
+      delBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        deleteTrip(t.id, t.name || t.title);
+      });
+      card.appendChild(delBtn);
+    }
 
     card.addEventListener('click', function () {
       closeTripModal();
@@ -1703,9 +1779,8 @@ function openTripModal() {
     });
     list.appendChild(card);
   });
-
-  $('#trip-modal').hidden = false;
 }
+
 function closeTripModal() { $('#trip-modal').hidden = true; }
 
 function updateAiKeyStatusBadge() {
@@ -1739,7 +1814,7 @@ function openUserModal(user) {
     box.appendChild(circle);
   }
 
-  var currentName = (user && user.name && user.name !== user.email) ? user.name : ((user && user.id && localStorage.getItem('nomad_custom_username_' + user.id)) || (user && user.email ? user.email.split('@')[0] : 'Kester'));
+  var currentName = (user && user.name && user.name !== user.email) ? user.name : ((user && user.id && localStorage.getItem('nomad_custom_username_' + user.id)) || (user && user.email ? user.email.split('@')[0] : 'Traveller'));
   $('#user-modal-name').textContent = currentName;
   $('#user-modal-email').textContent = (user && user.email) || '';
 
@@ -2115,12 +2190,17 @@ function renderFlippedMatrix(table, days) {
     } else if (ds.day.transit && ds.day.transit.toLowerCase().includes('sleeper')) {
       var busPill = ce('div', 'glance-stay-pill pill-type-stay');
       busPill.appendChild(ce('span', null, '🚌 Sleeper Bus'));
-      var busLink = ce('a', 'glance-booking-link', '12Go ↗');
-      busLink.href = 'https://12go.asia/en/travel/hanoi/ha-giang';
-      busLink.target = '_blank';
-      busLink.rel = 'noopener';
-      busLink.addEventListener('click', function (e) { e.stopPropagation(); });
-      busPill.appendChild(busLink);
+      var busItem = (ds.day.items || []).find(function (it) {
+        return /(sleeper|bus|train|limousine)/i.test((it.what || '') + ' ' + (it.notes || '')) && it.booking_url;
+      });
+      if (busItem) {
+        var busLink = ce('a', 'glance-booking-link', (busItem.booking_platform || 'Book') + ' ↗');
+        busLink.href = busItem.booking_url;
+        busLink.target = '_blank';
+        busLink.rel = 'noopener';
+        busLink.addEventListener('click', function (e) { e.stopPropagation(); });
+        busPill.appendChild(busLink);
+      }
       box.appendChild(busPill);
     }
 
@@ -2791,8 +2871,46 @@ function renderSwapIdeasList(filterText, filterCategory) {
 }
 
 /* ==========================================================================
-   2. ACCOMMODATION TAB (Route at a Glance & 23-Stay Directory)
+   2. ACCOMMODATION TAB (Route at a Glance & Stay Directory)
    ========================================================================== */
+
+/* A route built from the trip's own itinerary: one leg per day, carrying that
+   day's base and lodging. Used when a trip has no accommodation.route (a trip
+   made by hand, or one an AI did not fill in) so no trip ever inherits another
+   trip's hotels. */
+function deriveRouteFromItinerary(stays) {
+  var days = getItineraryDays();
+  var route = [];
+
+  days.forEach(function (d, i) {
+    var n = d.day || (i + 1);
+    var base = d.base || d.location || '';
+    var lodging = d.lodging || '';
+    var lLow = lodging.toLowerCase();
+    var bLow = base.toLowerCase();
+
+    var stay = stays.find(function (s) {
+      var sName = (s.name || s.hotel || '').toLowerCase();
+      if (sName.length > 3 && (lLow.includes(sName.slice(0, 10)) || sName.includes(lLow.slice(0, 10)))) return true;
+      var sCity = (s.city || s.area || s.location || '').toLowerCase();
+      return sCity.length > 3 && bLow.indexOf(sCity.split(/[^a-z0-9]+/)[0]) !== -1;
+    });
+
+    route.push({
+      id: 'leg-' + n,
+      stayId: stay ? stay.id : null,
+      nights: d.date ? ('Night ' + n + ' (' + formatDdMmm(d.date) + ')') : ('Night ' + n),
+      city: base || lodging || '—',
+      hotelName: lodging || (stay && (stay.name || stay.hotel)) || 'Not decided yet',
+      rate: stay ? (stay.price_sgd != null ? sgd(stay.price_sgd) + ' / night' : (stay.price_local || '—')) : '—',
+      status: (stay && stay.status) ? (stay.status.charAt(0).toUpperCase() + stay.status.slice(1)) : 'Planned',
+      notes: (stay && stay.notes) || '',
+      alts: []
+    });
+  });
+
+  return route;
+}
 
 function getPlannedRoute() {
   var docAcc = STATE.docs.accommodation;
@@ -2812,187 +2930,9 @@ function getPlannedRoute() {
     return copyRoute;
   }
 
-  var decNyePick = getActivePick('dec-nye') || 'opt-hanoi-nye';
-  var decRidePick = getActivePick('dec-ride');
-  var decTransitPick = getActivePick('dec-transit-29');
-  var decSplurgePick = getActivePick('dec-splurge');
-  var decDatesPick = getActivePick('dec-dates');
-
-  var route = [
-    {
-      id: 'leg-1',
-      stayId: 'acc-003',
-      nights: 'Night 1 (24–25 Dec)',
-      city: 'Hanoi Old Quarter',
-      hotelName: 'Peridot Grand Hotel & Spa',
-      rate: '2,400,000 VND (~S$ 59/person)',
-      status: 'Planned',
-      notes: 'Christmas Eve peak window: 300m from Hoan Kiem, inner courtyard, spa. Book 2-4 weeks out.',
-      alts: ['acc-001 (La Siesta Splurge)', 'acc-002 (Emerald Waters)', 'acc-006 (Hanoi Pearl)']
-    },
-    {
-      id: 'leg-2',
-      stayId: null,
-      nights: 'Night 2 (25–26 Dec)',
-      city: 'Hanoi → Ha Giang (Transit)',
-      hotelName: '21:00 Sleeper Bus to Ha Giang',
-      rate: 'Included in Transit Leg',
-      status: 'Planned',
-      notes: 'Overnight sleeper berth; hotel stores bags during the day after morning checkout.',
-      alts: ['Daytime limousine van on 26 Dec (see dec-loop-start)']
-    },
-    {
-      id: 'leg-3',
-      stayId: 'acc-018',
-      nights: 'Night 3 (26–27 Dec)',
-      city: 'Ha Giang Loop (Quản Bạ)',
-      hotelName: 'Dao Lodge Nam Dam / H\'Mong Village Resort',
-      rate: 'Included in Easy Rider Tour',
-      status: 'Planned',
-      notes: 'Mountain homestay dinner, clay lodge, herbal footbath, corn wine.',
-      alts: ['acc-018 H\'Mong Village Resort', 'acc-022 Dao Lodge Nam Dam']
-    },
-    {
-      id: 'leg-4',
-      stayId: 'acc-019',
-      nights: 'Night 4 (27–28 Dec)',
-      city: 'Ha Giang Loop (Đồng Văn / Mèo Vạc)',
-      hotelName: 'Auberge de Meo Vac / Ancient Town Guesthouse',
-      rate: 'Included in Easy Rider Tour',
-      status: 'Planned',
-      notes: 'Century-old H\'Mong stone architecture at the gateway to Mã Pí Lèng pass.',
-      alts: ['acc-019 Ancient Town Guesthouse', 'acc-020 Lo Lo Eco Lodge']
-    },
-    {
-      id: 'leg-5',
-      stayId: 'acc-023',
-      nights: 'Night 5 (28–29 Dec)',
-      city: 'Ha Giang City',
-      hotelName: 'Yen Bien Luxury Hotel',
-      rate: '1,065,000 VND (~S$ 26/person)',
-      status: 'Planned',
-      notes: 'Post-loop reset night: rooftop pool, river view, laundry before 10h transit.',
-      alts: ['acc-016 P\'apiu Resort (Ultra Splurge)', 'acc-017 Ha Giang Historic Hotel']
-    },
-    {
-      id: 'leg-6',
-      stayId: 'acc-015',
-      nights: 'Nights 6–7 (29–31 Dec)',
-      city: 'Tam Coc / Ninh Binh (2 nights)',
-      hotelName: 'Tam Coc Garden Resort',
-      rate: '1,170,000 VND / night (~S$ 29/person)',
-      status: 'Planned',
-      notes: 'Surrounded by limestone karst & paddies; 10 min bicycle from Tam Coc boat dock.',
-      alts: ['acc-014 Tam Coc Sunshine Homestay (Budget ~S$9)', 'acc-011 Emeralda Resort']
-    },
-    {
-      id: 'leg-7',
-      stayId: 'acc-009',
-      nights: 'Night 8 (31 Dec – 1 Jan)',
-      city: 'Hanoi Old Quarter',
-      hotelName: 'Hanoi La Siesta Premium Hang Be',
-      rate: '2,860,000 VND (~S$ 70/person)',
-      status: 'Planned',
-      notes: 'New Year\'s Eve lake fireworks: within 300m walking distance so no taxis needed after midnight.',
-      alts: ['acc-006 Hanoi Pearl (Fallback -S$19)', 'acc-004 O\'Gallery Premier', 'Tam Coc NYE (see dec-nye)']
-    },
-    {
-      id: 'leg-8',
-      stayId: null,
-      nights: 'Day 9 (1 Jan)',
-      city: 'Flight HAN → SIN',
-      hotelName: 'Noi Bai International Airport (HAN)',
-      rate: 'Outbound Flight',
-      status: 'Planned',
-      notes: 'Direct flight back to Singapore Changi.',
-      alts: []
-    }
-  ];
-
-  if (decRidePick === 'opt-self-ride' || decRidePick === 'opt-ride-self-drive') {
-    if (route[2]) {
-      route[2].rate = '125cc Bike Rental & Homestay (~S$ 18)';
-      route[2].notes = 'Self-ride night 1: traditional stilt house homestay (family dinner & breakfast included).';
-    }
-    if (route[3]) {
-      route[3].rate = '125cc Bike Rental & Homestay (~S$ 18)';
-      route[3].notes = 'Self-ride night 2: Đồng Văn / Mèo Vạc homestay (family dinner & breakfast included).';
-    }
-  }
-
-  if (decTransitPick === 'opt-skip-reset-night') {
-    if (route[4]) {
-      route[4].stayId = null;
-      route[4].city = 'Ha Giang → Tam Coc (Transit)';
-      route[4].hotelName = '21:00 Overnight Sleeper Bus Ha Giang → Tam Coc';
-      route[4].rate = 'Included in Transit Leg (~S$ 17)';
-      route[4].notes = 'Skip Ha Giang city reset night; direct 21:00 overnight sleeper bus arriving early in Tam Coc on the 29th.';
-    }
-  }
-
-  if (decSplurgePick === 'opt-papiu-splurge') {
-    if (route[4]) {
-      route[4].stayId = 'acc-023';
-      route[4].city = 'Bắc Mê (Ha Giang)';
-      route[4].hotelName = 'P\'apiu Resort';
-      route[4].rate = '14,280,000 VND (~S$ 352/person)';
-      route[4].notes = 'Ultra-splurge post-loop: private villa resort in Bắc Mê mountains.';
-    }
-  } else if (decSplurgePick === 'opt-upgrade-rooms') {
-    if (route[0]) {
-      route[0].stayId = 'acc-001';
-      route[0].hotelName = 'La Siesta Premium Hang Be';
-      route[0].rate = '2,860,000 VND (~S$ 70/person)';
-    }
-    if (route[5]) {
-      route[5].stayId = 'acc-012';
-      route[5].hotelName = 'Tam Coc Rice Fields Resort';
-      route[5].rate = '1,880,000 VND / night (~S$ 46/person)';
-    }
-  }
-
-  if (decNyePick === 'opt-tam-coc-nye' || decNyePick === 'opt-tamcoc-nye') {
-    route[6] = {
-      id: 'leg-7',
-      stayId: 'acc-015',
-      nights: 'Night 8 (31 Dec – 1 Jan)',
-      city: 'Tam Coc / Ninh Binh',
-      hotelName: 'Tam Coc Garden Resort',
-      rate: '1,170,000 VND / night (~S$ 29/person)',
-      status: 'Planned',
-      notes: 'Peaceful countryside New Year countdown surrounded by karst cliffs; avoiding Hanoi lake crowds.',
-      alts: ['acc-014 Tam Coc Sunshine Homestay', 'acc-011 Emeralda Resort']
-    };
-    route[7] = {
-      id: 'leg-8',
-      stayId: null,
-      nights: 'Day 9 (1 Jan)',
-      city: 'Tam Coc → Noi Bai Airport (HAN)',
-      hotelName: 'Noi Bai International Airport (HAN)',
-      rate: 'Outbound Flight',
-      status: 'Planned',
-      notes: 'Private minivan Tam Coc → Noi Bai (2h) for evening flight back to Singapore.',
-      alts: []
-    };
-  } else if (decNyePick === 'opt-hanoi-nye-fallback') {
-    if (route[6]) {
-      route[6].stayId = 'acc-006';
-      route[6].hotelName = 'Hanoi Pearl Hotel';
-      route[6].rate = '1,240,000 VND (~S$ 51/person)';
-      route[6].notes = 'Old Quarter fallback hotel, walking distance to Hoan Kiem fireworks, saving S$19/person.';
-    }
-  }
-
-  if (decDatesPick === 'opt-dates-shifted') {
-    if (route[0]) route[0].nights = 'Night 1 (26–27 Dec)';
-    if (route[1]) route[1].nights = 'Night 2 (27–28 Dec)';
-    if (route[2]) route[2].nights = 'Night 3 (28–29 Dec)';
-    if (route[3]) route[3].nights = 'Night 4 (29–30 Dec)';
-    if (route[4]) route[4].nights = 'Night 5 (30–31 Dec)';
-    if (route[5]) route[5].nights = 'Nights 6–7 (31 Dec – 2 Jan)';
-    if (route[6]) route[6].nights = 'Night 8 (2–3 Jan)';
-    if (route[7]) route[7].nights = 'Day 9 (3 Jan)';
-  }
+  // No route stored on this trip: derive one from its own itinerary — one leg
+  // per day with that day's base and lodging — rather than shipping a fixed trip.
+  var route = deriveRouteFromItinerary(stays);
 
   // Apply generic accommodation_impact from active decisions
   var allDecs = getDecisions();
@@ -3017,7 +2957,6 @@ function getPlannedRoute() {
     }
   });
 
-  var stays = getAccommodations();
   route.forEach(function (leg) {
     if (leg.stayId) {
       var found = stays.find(function (s) { return s.id === leg.stayId; });
@@ -3030,41 +2969,68 @@ function getPlannedRoute() {
   return route;
 }
 
-var NIGHT_GROUPS = [
-  { id: 'night-1', label: 'Night 1: 24–25 Dec · Hanoi Old Quarter' },
-  { id: 'night-2', label: 'Night 2: 25–26 Dec · Transit: Overnight Sleeper Bus' },
-  { id: 'night-3', label: 'Night 3: 26–27 Dec · Ha Giang Loop (Quản Bạ / Yên Minh)' },
-  { id: 'night-4', label: 'Night 4: 27–28 Dec · Ha Giang Loop (Đồng Văn / Mèo Vạc)' },
-  { id: 'night-5', label: 'Night 5: 28–29 Dec · Ha Giang City Reset' },
-  { id: 'nights-6-7', label: 'Nights 6–7: 29–31 Dec · Tam Coc / Ninh Binh (2 Nights)' },
-  { id: 'night-8', label: 'Night 8: 31 Dec – 1 Jan · Hanoi Old Quarter (NYE)' }
-];
+/* Night groups and location pills are read from the trip itself — the planned
+   route (or the stays' own night numbers). Nothing here is tied to one trip. */
+
+function nightNumbers(text) {
+  var nums = [];
+  String(text || '').toLowerCase().replace(/night[s]?\s*([0-9][0-9\s,–\-and]*)/g, function (m, tail) {
+    (tail.match(/\d+/g) || []).forEach(function (n) {
+      var v = Number(n);
+      if (nums.indexOf(v) === -1) nums.push(v);
+    });
+    return m;
+  });
+  return nums;
+}
+
+function getStayNightGroups() {
+  return getPlannedRoute().map(function (leg) {
+    var label = [leg.nights, leg.city || leg.hotelName].filter(Boolean).join(' · ') || leg.id;
+    var short = String(leg.nights || '').split(/[(:]/)[0].trim() || label;
+    return { id: leg.id, label: label, short: short, city: leg.city || leg.hotelName || '' };
+  });
+}
 
 function getStayNightId(s) {
-  var id = s.id || '';
-  var checkin = s.checkin || s.check_in || '';
-  var area = (s.area || s.location || '').toLowerCase();
-  var name = (s.name || s.hotel || '').toLowerCase();
+  var route = getPlannedRoute();
+  var groups = getStayNightGroups();
 
-  if (checkin === '2026-12-31' || ['acc-007', 'acc-008', 'acc-009', 'acc-010'].includes(id)) {
-    return 'night-8';
+  var byStay = route.find(function (leg) { return leg.stayId && leg.stayId === s.id; });
+  if (byStay) return byStay.id;
+
+  var stayNights = nightNumbers(s.nights || s.night || '');
+  if (stayNights.length) {
+    var byNight = groups.find(function (g) {
+      return nightNumbers(g.label).some(function (n) { return stayNights.indexOf(n) !== -1; });
+    });
+    if (byNight) return byNight.id;
   }
-  if (checkin === '2026-12-24' || ['acc-001', 'acc-002', 'acc-003', 'acc-004', 'acc-005', 'acc-006'].includes(id)) {
-    return 'night-1';
-  }
-  if (checkin === '2026-12-26' || ['acc-018', 'acc-021', 'acc-022'].includes(id) || area.includes('quản bạ') || area.includes('quan ba') || area.includes('yên minh') || area.includes('nam dam')) {
-    return 'night-3';
-  }
-  if (checkin === '2026-12-27' || ['acc-019', 'acc-020', 'acc-023'].includes(id) || area.includes('đồng văn') || area.includes('dong van') || area.includes('mèo vạc') || area.includes('meo vac')) {
-    return 'night-4';
-  }
-  if (checkin === '2026-12-28' || ['acc-016', 'acc-017'].includes(id) || name.includes('yen bien') || area.includes('ha giang city')) {
-    return 'night-5';
-  }
-  if (checkin === '2026-12-29' || ['acc-011', 'acc-012', 'acc-013', 'acc-014', 'acc-015'].includes(id) || area.includes('tam coc') || area.includes('ninh binh') || area.includes('tràng an') || area.includes('trang an')) {
-    return 'nights-6-7';
+
+  var city = (s.area || s.city || s.location || '').toLowerCase();
+  if (city) {
+    var byCity = groups.find(function (g) {
+      return String(g.city).toLowerCase().split(/[^a-z0-9]+/).some(function (w) {
+        return w.length > 3 && city.indexOf(w) !== -1;
+      });
+    });
+    if (byCity) return byCity.id;
   }
   return 'other';
+}
+
+/* "Hanoi – Old Quarter" → "Hanoi", "Tam Coc / Ninh Binh" → "Tam Coc" */
+function stayAreaLabel(city) {
+  return String(city || '').split(/[–—/(,·]/)[0].trim();
+}
+
+function getStayAreaOptions(stays) {
+  var seen = [];
+  stays.forEach(function (s) {
+    var label = stayAreaLabel(s.area || s.city || s.location || '');
+    if (label && seen.indexOf(label) === -1) seen.push(label);
+  });
+  return seen;
 }
 
 function toggleLegStatus(leg) {
@@ -3191,7 +3157,7 @@ function swapToStay(newStayId, previousStayId) {
     leg.hotelName = newStay.name || newStay.hotel;
     leg.status = newStay.status.charAt(0).toUpperCase() + newStay.status.slice(1);
     if (newStay.price_per_night) {
-      leg.rate = new Intl.NumberFormat().format(newStay.price_per_night) + ' ' + (newStay.currency || 'VND') + ' / night';
+      leg.rate = new Intl.NumberFormat().format(newStay.price_per_night) + ' ' + (newStay.currency || getLocalCurrency()) + ' / night';
     }
   }
 
@@ -3221,7 +3187,7 @@ function renderAccommodation() {
 
   var toggleGroup = ce('div', 'view-toggle-group');
   var routeBtn = ce('button', 'view-toggle-btn' + (STATE.stayViewMode === 'route' ? ' active' : ''), '🗺 Planned Route (At a Glance)');
-  var dirBtn = ce('button', 'view-toggle-btn' + (STATE.stayViewMode === 'directory' ? ' active' : ''), '📚 Stays Directory (23 Options)');
+  var dirBtn = ce('button', 'view-toggle-btn' + (STATE.stayViewMode === 'directory' ? ' active' : ''), '📚 Stays Directory (' + stays.length + ' Options)');
 
   routeBtn.addEventListener('click', function () {
     STATE.stayViewMode = 'route';
@@ -3414,7 +3380,7 @@ function renderStayCard(s, isAlternative, activeStayId) {
   var priceLine = ce('div', 'stay-price-line');
   var rateStr = '';
   if (s.price_per_night) {
-    rateStr = new Intl.NumberFormat().format(s.price_per_night) + ' ' + (s.currency || 'VND') + ' / night';
+    rateStr = new Intl.NumberFormat().format(s.price_per_night) + ' ' + (s.currency || getLocalCurrency()) + ' / night';
   } else if (s.cost_sgd) {
     rateStr = sgd(s.cost_sgd) + ' / night';
   } else {
@@ -3460,20 +3426,20 @@ function renderAccommodationDirectory(root, stays) {
   toolbar.style.padding = '10px 12px';
   toolbar.style.marginBottom = '14px';
 
-  // Row 1: Filter by Night Pills
+  // Row 1: Filter by Night Pills — one pill per planned route leg
   var nightRow = ce('div', 'filter-pills-row');
   nightRow.style.marginBottom = '8px';
-  var nightOptions = [
-    { id: 'all', label: 'All Nights' },
-    { id: 'night-1', label: 'Night 1' },
-    { id: 'night-2', label: 'Night 2' },
-    { id: 'night-3', label: 'Night 3' },
-    { id: 'night-4', label: 'Night 4' },
-    { id: 'night-5', label: 'Night 5' },
-    { id: 'nights-6-7', label: 'Nights 6–7' },
-    { id: 'night-8', label: 'Night 8' }
-  ];
+  var nightGroups = getStayNightGroups();
+  var nightOptions = [{ id: 'all', label: 'All Nights' }].concat(
+    nightGroups.map(function (g) { return { id: g.id, label: g.short }; })
+  );
+  var unassigned = stays.filter(function (s) { return getStayNightId(s) === 'other'; });
+  if (unassigned.length > 0) nightOptions.push({ id: 'other', label: 'Not in route' });
+
   if (!STATE.stayNightFilter) STATE.stayNightFilter = 'all';
+  if (!nightOptions.some(function (o) { return o.id === STATE.stayNightFilter; })) {
+    STATE.stayNightFilter = 'all';
+  }
 
   nightOptions.forEach(function (opt) {
     var pill = ce('button', 'filter-pill' + (STATE.stayNightFilter === opt.id ? ' active' : ''), opt.label);
@@ -3485,10 +3451,11 @@ function renderAccommodationDirectory(root, stays) {
   });
   toolbar.appendChild(nightRow);
 
-  // Row 2: Filter by Location Pills
+  // Row 2: Filter by Location Pills — only the cities this trip actually uses
   var locRow = ce('div', 'filter-pills-row');
-  var locOptions = ['all', 'Hanoi', 'Ha Giang', 'Tam Coc'];
+  var locOptions = ['all'].concat(getStayAreaOptions(stays));
   if (!STATE.stayArea) STATE.stayArea = 'all';
+  if (locOptions.indexOf(STATE.stayArea) === -1) STATE.stayArea = 'all';
 
   locOptions.forEach(function (loc) {
     var pill = ce('button', 'filter-pill' + (STATE.stayArea === loc ? ' active' : ''), loc === 'all' ? 'All Locations' : loc);
@@ -3503,7 +3470,11 @@ function renderAccommodationDirectory(root, stays) {
 
   // Render by Night Group with collapsible alternatives when booked
   var hasAny = false;
-  NIGHT_GROUPS.forEach(function (ng) {
+  var groups = nightGroups.concat(unassigned.length > 0
+    ? [{ id: 'other', label: 'Other stays not tied to a route night' }]
+    : []);
+
+  groups.forEach(function (ng) {
     if (STATE.stayNightFilter !== 'all' && STATE.stayNightFilter !== ng.id) {
       return;
     }
@@ -3514,7 +3485,7 @@ function renderAccommodationDirectory(root, stays) {
 
     if (STATE.stayArea !== 'all') {
       groupStays = groupStays.filter(function (s) {
-        var a = ((s.area || s.location || '') + ' ' + (s.name || '')).toLowerCase();
+        var a = ((s.city || '') + ' ' + (s.area || s.location || '') + ' ' + (s.name || '')).toLowerCase();
         return a.includes(STATE.stayArea.toLowerCase());
       });
     }
@@ -3602,7 +3573,7 @@ function renderAccommodationDirectory(root, stays) {
 function getCurrentUserEmail() {
   var st = TripAuth.status && TripAuth.status();
   var u = (st && st.user) || STATE.user;
-  return (u && u.email) ? u.email.toLowerCase() : 'kester.neo@gmail.com';
+  return (u && u.email) ? u.email.toLowerCase() : '';
 }
 
 function isExpensePaidForCurrentUser(it) {
@@ -3650,6 +3621,13 @@ function toggleExpenseSplit(it) {
   }
   saveExpensesDoc();
   renderExpenses();
+}
+
+function toggleExpenseBasis(it) {
+  it.per = getExpenseBasis(it) === 'pax' ? 'party' : 'pax';
+  saveExpensesDoc();
+  renderExpenses();
+  showToast(it.per === 'pax' ? 'Amount is now per traveller.' : 'Amount is now the total for the party.');
 }
 
 function formatExpenseDayBadge(it) {
@@ -3832,6 +3810,9 @@ function openExpenseEditorModal(it) {
   $('#expense-editor-category').value = isEdit ? (it.category || 'misc') : 'misc';
   $('#expense-editor-notes').value = isEdit ? (it.notes || '') : '';
   $('#expense-editor-split').value = isEdit ? ((it.split_type || 'shared').toLowerCase() === 'indiv' ? 'indiv' : 'shared') : 'shared';
+  if ($('#expense-editor-basis')) {
+    $('#expense-editor-basis').value = isEdit ? getExpenseBasis(it) : 'party';
+  }
 
   var daySel = $('#expense-editor-day');
   clear(daySel);
@@ -3868,6 +3849,7 @@ function openExpenseEditorModal(it) {
     var cat = $('#expense-editor-category').value;
     var dayVal = $('#expense-editor-day').value;
     var split = $('#expense-editor-split').value;
+    var per = $('#expense-editor-basis') ? $('#expense-editor-basis').value : 'party';
     var notes = $('#expense-editor-notes').value.trim();
 
     if (!desc) return;
@@ -3884,6 +3866,7 @@ function openExpenseEditorModal(it) {
       it.day = dayVal === 'all' ? null : (dayVal === 'pre' ? 'pre' : Number(dayVal));
       it.days = dayVal === 'all' || dayVal === 'pre' ? [] : [Number(dayVal)];
       it.split_type = split;
+      it.per = per;
       it.notes = notes;
     } else {
       var newExp = {
@@ -3896,6 +3879,7 @@ function openExpenseEditorModal(it) {
         day: dayVal === 'all' ? null : (dayVal === 'pre' ? 'pre' : Number(dayVal)),
         days: dayVal === 'all' || dayVal === 'pre' ? [] : [Number(dayVal)],
         split_type: split,
+        per: per,
         is_paid: false,
         paid_users: {},
         linked_type: 'custom',
@@ -3937,11 +3921,38 @@ function openExpenseDetailModal(it) {
   var dayLabel = formatExpenseDayBadge(it);
   if (dayLabel) badgesRow.appendChild(ce('span', 'badge', '🗓️ ' + dayLabel));
 
-  var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
+  var cost = expenseAmount(it);
+  var basis = getExpenseBasis(it);
+  var pax = getTravellerCount();
   if (cost != null) {
-    badgesRow.appendChild(ce('span', 'badge badge-good', sgd(cost) + ' SGD'));
+    badgesRow.appendChild(ce('span', 'badge badge-good',
+      basis === 'pax' ? sgd(cost) + ' per traveller' : sgd(cost) + ' total for ' + pax + ' travellers'));
   }
   body.appendChild(badgesRow);
+
+  if (cost != null) {
+    var basisBox = ce('div', 'card-panel');
+    basisBox.style.padding = '10px 12px';
+    basisBox.style.marginBottom = '14px';
+    basisBox.style.display = 'flex';
+    basisBox.style.justifyContent = 'space-between';
+    basisBox.style.alignItems = 'center';
+    basisBox.style.gap = '10px';
+    var bLeft = ce('div', null);
+    bLeft.appendChild(ce('div', 'muted tiny', 'AMOUNT BASIS'));
+    bLeft.appendChild(ce('div', 'small', basis === 'pax'
+      ? sgd(cost * pax) + ' for the whole party (' + pax + ' travellers)'
+      : sgd(cost) + ' covers everyone — ' + sgd(cost / pax) + ' each'));
+    basisBox.appendChild(bLeft);
+    var basisBtn = ce('button', 'expense-pill pill-basis', basis === 'pax' ? 'Per pax' : 'Total ' + pax + ' pax');
+    basisBtn.title = 'Switch between per-traveller and party-total amounts';
+    basisBtn.addEventListener('click', function () {
+      toggleExpenseBasis(it);
+      openExpenseDetailModal(it);
+    });
+    basisBox.appendChild(basisBtn);
+    body.appendChild(basisBox);
+  }
 
   // Split and Paid status toggle row
   var toggleBox = ce('div', 'card-panel');
@@ -4125,19 +4136,20 @@ function renderExpenses() {
   hTop.style.marginBottom = '8px';
 
   var hLeft = ce('div', null);
-  hLeft.appendChild(ce('div', 'muted small', 'Remaining Headroom'));
+  hLeft.appendChild(ce('div', 'muted small', 'Remaining Headroom (' + b.pax + ' ' + (b.pax === 1 ? 'traveller' : 'travellers') + ')'));
   var hVal = ce('div', null, b.headroom != null ? sgd(b.headroom) : '—');
   hVal.style.fontSize = '1.6rem';
   hVal.style.fontWeight = '800';
   hVal.style.color = (b.headroom != null && b.headroom >= 0) ? 'var(--good)' : 'var(--warn)';
   hLeft.appendChild(hVal);
+  hLeft.appendChild(ce('div', 'muted tiny', sgd(b.headroomPerPax) + ' / traveller'));
   hTop.appendChild(hLeft);
 
   var hRight = ce('div', null);
   hRight.style.textAlign = 'right';
   hRight.style.fontSize = '0.78rem';
-  hRight.appendChild(ce('div', null, 'Cap: ' + (b.cap != null ? sgd(b.cap) : '—')));
-  var spentLine = ce('div', 'muted', 'Planned: ' + sgd(b.net) + (b.delta !== 0 ? ' (' + (b.delta > 0 ? '+' : '') + sgd(b.delta) + ')' : ''));
+  hRight.appendChild(ce('div', null, 'Cap: ' + (b.cap != null ? sgd(b.cap) : '—') + ' / pax · ' + sgd(b.capTotal) + ' total'));
+  var spentLine = ce('div', 'muted', 'Planned: ' + sgd(b.net) + ' total · ' + sgd(b.netPerPax) + ' / pax' + (b.delta !== 0 ? ' (' + (b.delta > 0 ? '+' : '') + sgd(b.delta) + ')' : ''));
   hRight.appendChild(spentLine);
   hTop.appendChild(hRight);
   headroomCard.appendChild(hTop);
@@ -4148,7 +4160,7 @@ function renderExpenses() {
   track.style.borderRadius = '999px';
   track.style.overflow = 'hidden';
 
-  var pct = (b.cap && b.net) ? Math.min(100, Math.round((b.net / b.cap) * 100)) : 0;
+  var pct = (b.capTotal && b.net) ? Math.min(100, Math.round((b.net / b.capTotal) * 100)) : 0;
   var fill = ce('div', 'budget-progress-fill');
   fill.style.height = '100%';
   fill.style.width = pct + '%';
@@ -4158,11 +4170,11 @@ function renderExpenses() {
   headroomCard.appendChild(track);
   root.appendChild(headroomCard);
 
-  // 2. Category Breakdown
+  // 2. Category Breakdown (party totals, so flights and hotels are comparable)
   var catTotals = {};
   var totalValid = 0;
   plannedItems.forEach(function (it) {
-    var c = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
+    var c = expensePartyTotal(it, b.pax);
     if (c != null) {
       var cat = it.category || 'other';
       catTotals[cat] = (catTotals[cat] || 0) + c;
@@ -4190,6 +4202,8 @@ function renderExpenses() {
     bar.appendChild(cTrack);
     catBoxes.appendChild(bar);
   });
+  catCard.appendChild(ce('div', 'muted tiny', 'These are totals for ' + b.pax +
+    (b.pax === 1 ? ' traveller' : ' travellers') + ', not per person.'));
   catCard.appendChild(catBoxes);
   root.appendChild(catCard);
 
@@ -4306,10 +4320,11 @@ function renderExpenses() {
     return true;
   });
 
-  // Sort items
+  // Sort items (by party total, so a per-pax row sorts where its cost lands)
+  var sortPax = b.pax;
   filtered.sort(function (a, b) {
-    var costA = num(a.amount != null ? a.amount : (a.cost_sgd || a.amount_sgd)) || 0;
-    var costB = num(b.amount != null ? b.amount : (b.cost_sgd || b.amount_sgd)) || 0;
+    var costA = expensePartyTotal(a, sortPax) || 0;
+    var costB = expensePartyTotal(b, sortPax) || 0;
     if (STATE.expenseSort === 'cost-desc') return costB - costA;
     if (STATE.expenseSort === 'cost-asc') return costA - costB;
     if (STATE.expenseSort === 'cat') return (a.category || '').localeCompare(b.category || '');
@@ -4378,17 +4393,31 @@ function renderExpenses() {
       }
       metaRow.appendChild(metaLeft);
 
-      // Right: Cost + Split pill + Paid pill
+      // Right: Cost + basis pill + Split pill + Paid pill
       var metaRight = ce('div', 'compact-expense-meta-right');
 
-      var cost = num(it.amount != null ? it.amount : (it.cost_sgd || it.amount_sgd));
-      var costEl = ce('div', 'compact-expense-cost editable', cost != null ? sgd(cost) : '—');
-      costEl.title = 'Click to edit dollar amount directly';
+      var cost = expenseAmount(it);
+      var basis = getExpenseBasis(it);
+      var costText = cost != null ? sgd(cost) : '—';
+      if (cost != null && basis === 'pax') costText += ' /pax';
+      var costEl = ce('div', 'compact-expense-cost editable', costText);
+      costEl.title = cost == null ? 'No amount recorded'
+        : (basis === 'pax'
+          ? 'Per traveller — ' + sgd(cost * b.pax) + ' for all ' + b.pax
+          : 'Total for all ' + b.pax + ' travellers — ' + sgd(cost / b.pax) + ' each · click to edit');
       costEl.addEventListener('click', function (e) {
         e.stopPropagation();
         openEditExpenseAmountModal(it);
       });
       metaRight.appendChild(costEl);
+
+      var basisBtn = ce('button', 'expense-pill pill-basis', basis === 'pax' ? 'Per pax' : 'Total ' + b.pax + ' pax');
+      basisBtn.title = 'Click to switch: this amount is ' + (basis === 'pax' ? 'per traveller' : 'the total for the party');
+      basisBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleExpenseBasis(it);
+      });
+      metaRight.appendChild(basisBtn);
 
       var isShared = (it.split_type || 'shared').toLowerCase() === 'shared';
       var splitBtn = ce('button', 'expense-pill ' + (isShared ? 'pill-shared' : 'pill-indiv'), isShared ? 'Shared' : 'Indiv');
@@ -4515,7 +4544,7 @@ function getTripTravellersList() {
   var curEmail = (curUser && curUser.email) ? curUser.email.toLowerCase() : '';
   var curUserId = (curUser && curUser.id) ? curUser.id : '';
   var customName = (curUser && curUser.id && localStorage.getItem('nomad_custom_username_' + curUser.id)) || '';
-  var myName = customName || (curUser && curUser.name && curUser.name !== curUser.email ? curUser.name : '') || 'Kester';
+  var myName = customName || (curUser && curUser.name && curUser.name !== curUser.email ? curUser.name : '') || (curUser && curUser.email ? curUser.email.split('@')[0] : '') || 'Traveller';
 
   // 1. Members from backend (trip_members)
   if (Array.isArray(STATE.members) && STATE.members.length > 0) {
@@ -4541,6 +4570,8 @@ function getTripTravellersList() {
 
       list.push({
         id: travId,
+        memberId: m.id,
+        kind: m.kind || 'member',
         user_id: mUserId,
         email: mEmail,
         name: dispName,
@@ -4602,14 +4633,14 @@ function getTravellerPackingState(travellerId) {
   var lsKey = LS_PACKING_PREFIX + (STATE.activeTripId || 'default') + '_' + travellerId;
   var saved = localStorage.getItem(lsKey);
   if (saved) {
-    try { return JSON.parse(saved); } catch (e) {}
+    try { return JSON.parse(saved); } catch {}
   }
   // Legacy fallback for primary traveller
   if (travellerId === 'traveller-primary') {
     var oldKey = LS_PACKING_PREFIX + (STATE.activeTripId || 'default');
     var oldSaved = localStorage.getItem(oldKey);
     if (oldSaved) {
-      try { return JSON.parse(oldSaved); } catch (e) {}
+      try { return JSON.parse(oldSaved); } catch {}
     }
   }
   return {};
@@ -4773,7 +4804,6 @@ function renderPacking() {
   });
   root.appendChild(travBar);
 
-  var currentTrav = travellers.find(function (t) { return t.id === STATE.activePackingTravellerId; }) || travellers[0] || { name: 'Traveller' };
   var checkedState = getTravellerPackingState(STATE.activePackingTravellerId);
 
   cats.forEach(function (cat) {
@@ -4792,7 +4822,7 @@ function renderPacking() {
     titleBox.appendChild(hTitle);
 
     var totalItems = (cat.items || []).length;
-    var packedCount = (cat.items || []).filter(function (it, idx) {
+    var packedCount = (cat.items || []).filter(function (it) {
       var itemText = typeof it === 'string' ? it : (it.item || it.name || '');
       var itemId = catKey + '_' + itemText;
       return !!checkedState[itemId];
@@ -4930,10 +4960,15 @@ function renderRecommendations() {
   });
   searchBar.appendChild(searchInp);
 
-  // Location filter pills
+  // Location filter pills — read from the ideas pool, not from one itinerary
   var locRow = ce('div', 'filter-pills-row');
   locRow.style.marginBottom = '6px';
-  var locs = ['all', 'Hanoi', 'Ha Giang', 'Ninh Binh'];
+  var locs = ['all'];
+  recs.forEach(function (r) {
+    var label = stayAreaLabel(r.area || r.location || '');
+    if (label && locs.indexOf(label) === -1) locs.push(label);
+  });
+  if (locs.indexOf(STATE.recLocation) === -1) STATE.recLocation = 'all';
   locs.forEach(function (loc) {
     var pill = ce('button', 'filter-pill' + (STATE.recLocation === loc ? ' active' : ''), loc === 'all' ? 'All Locations' : loc);
     pill.addEventListener('click', function () {
@@ -5247,7 +5282,6 @@ function openAddIdeaToDayModal(idea, optPreselectDay) {
     var oldAct = targetDay.items[selIdx];
     var oldCost = Number(oldAct.cost || 0);
     var delta = ideaCost - oldCost;
-    var deltaSign = delta > 0 ? '+' : '';
     var deltaBadge = delta === 0 ? '±$0' : (delta > 0 ? '+' + sgd(delta) : '-' + sgd(Math.abs(delta)));
 
     repDeltaBox.innerHTML = '<div>Replacing: <strong>' + escapeHtml(oldAct.what || oldAct.title) + '</strong> (' + sgd(oldCost) + ')</div>' +
@@ -5738,7 +5772,7 @@ function saveTravellersDoc() {
     });
     try {
       localStorage.setItem('nomad_travellers_override_' + STATE.activeTripId, JSON.stringify(STATE.docs.travellers));
-    } catch (e) {}
+    } catch {}
   }
 }
 
@@ -6043,14 +6077,18 @@ function createCompactPassportCard(trav) {
       deleteCompanion(trav.id, dispName);
     });
     actions.appendChild(delBtn);
+  } else if (!isSelf && trav.kind) {
+    // a trip member or a pending invitation — revoke their access
+    var kickBtn = ce('button', 'btn-icon-danger tiny', '🗑️');
+    kickBtn.title = trav.kind === 'invite' ? 'Cancel invitation' : 'Remove this member from the trip';
+    kickBtn.addEventListener('click', function () {
+      removePartyMember(trav);
+    });
+    actions.appendChild(kickBtn);
   }
 
   card.appendChild(actions);
   return card;
-}
-
-function renderTravellers() {
-  renderShare();
 }
 
 function openTravellerEditor(trav, passport, isSelf) {
@@ -6105,7 +6143,7 @@ function saveTravellerEditor() {
 
   var name = $('#edit-traveller-name').value.trim();
   if (!name) {
-    alert('Please enter traveller full name.');
+    showToast('Please enter traveller full name.');
     return;
   }
 
@@ -6175,6 +6213,25 @@ function saveTravellerEditor() {
   showToast('Passport details saved for ' + name + '!');
 }
 
+function removePartyMember(trav) {
+  if (!trav) return;
+  var label = trav.kind === 'invite' ? (trav.email || 'this invitation') : (trav.name || 'this member');
+  if (!confirm('Remove ' + label + ' from this trip? They lose access to the itinerary.')) return;
+
+  TripAuth.removeMember({
+    id: trav.memberId || trav.id,
+    kind: trav.kind === 'invite' ? 'invite' : 'member',
+    trip: STATE.activeTripId,
+    invited_email: trav.email || ''
+  }).then(function () {
+    STATE.members = (STATE.members || []).filter(function (m) { return m.id !== (trav.memberId || trav.id); });
+    renderShare();
+    showToast('Removed ' + label + ' from the trip.');
+  }, function (e) {
+    alert('Could not remove ' + label + ': ' + ((e && e.message) || e));
+  });
+}
+
 function deleteCompanion(id, name) {
   if (!confirm('Remove companion "' + (name || 'traveller') + '"?')) return;
   var data = getTravellersData();
@@ -6197,7 +6254,7 @@ function deleteCompanion(id, name) {
 function buildPrintableDocument() {
   var t = STATE.docs.trip || STATE.trip || {};
   var tripTitle = t.name || t.title || 'Nomad Itinerary';
-  var destination = t.destination || 'Vietnam (Hanoi · Ha Giang · Ninh Binh)';
+  var destination = t.destination || t.title || t.name || 'Trip';
   var dateStr = (t.start_date && t.end_date) ? (t.start_date.slice(0, 10) + ' to ' + t.end_date.slice(0, 10)) : 'End 2026';
   var days = getItineraryDays();
   var b = calculateBudget();
@@ -6216,7 +6273,7 @@ function buildPrintableDocument() {
   html.push('    <div style="text-align: right;">');
   html.push('      <div style="font-size: 0.75rem; color: #6b7280;">Planned Budget</div>');
   html.push('      <div style="font-size: 1.15rem; font-weight: 800; color: #111827;">' + sgd(b.cap) + ' / pax</div>');
-  html.push('      <div style="font-size: 0.72rem; color: #059669; font-weight: 600;">Est. Net: ' + sgd(b.netPlanned) + '</div>');
+  html.push('      <div style="font-size: 0.72rem; color: #059669; font-weight: 600;">Est. Net: ' + sgd(b.net) + ' total · ' + sgd(b.netPerPax) + ' / pax</div>');
   html.push('    </div>');
   html.push('  </div>');
 
@@ -6481,7 +6538,7 @@ function exportMasterTripJson() {
       end_date: t.end_date || t.end || '',
       currency: t.currency || 'SGD',
       budget_cap: (t.budget_cap != null) ? t.budget_cap : (budgetObj.cap || 2500),
-      travellers: t.travellers || 2,
+      travellers: getTravellerCount(),
       description: t.description || t.notes || ''
     },
     itinerary: {
@@ -6792,7 +6849,7 @@ function executeAICompletion(messages, onStatus) {
         try {
           var parsedErr = JSON.parse(t);
           errDetail = (parsedErr.error && parsedErr.error.message) || t;
-        } catch (e) {}
+        } catch {}
         throw new Error('AI API Error (' + res.status + '): ' + errDetail);
       });
     }
@@ -6837,6 +6894,7 @@ function startAiTripGeneration() {
   var sDate = $('#ai-gen-start-input').value;
   var eDate = $('#ai-gen-end-input').value;
   var budget = parseFloat($('#ai-gen-budget-input').value) || 2500;
+  var travellers = Math.max(1, parseInt($('#ai-gen-travellers-input') ? $('#ai-gen-travellers-input').value : '2', 10) || 2);
   var curr = $('#ai-gen-currency-select').value || 'SGD';
   var promptNotes = ($('#ai-gen-prompt-input').value || '').trim();
 
@@ -6861,7 +6919,7 @@ function startAiTripGeneration() {
     '    "end_date": "' + eDate + '",\n' +
     '    "currency": "' + curr + '",\n' +
     '    "budget_cap": ' + budget + ',\n' +
-    '    "travellers": 2,\n' +
+    '    "travellers": ' + travellers + ',\n' +
     '    "description": "Short summary"\n' +
     '  },\n' +
     '  "itinerary": {\n' +
@@ -6922,7 +6980,7 @@ function startAiTripGeneration() {
     '    "budget_cap": ' + budget + ',\n' +
     '    "currency": "' + curr + '",\n' +
     '    "planned": [\n' +
-    '      { "id": "exp-1", "category": "Flights"|"Lodging"|"Activities"|"Transit"|"Food & Dining"|"Buffer", "name": "Item name", "amount_sgd": 350, "notes": "Details" }\n' +
+    '      { "id": "exp-1", "category": "Flights"|"Lodging"|"Activities"|"Transit"|"Food & Dining"|"Buffer", "name": "Item name", "amount_sgd": 350, "per": "party"|"pax", "notes": "Details, including how many people and nights the amount covers" }\n' +
     '    ]\n' +
     '  },\n' +
     '  "decisions": [\n' +
@@ -6965,12 +7023,19 @@ function startAiTripGeneration() {
   var userPrompt =
     "Generate a complete trip plan for " + dest + ".\n" +
     (sDate && eDate ? ("- Dates: " + sDate + " to " + eDate + "\n") : "") +
-    "- Target Budget: " + budget + " " + curr + "\n" +
+    "- Travellers: " + travellers + " (all costs below are for this party of " + travellers + ")\n" +
+    "- Target Budget: " + budget + " " + curr + " per person\n" +
     "- Travel Style: " + vibe + "\n" +
     (promptNotes ? ("- Specific Preferences: " + promptNotes + "\n") : "") +
     "\nCRITICAL RULES:\n" +
     "1. PACKING TITLES: Every packing item 'name' or 'item' MUST be strictly at most 40 characters (e.g. 'Warm mid-layer fleece'). Put all extra notes, quantities, or explanations in the 'notes' field.\n" +
-    "2. Ensure every day has rich morning, afternoon, evening, and night activities with explicit 'type' and 'slot' fields. Include stays with 'status', budget breakdown, fork decisions, 6 packing categories (Clothings, Footwear, Electronics, Documents including ballpoint pen, Toiletries, Medicine), and top recommendations.";
+    "2. Ensure every day has rich morning, afternoon, evening, and night activities with explicit 'type' and 'slot' fields. Include stays with 'status', budget breakdown, fork decisions, 6 packing categories (Clothings, Footwear, Electronics, Documents including ballpoint pen, Toiletries, Medicine), and top recommendations.\n" +
+    "3. EXPENSE BASIS: 'budget_cap' is PER PERSON. Every expense item MUST set 'per': 'party' when the amount is the total for all " + travellers + " travellers (flights for the group, a private transfer, a hotel room for the party) or 'per': 'pax' when it is a per-person amount (a museum ticket, one cable-car ticket). Never leave 'per' out. Flight costs MUST be the total fare for all " + travellers + " travellers with 'per': 'party', and the name and notes must say so — e.g. name 'Singapore-Hanoi return, " + travellers + " pax', notes '" + curr + "1,240 total = " + curr + "620 each'. Sum the flights from the real per-person fare for those dates, not from a guess.\n" +
+    "4. BOOKING LINKS MUST RESOLVE TO THAT EXACT ACTIVITY. Only include a 'booking_url' you are confident opens the specific tour, ticket, hotel or route — never a platform homepage, a search page for another city, or a fabricated/made-up id. Prefer the official operator page; for Klook use the exact activity page (https://www.klook.com/activity/<id>-<slug>/) and only when you actually know that id — otherwise omit 'booking_url' entirely and put the platform plus the exact activity name to search for in 'notes'. A wrong link is worse than no link.\n" +
+    "5. 'booking_platform' must name the real platform for the item ('Klook', 'Booking.com', '12Go', 'Official site', 'Direct / on arrival').\n" +
+    "6. Every stay needs a real 'booking_url' on Booking.com/Agoda/official site for that property in that city, or none at all.\\n" +
+    "7. accommodation.route IS MANDATORY and must never be empty or missing: exactly one leg per night of the trip (a " + nights + "-night trip needs " + nights + " legs), ids leg-1..leg-" + nights + ", each with nights ('Night N (DD-DD MMM)'), city, hotelName, rate, status and a stayId that matches an id in accommodation.stays. The Stays tab builds its night filter, its route table and its per-night grouping from this array only — with no route it cannot place a single stay.\\n" +
+    "8. The itinerary must agree with that route: each day's 'base' names the city that leg is in, and each day's 'lodging' names the hotel of that night's leg (write 'Overnight bus/train' or 'In transit' when nobody sleeps in a hotel). Do not name a city anywhere that is not on the route.";
 
   var messages = [
     { role: 'system', content: systemPrompt },

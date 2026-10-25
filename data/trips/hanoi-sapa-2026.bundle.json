@@ -1,0 +1,1132 @@
+{
+ "schema": "nomad.trip.bundle.v1",
+ "trip_id": "hanoi-sapa-2026",
+ "source": {
+  "backend": "pocketbase",
+  "record": "s2v2jd5685ccp95",
+  "pulled_at": "2026-10-26"
+ },
+ "trip": {
+  "bases": null,
+  "budget": 0,
+  "budget_currency": "",
+  "budget_per_person": 0,
+  "currency": "SGD",
+  "end_date": "2026-12-29 00:00:00.000Z",
+  "excludes": "",
+  "notes": "",
+  "origin": "",
+  "owner": "8isfk0jclliysjf",
+  "start_date": "2026-12-24 00:00:00.000Z",
+  "title": "Hanoi + Sapa",
+  "travellers": 2,
+  "created": "2026-10-25 17:01:16.886Z",
+  "updated": "2026-10-25 17:25:58.405Z"
+ },
+ "docs": {
+  "accommodation": {
+   "route": [
+    {
+     "city": "Hanoi – Hoan Kiem / Old Quarter",
+     "hotelName": "Hanoi Golden Rooster Hotel",
+     "id": "leg-1",
+     "nights": "Night 1-2 (24-25 Dec)",
+     "notes": "5 minutes' walk from Hoan Kiem Lake and the water puppet theatre, on quiet Hang Ga. Walkable to Ta Hien, Dong Xuan and the food streets; Grab pickup is easy on the corner.",
+     "rate": "65 SGD per night",
+     "status": "Planned",
+     "stayId": "acc-1"
+    },
+    {
+     "city": "Sapa – Cau May",
+     "hotelName": "Pistachio Hotel Sapa",
+     "id": "leg-2",
+     "nights": "Night 3-4 (26-27 Dec)",
+     "notes": "Rooftop pool and valley-facing rooms, 5 minutes from Sapa lake and the night market. Trek desks and the Fansipan shuttle stop are on the same block.",
+     "rate": "82 SGD per night",
+     "status": "Planned",
+     "stayId": "acc-2"
+    },
+    {
+     "city": "Hanoi – Hoan Kiem / Old Quarter",
+     "hotelName": "Hanoi Golden Rooster Hotel",
+     "id": "leg-3",
+     "nights": "Night 5 (28 Dec)",
+     "notes": "Return to the same property so luggage can be stored between the two stays and the airport run stays simple.",
+     "rate": "65 SGD per night",
+     "status": "Planned",
+     "stayId": "acc-1"
+    }
+   ],
+   "stays": [
+    {
+     "badge": "Recommended",
+     "booking_url": "https://www.booking.com/hotel/vn/golden-rooster.html",
+     "city": "Hanoi – Old Quarter",
+     "id": "acc-1",
+     "name": "Hanoi Golden Rooster Hotel",
+     "nights": "Night 1, 2 and 5",
+     "notes": "Boutique rooms with air conditioning, breakfast included and a small balcony on the upper floors. Free luggage storage between stays, which is what makes the two-part Hanoi booking work.",
+     "price_local": "~1,250,000 VND",
+     "price_sgd": 65,
+     "rating": 9.2,
+     "status": "planned"
+    },
+    {
+     "badge": "Valley view",
+     "booking_url": "https://www.booking.com/hotel/vn/pistachio-sapa.html",
+     "city": "Sapa – Cau May",
+     "id": "acc-2",
+     "name": "Pistachio Hotel Sapa",
+     "nights": "Night 3 and 4",
+     "notes": "Heated rooms, indoor pool and a rooftop terrace over the Muong Hoa valley. Book a high floor facing the valley; the town-side rooms pick up night market noise until 22:30.",
+     "price_local": "~1,550,000 VND",
+     "price_sgd": 82,
+     "rating": 9,
+     "status": "planned"
+    }
+   ]
+  },
+  "decisions": [
+   {
+    "id": "dec-1",
+    "options": [
+     {
+      "accommodation_impact": [],
+      "cost_delta": 0,
+      "id": "opt-1",
+      "label": "Daytime limousine bus (current plan)",
+      "schedule_impact": [],
+      "summary": "5.5 hours with hotel pickup, arrives 12:15 and leaves both Sapa evenings free. Costs a morning on the road but you sleep in a real bed every night."
+     },
+     {
+      "accommodation_impact": [
+       {
+        "hotel_name": "Pistachio Hotel Sapa (early check-in)",
+        "leg_id": "leg-2",
+        "rate": "82 SGD",
+        "stay_id": "acc-2"
+       }
+      ],
+      "cost_delta": 70,
+      "id": "opt-2",
+      "label": "Chapa Express night train",
+      "schedule_impact": [
+       {
+        "action": "replace",
+        "cost": 55,
+        "day": 2,
+        "slot": "night",
+        "target": "Rooftop drinks over Hoan Kiem",
+        "type": "transit",
+        "what": "Board Chapa Express sleeper to Lao Cai"
+       },
+       {
+        "action": "replace",
+        "cost": 8,
+        "day": 3,
+        "slot": "morning",
+        "target": "Limousine bus Hanoi to Sapa",
+        "type": "transit",
+        "what": "Transfer Lao Cai to Sapa, early check-in"
+       }
+      ],
+      "summary": "Soft-sleeper 4-berth from Hanoi at 22:00, arrive Lao Cai 06:00 plus a 45-minute transfer. Saves a daylight day but you arrive bleary-eyed and pay for an unused Sapa night unless the hotel is rebooked."
+     }
+    ],
+    "question": "Daytime limousine bus or the overnight Chapa Express train?",
+    "status": "open",
+    "title": "How to get to Sapa"
+   },
+   {
+    "id": "dec-2",
+    "options": [
+     {
+      "accommodation_impact": [],
+      "cost_delta": 0,
+      "id": "opt-1",
+      "label": "Fansipan plus Muong Hoa trek (current plan)",
+      "schedule_impact": [],
+      "summary": "Summit at 3,143 m in the morning, downhill village trek after lunch. The headline sight plus quiet trails, but it is a full and physical day."
+     },
+     {
+      "accommodation_impact": [],
+      "cost_delta": -80,
+      "id": "opt-2",
+      "label": "Slow villages, no cable car",
+      "schedule_impact": [
+       {
+        "action": "replace",
+        "cost": 20,
+        "day": 4,
+        "slot": "morning",
+        "target": "Fansipan cable car to 3,143 m",
+        "type": "activity",
+        "what": "O Quy Ho pass viewpoint and Ta Van lunch"
+       },
+       {
+        "action": "replace",
+        "cost": 30,
+        "day": 4,
+        "slot": "afternoon",
+        "target": "Guided trek Lao Chai to Ta Van",
+        "type": "activity",
+        "what": "Muong Hoa rice terrace photo walk"
+       }
+      ],
+      "summary": "Skip the cable car entirely: O Quy Ho pass viewpoint, a long lunch in Ta Van and an unhurried photo walk. More authentic and weather-proof, but you miss Indochina's highest peak."
+     }
+    ],
+    "question": "Spend the morning on the Fansipan cable car or stay low in the valleys?",
+    "status": "open",
+    "title": "Sapa's big day"
+   },
+   {
+    "id": "dec-3",
+    "options": [
+     {
+      "accommodation_impact": [],
+      "cost_delta": 0,
+      "id": "opt-1",
+      "label": "Pistachio Hotel in town (current plan)",
+      "schedule_impact": [],
+      "summary": "Walkable to dinner, night market and the Fansipan shuttle, heated rooms in December. Slightly less character than a stilt house."
+     },
+     {
+      "accommodation_impact": [
+       {
+        "hotel_name": "Ta Van Valley Stilt House (Airbnb)",
+        "leg_id": "leg-2",
+        "rate": "55 SGD",
+        "stay_id": "acc-2"
+       }
+      ],
+      "cost_delta": -30,
+      "id": "opt-2",
+      "label": "Stilt-house Airbnb in Ta Van",
+      "schedule_impact": [
+       {
+        "action": "replace",
+        "cost": 10,
+        "day": 5,
+        "slot": "afternoon",
+        "target": "Check out and quick lunch",
+        "type": "transit",
+        "what": "Taxi from Ta Van to Sapa bus stop"
+       }
+      ],
+      "summary": "About 55 SGD a night with terraces straight off the balcony, but 20 minutes by taxi from town for every meal and no guaranteed heater in December cold."
+     }
+    ],
+    "question": "Town hotel with heating, or a valley Airbnb in Ta Van?",
+    "status": "open",
+    "title": "Where to sleep in Sapa"
+   },
+   {
+    "id": "dec-4",
+    "options": [
+     {
+      "accommodation_impact": [],
+      "cost_delta": 0,
+      "id": "opt-1",
+      "label": "Old Quarter hotel (current plan)",
+      "schedule_impact": [],
+      "summary": "One last evening of Hanoi food and the lake at night, with a 45-minute transfer in the morning. Keeps the trip ending in the city rather than a car park."
+     },
+     {
+      "accommodation_impact": [
+       {
+        "hotel_name": "Paragon Noi Bai Hotel",
+        "leg_id": "leg-3",
+        "rate": "58 SGD",
+        "stay_id": "acc-1"
+       }
+      ],
+      "cost_delta": -10,
+      "id": "opt-2",
+      "label": "Airport hotel near Noi Bai",
+      "schedule_impact": [
+       {
+        "action": "replace",
+        "cost": 58,
+        "day": 5,
+        "slot": "evening",
+        "target": "Check in at the Old Quarter hotel",
+        "type": "stay",
+        "what": "Check in near Noi Bai airport"
+       },
+       {
+        "action": "replace",
+        "cost": 0,
+        "day": 6,
+        "slot": "afternoon",
+        "target": "Grab to Noi Bai airport",
+        "type": "transit",
+        "what": "Hotel shuttle to Terminal 2"
+       }
+      ],
+      "summary": "About 58 SGD and a 10-minute shuttle to the terminal, but the final evening is spent in a suburb with nothing around it and you lose the Old Quarter dinner."
+     }
+    ],
+    "question": "Old Quarter hotel again, or an airport hotel for an easier departure?",
+    "status": "open",
+    "title": "Last night in Hanoi"
+   }
+  ],
+  "expenses": {
+   "budget_cap": 2500,
+   "currency": "SGD",
+   "planned": [
+    {
+     "amount_sgd": 620,
+     "category": "Flights",
+     "id": "exp-1",
+     "name": "Singapore-Hanoi return, 2 pax",
+     "notes": "Outbound 24 Dec 08:00, return 29 Dec 16:00. Book 6-8 weeks ahead; December peak adds about 20%."
+    },
+    {
+     "amount_sgd": 360,
+     "category": "Lodging",
+     "id": "exp-2",
+     "name": "Hanoi 3 nights + Sapa 2 nights",
+     "notes": "Golden Rooster 3 nights at 65 SGD, Pistachio Sapa 2 nights at 82 SGD, breakfast included at both."
+    },
+    {
+     "amount_sgd": 200,
+     "category": "Activities",
+     "id": "exp-3",
+     "name": "Fansipan, treks, puppets, entrances",
+     "notes": "Fansipan cable car 80, two guided treks 70, water puppets 12, temple and museum entries 24, market coffee run 14."
+    },
+    {
+     "amount_sgd": 185,
+     "category": "Transit",
+     "id": "exp-4",
+     "name": "Limousine buses and all local transfers",
+     "notes": "Hanoi-Sapa return limousine 80, Noi Bai airport transfers 33, Grab and taxis in Hanoi and Sapa 72."
+    },
+    {
+     "amount_sgd": 420,
+     "category": "Food & Dining",
+     "id": "exp-5",
+     "name": "Six days of meals and drinks, 2 pax",
+     "notes": "Street food 20-30 SGD a day for two, one food tour at 45, two restaurant dinners and coffee stops."
+    },
+    {
+     "amount_sgd": 500,
+     "category": "Buffer",
+     "id": "exp-6",
+     "name": "Contingency and shopping",
+     "notes": "Covers a weather-cancelled Fansipan day, taxi surge, extra warm layers bought in Sapa and coffee or cashew gifts."
+    }
+   ]
+  },
+  "itinerary": {
+   "days": [
+    {
+     "date": "2026-12-24",
+     "day": 1,
+     "day_cost_estimate": 390,
+     "focus": "Arrival, Old Quarter orientation and a gentle first evening",
+     "items": [
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.singaporeair.com",
+       "cost": 320,
+       "currency": "SGD",
+       "notes": "Book 6-8 weeks ahead for 24 Dec peak fares. Apply for the Vietnam e-visa (25 USD) at evisa.xuatnhapcanh.gov.vn at least 5 days before departure and print it.",
+       "slot": "morning",
+       "time": "08:00",
+       "type": "transit",
+       "what": "Flight Singapore to Hanoi (arrive 10:30)"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.grab.com/vn/en/",
+       "cost": 15,
+       "currency": "SGD",
+       "notes": "Meet at arrivals level 1, pillar 10. Roughly 350,000 VND and 45 minutes. Ignore taxi touts inside the hall.",
+       "slot": "afternoon",
+       "time": "12:00",
+       "type": "transit",
+       "what": "Grab from Noi Bai to Old Quarter hotel"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Pho+Gia+Truyen+Bat+Dan",
+       "cost": 12,
+       "currency": "SGD",
+       "notes": "49 Bat Dan, 8 minutes' walk from the lake. Go before 14:00 or they run out; cash only, about 70,000 VND a bowl.",
+       "slot": "afternoon",
+       "time": "13:00",
+       "type": "food",
+       "what": "Beef pho lunch at Pho Gia Truyen"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Ngoc+Son+Temple+Hanoi",
+       "cost": 4,
+       "currency": "SGD",
+       "notes": "30,000 VND entry to the island temple via the red Huc Bridge. The lake loop is 1.7 km and flat — easy recovery from the flight.",
+       "slot": "afternoon",
+       "time": "14:30",
+       "type": "activity",
+       "what": "Hoan Kiem Lake and Ngoc Son Temple"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Cafe+Giang+39+Nguyen+Huu+Huan",
+       "cost": 8,
+       "currency": "SGD",
+       "notes": "39 Nguyen Huu Huan, up the narrow stair at the back. The original 1946 recipe; order it hot, not iced.",
+       "slot": "evening",
+       "time": "17:00",
+       "type": "food",
+       "what": "Egg coffee at Cafe Giang"
+      },
+      {
+       "booking_platform": "Klook",
+       "booking_url": "https://www.klook.com/activity/1861-hanoi-water-puppet-show/",
+       "cost": 12,
+       "currency": "SGD",
+       "notes": "57B Dinh Tien Hoang. Book the 19:20 or 20:20 slot; front rows (100,000 VND) get splashed a little but see the musicians.",
+       "slot": "evening",
+       "time": "19:00",
+       "type": "activity",
+       "what": "Thang Long water puppet show"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Ta+Hien+Street+Hanoi",
+       "cost": 22,
+       "currency": "SGD",
+       "notes": "Draft beer is about 10,000 VND a glass — confirm the price before ordering and take the plastic stools on the street side.",
+       "slot": "night",
+       "time": "20:45",
+       "type": "food",
+       "what": "Bia hoi and grilled skewers on Ta Hien"
+      }
+     ],
+     "key_event": "Land in Hanoi, lake walk and water puppets",
+     "location": "Hanoi – Hoan Kiem / Old Quarter"
+    },
+    {
+     "date": "2026-12-25",
+     "day": 2,
+     "day_cost_estimate": 115,
+     "focus": "Hanoi's history and food, no prisons and no cathedral stop",
+     "items": [
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/banh+cuon+Hang+Ga+Hanoi",
+       "cost": 10,
+       "currency": "SGD",
+       "notes": "Order banh cuon nong with the fried shallots; the Hang Ga stalls open at 06:30 and close by 10:00.",
+       "slot": "morning",
+       "time": "07:30",
+       "type": "food",
+       "what": "Banh cuon breakfast on Hang Ga"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Temple+of+Literature+Hanoi",
+       "cost": 4,
+       "currency": "SGD",
+       "notes": "58 Quoc Tu Giam, open 08:00-17:00, 30,000 VND. Vietnam's first university; the courtyard of stelae is the quietest corner.",
+       "slot": "morning",
+       "time": "08:30",
+       "type": "activity",
+       "what": "Temple of Literature"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Imperial+Citadel+Thang+Long",
+       "cost": 4,
+       "currency": "SGD",
+       "notes": "19C Hoang Dieu, 30,000 VND, closed Mondays. The Doan Mon gate and the bunker exhibition are the highlights.",
+       "slot": "morning",
+       "time": "10:00",
+       "type": "activity",
+       "what": "Imperial Citadel of Thang Long"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Bun+cha+Huong+Lien+Le+Van+Huu",
+       "cost": 14,
+       "currency": "SGD",
+       "notes": "24 Le Van Huu — the shop that served the famous Obama combo. Portions are small; order one extra portion between two.",
+       "slot": "afternoon",
+       "time": "12:00",
+       "type": "food",
+       "what": "Bun cha lunch at Huong Lien"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Museum+of+Ethnology+Hanoi",
+       "cost": 8,
+       "currency": "SGD",
+       "notes": "Nguyen Van Huyen Road, 40,000 VND, open Tue-Sun. Spend 90 minutes here before Sapa — the Hmong and Dao galleries make the villages mean something.",
+       "slot": "afternoon",
+       "time": "13:30",
+       "type": "activity",
+       "what": "Museum of Ethnology"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Tran+Quoc+Pagoda+Hanoi",
+       "cost": 6,
+       "currency": "SGD",
+       "notes": "Free entry on Thanh Nien Road; the lakefront cafes opposite are the best sunset seat in the city.",
+       "slot": "afternoon",
+       "time": "16:00",
+       "type": "activity",
+       "what": "Tran Quoc Pagoda and West Lake coffee"
+      },
+      {
+       "booking_platform": "Klook",
+       "booking_url": "https://www.klook.com/activity/1547-hanoi-street-food-tour/",
+       "cost": 45,
+       "currency": "SGD",
+       "notes": "Six to eight tastings: bun oc, nem chua ran, banh mi and che. Flag vegetarian or shellfish issues when booking and again at pickup.",
+       "slot": "evening",
+       "time": "18:30",
+       "type": "food",
+       "what": "Guided Old Quarter food walk"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Summit+Lounge+Hanoi",
+       "cost": 20,
+       "currency": "SGD",
+       "notes": "Summit Lounge or Lighthouse Sky Bar — happy hour runs until 21:30, so arrive on time or pay double.",
+       "slot": "night",
+       "time": "21:00",
+       "type": "food",
+       "what": "Rooftop drinks over Hoan Kiem"
+      }
+     ],
+     "key_event": "Temples, museums and a street food crawl",
+     "location": "Hanoi – Dong Da, Ba Dinh and West Lake"
+    },
+    {
+     "date": "2026-12-26",
+     "day": 3,
+     "day_cost_estimate": 85,
+     "focus": "Transfer day, gentle town orientation and the night market",
+     "items": [
+      {
+       "booking_platform": "12Go",
+       "booking_url": "https://12go.asia/en/travel/hanoi/sapa",
+       "cost": 40,
+       "currency": "SGD",
+       "notes": "Hotel pickup at 06:15, Dcar or GreenLion limousine, about 5.5 hours with two stops. Sit on the left for the valley approach; the last 40 minutes are switchbacks.",
+       "slot": "morning",
+       "time": "06:30",
+       "type": "transit",
+       "what": "Limousine bus Hanoi to Sapa"
+      },
+      {
+       "booking_platform": "Booking.com",
+       "booking_url": "https://www.booking.com/hotel/vn/pistachio-sapa.html",
+       "cost": 0,
+       "currency": "SGD",
+       "notes": "Cau May area, 5 minutes' walk from the lake. Ask for a high floor facing the valley and confirm the room heater works before unpacking.",
+       "slot": "afternoon",
+       "time": "12:30",
+       "type": "stay",
+       "what": "Check in at Pistachio Hotel Sapa"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/pho+ca+hoi+an+Cau+May+Sapa",
+       "cost": 14,
+       "currency": "SGD",
+       "notes": "Say 'khong cay' if you do not want chilli. Local salmon hotpot and pho both run about 150,000 VND a head.",
+       "slot": "afternoon",
+       "time": "13:15",
+       "type": "food",
+       "what": "Salmon pho lunch on Cau May"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Sapa+Lake",
+       "cost": 0,
+       "currency": "SGD",
+       "notes": "A flat 3 km loop around the lake and up to the stone church square. December afternoons sit around 10°C with fog — keep the fleece on.",
+       "slot": "afternoon",
+       "time": "14:30",
+       "type": "activity",
+       "what": "Sapa lake and town viewpoint loop"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/cafe+Muong+Hoa+Sapa",
+       "cost": 8,
+       "currency": "SGD",
+       "notes": "The Muong Hoa Road cafes have upstairs terraces over the valley. Best light is 16:30-17:30 before the fog rolls in.",
+       "slot": "evening",
+       "time": "16:30",
+       "type": "food",
+       "what": "Hot cocoa at a valley-view cafe"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Sapa+Night+Market",
+       "cost": 20,
+       "currency": "SGD",
+       "notes": "Around the market square from 18:00. Grilled pork skewers, thang co and hot soy milk; agree prices before ordering and bargain on souvenirs.",
+       "slot": "evening",
+       "time": "18:30",
+       "type": "food",
+       "what": "Sapa night market and grilled skewers"
+      },
+      {
+       "booking_platform": "Booking.com",
+       "booking_url": "https://www.booking.com/hotel/vn/pistachio-sapa.html",
+       "cost": 0,
+       "currency": "SGD",
+       "notes": "Set an 06:30 alarm for Fansipan. Fill water bottles tonight — summit kiosks charge triple.",
+       "slot": "night",
+       "time": "20:30",
+       "type": "activity",
+       "what": "Hotel rooftop pool and early night"
+      }
+     ],
+     "key_event": "Limousine north to Sapa's mountain air",
+     "location": "Hanoi to Sapa, Lao Cai"
+    },
+    {
+     "date": "2026-12-27",
+     "day": 4,
+     "day_cost_estimate": 195,
+     "focus": "Indochina's roof in the morning, hidden Hmong villages after lunch",
+     "items": [
+      {
+       "booking_platform": "Booking.com",
+       "booking_url": "https://www.booking.com/hotel/vn/pistachio-sapa.html",
+       "cost": 0,
+       "currency": "SGD",
+       "notes": "Included in the room rate. Eat properly — the next real meal is 12:00 and the summit is cold.",
+       "slot": "morning",
+       "time": "07:00",
+       "type": "food",
+       "what": "Buffet breakfast before the queues"
+      },
+      {
+       "booking_platform": "Klook",
+       "booking_url": "https://www.klook.com/activity/2791-fansipan-legend-cable-car-sapa/",
+       "cost": 80,
+       "currency": "SGD",
+       "notes": "Book the 08:00 slot — cloud builds from 10:30. 20 minutes up, summit often below 0°C with wind chill; gloves and a hat are essential. Last cable car down is 17:00.",
+       "slot": "morning",
+       "time": "08:00",
+       "type": "activity",
+       "what": "Fansipan cable car to 3,143 m"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/restaurant+Cau+May+Sapa",
+       "cost": 18,
+       "currency": "SGD",
+       "notes": "Keep it light before the trek — a bowl of pho or a banh mi around Cau May, roughly 200,000 VND for two.",
+       "slot": "afternoon",
+       "time": "11:45",
+       "type": "food",
+       "what": "Lunch back in Sapa town"
+      },
+      {
+       "booking_platform": "Klook",
+       "booking_url": "https://www.klook.com/activity/2791-fansipan-legend-cable-car-sapa/",
+       "cost": 45,
+       "currency": "SGD",
+       "notes": "7 km mostly downhill along the Muong Hoa river with a Hmong guide. This is the deliberate swap for Cat Cat village — same terraces, a fraction of the crowds. Waterproof shoes: the clay path is slick in December.",
+       "slot": "afternoon",
+       "time": "13:30",
+       "type": "activity",
+       "what": "Guided trek Lao Chai to Ta Van"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.grab.com/vn/en/",
+       "cost": 8,
+       "currency": "SGD",
+       "notes": "Grab from Ta Van is about 100,000 VND; signal is patchy so ask the guide to call one at 17:00.",
+       "slot": "evening",
+       "time": "17:15",
+       "type": "transit",
+       "what": "Taxi back up to Sapa town"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/salmon+hotpot+Sapa",
+       "cost": 30,
+       "currency": "SGD",
+       "notes": "A hotpot for two runs about 600,000 VND with vegetables and noodles. The broth is the point after a cold trek.",
+       "slot": "evening",
+       "time": "18:30",
+       "type": "food",
+       "what": "Salmon hotpot dinner"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/craft+beer+Sapa",
+       "cost": 12,
+       "currency": "SGD",
+       "notes": "Dong Loi street taproom; live music on weekends. Walkable to the hotel in 6 minutes if you keep it short.",
+       "slot": "night",
+       "time": "20:30",
+       "type": "food",
+       "what": "Nightcap at the Sapa craft brewery"
+      }
+     ],
+     "key_event": "Fansipan summit then Muong Hoa valley trek",
+     "location": "Sapa – Fansipan and Muong Hoa valley"
+    },
+    {
+     "date": "2026-12-28",
+     "day": 5,
+     "day_cost_estimate": 120,
+     "focus": "Quiet morning hike below the tourist trail, then the drive south",
+     "items": [
+      {
+       "booking_platform": "Booking.com",
+       "booking_url": "https://www.booking.com/hotel/vn/pistachio-sapa.html",
+       "cost": 0,
+       "currency": "SGD",
+       "notes": "Leave the big cases in reception storage rather than lugging them up the trail.",
+       "slot": "morning",
+       "time": "07:30",
+       "type": "food",
+       "what": "Breakfast and pack the bags"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Y+Linh+Ho+Sapa",
+       "cost": 25,
+       "currency": "SGD",
+       "notes": "Two hours on a dirt path along the river, past two Hmong hamlets with almost no tour groups. December water levels are low, so the crossings are easy. Guides can be arranged at any trek desk on Cau May the night before.",
+       "slot": "morning",
+       "time": "08:30",
+       "type": "activity",
+       "what": "Hidden trail to Y Linh Ho village"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/banh+mi+Sapa",
+       "cost": 14,
+       "currency": "SGD",
+       "notes": "Check out by 11:30 and grab a banh mi to eat on the bus — the limousine stops are not meal stops.",
+       "slot": "afternoon",
+       "time": "11:00",
+       "type": "food",
+       "what": "Check out and quick lunch"
+      },
+      {
+       "booking_platform": "12Go",
+       "booking_url": "https://12go.asia/en/travel/sapa/hanoi",
+       "cost": 40,
+       "currency": "SGD",
+       "notes": "Departs Sapa 12:30, arrives Old Quarter about 18:15 with two toilet stops. Motion-sickness tablets 30 minutes before departure.",
+       "slot": "afternoon",
+       "time": "12:30",
+       "type": "transit",
+       "what": "Limousine Sapa back to Hanoi"
+      },
+      {
+       "booking_platform": "Booking.com",
+       "booking_url": "https://www.booking.com/hotel/vn/golden-rooster.html",
+       "cost": 0,
+       "currency": "SGD",
+       "notes": "Same property as the first two nights so luggage can be left between stays — request a high floor away from Hang Ga.",
+       "slot": "evening",
+       "time": "18:30",
+       "type": "stay",
+       "what": "Check in at the Old Quarter hotel"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Banh+Mi+25+Hang+Ca",
+       "cost": 25,
+       "currency": "SGD",
+       "notes": "25 Hang Ca; the queue moves fast. Order one pork and one tofu to compare, plus a fresh fruit shake.",
+       "slot": "evening",
+       "time": "19:30",
+       "type": "food",
+       "what": "Dinner at Banh Mi 25"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/egg+coffee+Hoan+Kiem",
+       "cost": 12,
+       "currency": "SGD",
+       "notes": "The lake is floodlit until 23:00 and the weekend walking street is car-free on Saturday nights.",
+       "slot": "night",
+       "time": "21:00",
+       "type": "food",
+       "what": "Hoan Kiem night walk and egg coffee"
+      }
+     ],
+     "key_event": "Hidden Y Linh Ho trail, then back to Hanoi",
+     "location": "Sapa to Hanoi"
+    },
+    {
+     "date": "2026-12-29",
+     "day": 6,
+     "day_cost_estimate": 400,
+     "focus": "Ba Dinh's ceremonial square, souvenir run, flight out",
+     "items": [
+      {
+       "booking_platform": "Booking.com",
+       "booking_url": "https://www.booking.com/hotel/vn/golden-rooster.html",
+       "cost": 0,
+       "currency": "SGD",
+       "notes": "Leave bags at reception after checkout; the airport run is direct from here.",
+       "slot": "morning",
+       "time": "07:30",
+       "type": "food",
+       "what": "Breakfast and luggage hold"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Ho+Chi+Minh+Mausoleum",
+       "cost": 4,
+       "currency": "SGD",
+       "notes": "Open Tuesday 08:00-11:00 (closed Friday and Monday — that is why it sits on the last day). Free entry, shoulders and knees covered, cameras held at security. The One Pillar Pagoda and stilt house are in the same grounds.",
+       "slot": "morning",
+       "time": "08:30",
+       "type": "activity",
+       "what": "Ho Chi Minh Mausoleum complex"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/Dong+Xuan+Market",
+       "cost": 45,
+       "currency": "SGD",
+       "notes": "Buy coffee beans and cashews here rather than at the airport. Fixed prices at the shops on Hang Dao; haggling only works in the wet-market aisles.",
+       "slot": "morning",
+       "time": "10:30",
+       "type": "activity",
+       "what": "Dong Xuan Market and coffee run"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.google.com/maps/search/banh+mi+Old+Quarter+Hanoi",
+       "cost": 12,
+       "currency": "SGD",
+       "notes": "Eat before 13:00 so the airport transfer is not rushed. Pack the fruit in the checked bag, not the carry-on.",
+       "slot": "afternoon",
+       "time": "12:00",
+       "type": "food",
+       "what": "Last banh mi and fruit lunch"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.grab.com/vn/en/",
+       "cost": 18,
+       "currency": "SGD",
+       "notes": "45 minutes to Terminal 2 international. Build in 20 minutes for the Hanoi ring road at midday.",
+       "slot": "afternoon",
+       "time": "13:30",
+       "type": "transit",
+       "what": "Grab to Noi Bai airport"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.singaporeair.com",
+       "cost": 300,
+       "currency": "SGD",
+       "notes": "Arrives Changi around 20:30. Keep the Fansipan jacket accessible — Changi is air-conditioned and the return shock is real.",
+       "slot": "evening",
+       "time": "16:00",
+       "type": "transit",
+       "what": "Flight Hanoi to Singapore"
+      },
+      {
+       "booking_platform": "Direct",
+       "booking_url": "https://www.jewelchangiairport.com",
+       "cost": 25,
+       "currency": "SGD",
+       "notes": "Level 5 food court; avoid the Rain Vortex light show crowds if you are carrying luggage.",
+       "slot": "night",
+       "time": "21:00",
+       "type": "food",
+       "what": "Dinner at Jewel Changi"
+      }
+     ],
+     "key_event": "Mausoleum morning, market run and flight home",
+     "location": "Hanoi – Ba Dinh and Old Quarter"
+    }
+   ]
+  },
+  "packing": {
+   "categories": [
+    {
+     "id": "cat-clothings",
+     "items": [
+      {
+       "id": "p-1",
+       "name": "Merino base layers (2 sets)",
+       "notes": "Hanoi sits at 15-20°C in December, Sapa at 2-8°C after dark; thin layers beat one heavy coat."
+      },
+      {
+       "id": "p-2",
+       "name": "Packable down jacket",
+       "notes": "Fansipan summit regularly hits 0°C with wind chill, even on a clear morning."
+      },
+      {
+       "id": "p-3",
+       "name": "Warm mid-layer fleece",
+       "notes": "Worn in Sapa town, on the limousine and at the night market."
+      },
+      {
+       "id": "p-4",
+       "name": "Quick-dry trekking trousers",
+       "notes": "Two pairs. The Lao Chai path is clay and muddy in late December."
+      },
+      {
+       "id": "p-5",
+       "name": "Long-sleeve shirts for temples",
+       "notes": "Shoulders and knees covered for the mausoleum, pagodas and Temple of Literature."
+      },
+      {
+       "id": "p-6",
+       "name": "Rain shell and compact umbrella",
+       "notes": "Sapa drizzle and Hanoi mist are both common in the last week of December."
+      }
+     ],
+     "name": "Clothings"
+    },
+    {
+     "id": "cat-footwear",
+     "items": [
+      {
+       "id": "p-7",
+       "name": "Waterproof trail shoes",
+       "notes": "Grip matters on the 7 km downhill from Lao Chai to Ta Van; trainers will slip."
+      },
+      {
+       "id": "p-8",
+       "name": "Sandals or sliders",
+       "notes": "For the hotel, the pool deck and warm Hanoi evenings."
+      },
+      {
+       "id": "p-9",
+       "name": "Merino socks (4 pairs)",
+       "notes": "Blister control on trek day; one dry pair reserved for the bus home."
+      }
+     ],
+     "name": "Footwear"
+    },
+    {
+     "id": "cat-electronics",
+     "items": [
+      {
+       "id": "p-10",
+       "name": "Universal adapter (Type A/C)",
+       "notes": "Vietnam runs 220V at 50Hz; most sockets are Type A or C."
+      },
+      {
+       "id": "p-11",
+       "name": "10,000 mAh power bank",
+       "notes": "Under the 100Wh cabin limit; needed on the 5.5-hour limousine rides."
+      },
+      {
+       "id": "p-12",
+       "name": "Action camera and spare battery",
+       "notes": "Cold at the Fansipan summit drains batteries roughly twice as fast."
+      },
+      {
+       "id": "p-13",
+       "name": "Noise-cancelling earbuds",
+       "notes": "For the limousine and the sleeper train if you switch to the night option."
+      }
+     ],
+     "name": "Electronics"
+    },
+    {
+     "id": "cat-documents",
+     "items": [
+      {
+       "id": "p-14",
+       "name": "Original Passport",
+       "notes": "Six or more months validity and two blank pages, checked before booking flights."
+      },
+      {
+       "id": "p-15",
+       "name": "Vietnam e-visa printout",
+       "notes": "Apply at evisa.xuatnhapcanh.gov.vn at least 5 days ahead; print two copies."
+      },
+      {
+       "id": "p-16",
+       "name": "Ballpoint pen",
+       "notes": "For arrival cards and immigration forms; none are provided at Noi Bai."
+      },
+      {
+       "id": "p-17",
+       "name": "Travel insurance policy",
+       "notes": "Must explicitly cover trekking to 3,143 m and trip delay on the Sapa road."
+      },
+      {
+       "id": "p-18",
+       "name": "Booking PDFs saved offline",
+       "notes": "Hotel, limousine, Fansipan cable car and water puppet confirmations in one folder."
+      }
+     ],
+     "name": "Documents"
+    },
+    {
+     "id": "cat-toiletries",
+     "items": [
+      {
+       "id": "p-19",
+       "name": "SPF 50 sunscreen",
+       "notes": "UV is strong above the cloud line on Fansipan even when Sapa town is overcast."
+      },
+      {
+       "id": "p-20",
+       "name": "Lip balm and cold cream",
+       "notes": "Dry mountain air at altitude cracks lips within a day."
+      },
+      {
+       "id": "p-21",
+       "name": "Hand sanitiser (100 ml)",
+       "notes": "Within the cabin liquid limit; useful at the street food stalls."
+      },
+      {
+       "id": "p-22",
+       "name": "Basic first-aid kit",
+       "notes": "Blister plasters, antiseptic wipes and a small roll of tape for the trek."
+      }
+     ],
+     "name": "Toiletries"
+    },
+    {
+     "id": "cat-medicine",
+     "items": [
+      {
+       "id": "p-23",
+       "name": "Motion sickness tablets",
+       "notes": "Take 30 minutes before the winding road up to Sapa from Lao Cai."
+      },
+      {
+       "id": "p-24",
+       "name": "Paracetamol and ibuprofen",
+       "notes": "For altitude headache at 3,143 m and after long bus days."
+      },
+      {
+       "id": "p-25",
+       "name": "Cold and flu tablets",
+       "notes": "Night temperatures of 5°C in Sapa make a chill likely; pack a full course."
+      },
+      {
+       "id": "p-26",
+       "name": "Personal prescriptions",
+       "notes": "Keep in original labelled packaging and carry in cabin baggage."
+      }
+     ],
+     "name": "Medicine"
+    }
+   ]
+  },
+  "recommendations": [
+   {
+    "category": "Food & Drink",
+    "cost_estimate": "$",
+    "id": "rec-1",
+    "location": "49 Bat Dan, Old Quarter, Hanoi",
+    "name": "Pho Gia Truyen",
+    "notes": "The benchmark Hanoi beef pho, ladled from 06:00 and gone by mid-morning. Cash only, share a table, no menu.",
+    "rating": 4.7
+   },
+   {
+    "category": "Food & Drink",
+    "cost_estimate": "$",
+    "id": "rec-2",
+    "location": "39 Nguyen Huu Huan, Old Quarter",
+    "name": "Cafe Giang",
+    "notes": "Hanoi's original egg coffee, made here since 1946. Climb the narrow stairs at the back for the balcony seats.",
+    "rating": 4.6
+   },
+   {
+    "category": "Hidden Gem",
+    "cost_estimate": "$",
+    "id": "rec-3",
+    "location": "Muong Hoa valley, Sapa",
+    "name": "Ta Van rice terraces",
+    "notes": "The deliberate alternative to Cat Cat village: same terraces and Hmong and Dao hamlets, a fraction of the tour groups. Best walked downhill from Lao Chai.",
+    "rating": 4.8
+   },
+   {
+    "category": "Hidden Gem",
+    "cost_estimate": "$",
+    "id": "rec-4",
+    "location": "Below Sapa town, Lao Cai",
+    "name": "Y Linh Ho river trail",
+    "notes": "Two hours on a dirt path along the Muong Hoa with two quiet hamlets and almost no visitors. Low river levels in December make the crossings easy.",
+    "rating": 4.6
+   },
+   {
+    "category": "Must-See",
+    "cost_estimate": "$$",
+    "id": "rec-5",
+    "location": "Muong Hoa Road, Sapa",
+    "name": "Fansipan cable car",
+    "notes": "Indochina's highest peak at 3,143 m. Take the 08:00 slot — cloud usually swallows the summit by 10:30 and the views are the whole point.",
+    "rating": 4.7
+   },
+   {
+    "category": "Must-See",
+    "cost_estimate": "$",
+    "id": "rec-6",
+    "location": "58 Quoc Tu Giam, Dong Da, Hanoi",
+    "name": "Temple of Literature",
+    "notes": "Vietnam's first university, founded in 1070. Go at opening time; the stelae courtyard is empty before 09:30.",
+    "rating": 4.6
+   },
+   {
+    "category": "Nightlife",
+    "cost_estimate": "$",
+    "id": "rec-7",
+    "location": "Ta Hien and Luong Ngoc Quyen, Old Quarter",
+    "name": "Bia hoi corner, Ta Hien",
+    "notes": "Cheap draft beer on plastic stools with tables spilling into the street. Agree the price per glass first; the first quote is often double.",
+    "rating": 4.4
+   },
+   {
+    "category": "Must-See",
+    "cost_estimate": "$",
+    "id": "rec-8",
+    "location": "Hang Dao, Old Quarter, Hanoi",
+    "name": "Dong Xuan Market",
+    "notes": "Buy coffee beans, cashews and gifts here at a third of airport prices. Fixed prices in the surrounding shops, haggling only inside the wet market.",
+    "rating": 4.2
+   }
+  ],
+  "travellers": {
+   "companions": [],
+   "members_passports": {
+    "kester.neo@gmail.com": {
+     "date_of_birth": "",
+     "email": "kester.neo@gmail.com",
+     "emergency_contact_name": "",
+     "emergency_contact_phone": "",
+     "expiry_date": "",
+     "full_name": "Kester Neo",
+     "nationality": "Singapore",
+     "notes": "Singapore passport holders enter Vietnam visa-free for up to 30 days. Requires 6+ months passport validity upon entry.",
+     "passport_number": ""
+    }
+   },
+   "my_passport": {
+    "date_of_birth": "",
+    "email": "kester.neo@gmail.com",
+    "emergency_contact_name": "",
+    "emergency_contact_phone": "",
+    "expiry_date": "",
+    "full_name": "Kester Neo",
+    "nationality": "Singapore",
+    "notes": "Singapore passport holders enter Vietnam visa-free for up to 30 days. Requires 6+ months passport validity upon entry.",
+    "passport_number": ""
+   }
+  }
+ }
+}

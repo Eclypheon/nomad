@@ -149,6 +149,7 @@ global.TripAuth = {
   listTrips: function () { return read('listTrips', [], []); },
   createTrip: function (tripData) { return call('createTrip', [tripData]); },
   openTrip: function (key) { return call('openTrip', [key]); },
+  deleteTrip: function (tripId) { return call('deleteTrip', [tripId]); },
   joinTrip: function (tripId) { return call('joinTrip', [tripId]); },
   pendingInvites: function () { return read('pendingInvites', [], []); },
   acceptInvite: function (invite) { return call('acceptInvite', [invite]); },

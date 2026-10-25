@@ -298,7 +298,7 @@
           <div style="max-width: 320px; margin: 0 auto 12px; text-align: left;">
             <label class="muted tiny" style="display: block; margin-bottom: 4px; font-weight: 700;">DISPLAY USERNAME</label>
             <div style="display: flex; gap: 6px;">
-              <input type="text" id="user-modal-name-input" class="search-input" placeholder="e.g. Kester" style="flex: 1;" />
+              <input type="text" id="user-modal-name-input" class="search-input" placeholder="e.g. Alex" style="flex: 1;" />
               <button type="button" id="user-modal-save-name-btn" class="btn btn-secondary small">Save</button>
             </div>
           </div>
@@ -402,12 +402,19 @@
             </select>
           </div>
           <div>
-            <label class="form-label small">Split Type</label>
-            <select id="expense-editor-split" class="search-input">
-              <option value="shared">Shared (Split between group)</option>
-              <option value="indiv">Individual (Self only)</option>
+            <label class="form-label small">Amount Is</label>
+            <select id="expense-editor-basis" class="search-input">
+              <option value="party">Total for the whole party</option>
+              <option value="pax">Per traveller</option>
             </select>
           </div>
+        </div>
+        <div>
+          <label class="form-label small">Split Type</label>
+          <select id="expense-editor-split" class="search-input">
+            <option value="shared">Shared (Split between group)</option>
+            <option value="indiv">Individual (Self only)</option>
+          </select>
         </div>
         <div>
           <label class="form-label small">Planning Notes (Optional)</label>
@@ -538,7 +545,7 @@
 
         <!-- Inline Direct Email Form -->
         <form id="inline-signin-form" class="auth-form" onsubmit="return false;">
-          <input type="email" id="auth-email-input" class="search-input" placeholder="Email address (e.g. kester.neo@gmail.com)" required autocomplete="email">
+          <input type="email" id="auth-email-input" class="search-input" placeholder="Email address (e.g. you@example.com)" required autocomplete="email">
           <input type="password" id="auth-password-input" class="search-input" placeholder="Password" required autocomplete="current-password" style="margin-top: 8px;">
           <button type="submit" id="auth-submit-btn" class="btn w-full" style="margin-top: 12px;">Sign In</button>
           <div id="auth-form-error" class="auth-error-msg" hidden></div>
@@ -639,7 +646,7 @@
 
           <div class="form-group">
             <label for="edit-traveller-name" class="form-label">Full Name (as in Passport)</label>
-            <input type="text" id="edit-traveller-name" class="search-input" placeholder="e.g. Kester Neo" required>
+            <input type="text" id="edit-traveller-name" class="search-input" placeholder="e.g. Alex Tan" required>
           </div>
 
           <div class="form-row-2" style="margin-top: 10px;">
@@ -759,10 +766,14 @@
             <textarea id="ai-gen-prompt-input" class="search-input" rows="3" placeholder="e.g. Include local coffee shops, peaceful temples, avoid night clubs, public transit focused..."></textarea>
           </div>
 
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 14px;">
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 14px;">
             <div>
-              <label class="muted tiny" style="display: block; font-weight: 600; margin-bottom: 2px;">TARGET BUDGET</label>
+              <label class="muted tiny" style="display: block; font-weight: 600; margin-bottom: 2px;">TARGET BUDGET (PER PERSON)</label>
               <input type="number" id="ai-gen-budget-input" class="search-input" placeholder="2500" value="2500" style="width: 100%;" />
+            </div>
+            <div>
+              <label class="muted tiny" style="display: block; font-weight: 600; margin-bottom: 2px;">TRAVELLERS</label>
+              <input type="number" id="ai-gen-travellers-input" class="search-input" min="1" step="1" value="2" style="width: 100%;" />
             </div>
             <div>
               <label class="muted tiny" style="display: block; font-weight: 600; margin-bottom: 2px;">CURRENCY</label>

@@ -2409,6 +2409,11 @@ p { margin: 0 0 10px; }
   color: #c084fc;
   border-color: rgba(168, 85, 247, 0.35);
 }
+.pill-basis {
+  background: rgba(250, 204, 21, 0.12);
+  color: #facc15;
+  border-color: rgba(250, 204, 21, 0.35);
+}
 
 /* ==========================================================================
    Packing Tab: Compact Single-Line Items & Expandable Notes

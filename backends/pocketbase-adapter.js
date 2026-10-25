@@ -90,14 +90,17 @@ function err(message, code) {
   return e;
 }
 function quote(v) { return '"' + String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
-function copyJson(v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+function copyJson(v) {
+  if (v === undefined) return undefined;
+  try { return JSON.parse(JSON.stringify(v)); } catch { return v; }
+}
 function isPBId(s) { return /^[a-z0-9]{15}$/i.test(String(s || '').trim()); }
 /* a pasted share link, a '#trip=…' hash or a bare id all resolve to the id */
 function keyFrom(text) {
   var s = String(text == null ? '' : text).trim();
   if (!s) return '';
   var m = /(?:^|[#?&/])trip=([^&\s]+)/i.exec(s);
-  if (m) { try { s = decodeURIComponent(m[1]); } catch (e) { s = m[1]; } }
+  if (m) { try { s = decodeURIComponent(m[1]); } catch { s = m[1]; } }
   s = s.trim().replace(/\/+$/, '');
   if (isPBId(s)) return s;
   var tail = s.split('/').pop();
@@ -120,7 +123,7 @@ function wireError(e) {
       if (typeof window !== 'undefined' && window.location && BASE) {
         isCross = window.location.origin !== new URL(BASE).origin;
       }
-    } catch (ignore) {}
+    } catch {}
     if (isCross) {
       return err('Local Network Access blocked: your browser blocked public github.io from connecting to local Tailscale IP at ' + BASE + '. Open Nomad directly at ' + BASE + '/trip/ or allow local network access in browser settings.', 'network_lna');
     }
@@ -149,7 +152,7 @@ function status() {
 }
 function emit() {
   var s = status();
-  listeners.forEach(function (fn) { try { fn(s); } catch (e) { /* one bad listener must not break auth */ } });
+  listeners.forEach(function (fn) { try { fn(s); } catch { /* one bad listener must not break auth */ } });
 }
 function userFrom(record) {
   if (!record) return null;
@@ -217,7 +220,7 @@ function storedToken() {
     if (!raw) return '';
     var v = JSON.parse(raw);
     return (v && v.token) || '';
-  } catch (e) { return ''; }
+  } catch { return ''; }
 }
 
 function init() {
@@ -285,7 +288,7 @@ function signIn() {
       pendingTrip = (global.sessionStorage && global.sessionStorage.getItem('nomad_pending_join')) ||
                     (global.localStorage && global.localStorage.getItem('nomad_pending_join')) || '';
       pendingTrip = (pendingTrip || '').trim();
-    } catch (_) {}
+    } catch {}
 
     var authOpts = {
       provider: PROVIDER
@@ -327,7 +330,7 @@ function signOut() {
   var p = ST.pb;
   ST.roles = {};
   if (!p) { setUser(null); return Promise.resolve(false); }
-  try { p.authStore.clear(); } catch (e) { /* nothing to clear */ }
+  try { p.authStore.clear(); } catch { /* nothing to clear */ }
   setUser(null);
   return Promise.resolve(true);
 }
@@ -447,6 +450,20 @@ function listTrips() {
        sorting on one is the list order DESIGN.md 6.2 specifies. */
     return p.collection('trips').getFullList({ sort: '-created', requestKey: null });
   }).then(function (rows) { return (rows || []).map(mapTrip); }, function (e) { throw friendly(e); });
+}
+
+/* Deleting a trip is the owner's call, and it takes the trip's documents,
+   memberships and invitations with it (see pb_hooks/20_cascade_trip_delete.pb.js
+   on the server). The client only sends the one delete. */
+function deleteTrip(tripId) {
+  var id = String(tripId || '').trim();
+  if (!id) return Promise.reject(err('No trip given.', 'bad_request'));
+  return pb().then(function (p) {
+    return p.collection('trips').delete(id, { requestKey: null });
+  }).then(function () {
+    delete ST.roles[id];
+    return true;
+  }, function (e) { throw friendly(e); });
 }
 
 function openTrip(key) {
@@ -579,7 +596,7 @@ function joinTrip(tripId) {
 
 /* --------------------------------------------------- members & invitations */
 
-function invite(tripId, email, role) {
+function invite(tripId, email) {
   var to = String(email || '').trim().toLowerCase();
   if (!to || to.indexOf('@') === -1) return Promise.reject(err('That does not look like an email address.', 'bad_request'));
   return pb().then(function (p) {
@@ -913,6 +930,7 @@ global.TripBackends.pocketbase = {
   listTrips: listTrips,
   createTrip: createTrip,
   openTrip: openTrip,
+  deleteTrip: deleteTrip,
   joinTrip: joinTrip,
   pendingInvites: pendingInvites,
   acceptInvite: acceptInvite,

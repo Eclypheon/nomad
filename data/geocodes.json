@@ -1,0 +1,57 @@
+{
+ "Hanoi": {
+  "lat": 21.0283334,
+  "lon": 105.854041,
+  "address": "Thành phố Hà Nội, Việt Nam"
+ },
+ "Ha Giang": {
+  "lat": 22.8168007,
+  "lon": 104.9504515,
+  "address": "Thành phố Hà Giang, Tỉnh Tuyên Quang, 20152, Việt Nam"
+ },
+ "Quan Ba": {
+  "lat": 23.0208257,
+  "lon": 104.9642125,
+  "address": "Quản Bạ (town), Hà Giang — OSM/Overpass"
+ },
+ "Yen Minh": {
+  "lat": 23.1172045,
+  "lon": 105.1491234,
+  "address": "Yên Minh (town), Hà Giang — OSM/Overpass"
+ },
+ "Dong Van": {
+  "lat": 23.2782975,
+  "lon": 105.3615214,
+  "address": "Đồng Văn (town), Hà Giang — OSM/Overpass"
+ },
+ "Meo Vac": {
+  "lat": 23.1633187,
+  "lon": 105.410444,
+  "address": "Mèo Vạc (town), Hà Giang — OSM/Overpass"
+ },
+ "Tam Coc": {
+  "lat": 20.2176747,
+  "lon": 105.9294811,
+  "address": "Tam Coc Amanda Villas, Tam Coc, Đường tỉnh 478B, Đam Khê, Phường Nam Hoa Lư, Phường Hoa Lư, Tỉnh Ninh Bình, 08213, Việt Nam"
+ },
+ "Noi Bai": {
+  "lat": 21.2188925,
+  "lon": 105.8044596,
+  "address": "Sân bay Quốc tế Nội Bài, Ga đi Quốc tế, Xã Nội Bài, Thành phố Hà Nội, 12233, Việt Nam"
+ },
+ "Lao Cai": {
+  "lat": 22.30693,
+  "lon": 104.18296,
+  "address": "Tỉnh Lào Cai, Việt Nam"
+ },
+ "Sa Pa": {
+  "lat": 22.31539,
+  "lon": 103.83998,
+  "address": "Thị xã Sa Pa, Xã Tả Van, Tỉnh Lào Cai, Việt Nam"
+ },
+ "Fansipan": {
+  "lat": 22.30308,
+  "lon": 103.77544,
+  "address": "Đinh Núi Phan Xi Phăng, Xã Mường Khoa, Tỉnh Lai Châu, Việt Nam"
+ }
+}
