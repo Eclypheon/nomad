@@ -908,6 +908,23 @@ function selectTrip(tripId) {
       STATE.picks = picks || {};
     }).catch(function () { STATE.picks = {}; });
   }).then(function () {
+    /* One-time: rewrite Klook links an AI guessed before the prompt forbade it.
+       Runs once per trip so a link you paste by hand is never touched again. */
+    var klookKey = 'nomad.klook_fixed.v1.' + tripId;
+    try {
+      if (!localStorage.getItem(klookKey)) {
+        var repaired = repairKlookLinks(STATE.docs);
+        localStorage.setItem(klookKey, '1');
+        if (repaired > 0) {
+          TripAuth.saveDocs(tripId, STATE.docs).catch(function (e) {
+            console.warn('Could not save repaired Klook links:', e);
+          });
+          showToast('🔗 Fixed ' + repaired + ' broken Klook link' + (repaired > 1 ? 's' : '') + ' — they now open Klook search');
+        }
+      }
+    } catch (err) {
+      console.warn('Klook link repair skipped:', err);
+    }
     hideLoading();
     renderTripBanner();
     renderCurrentTab();
@@ -3652,6 +3669,50 @@ function getExpenseDayShort(it) {
     return 'D' + it.day;
   }
   return '';
+}
+
+/* ============================ BOOKING LINKS ==============================
+   Klook serves /activity/<numeric id>-<slug>/ by the ID and ignores the slug.
+   An AI cannot know real Klook ids, so a guessed id resolves to some other
+   city's activity (or a dead page) — and the slug looks right, so nobody
+   notices until they click. The search URL is the only Klook link that can be
+   built without knowing an id, and it always resolves.                       */
+
+function klookSearchUrl(query) {
+  var q = String(query || '').replace(/\s+/g, ' ').trim();
+  return 'https://www.klook.com/search/result/?query=' + encodeURIComponent(q);
+}
+
+function isKlookActivityUrl(url) {
+  return /^https?:\/\/(?:[a-z0-9-]+\.)*klook\.com\/(?:[a-z]{2}-[a-z]{2}\/)?activity\//i.test(String(url || ''));
+}
+
+/* Replace guessed Klook activity links with Klook search links.
+   Returns how many were rewritten. */
+function repairKlookLinks(docs) {
+  var changed = 0;
+  function fix(entry, place) {
+    if (!entry || !isKlookActivityUrl(entry.booking_url)) return;
+    var name = entry.what || entry.title || entry.name || entry.description || '';
+    var where = entry.base || entry.city || entry.location || entry.area || place || '';
+    /* "Sapa – Cau May" is a district, not a search term: keep the city part */
+    var query = (name + ' ' + (where ? stayAreaLabel(where) : '')).trim() || 'activity';
+    entry.booking_url = klookSearchUrl(query);
+    changed += 1;
+  }
+  if (!docs) return changed;
+
+  var iti = docs.itinerary;
+  var days = Array.isArray(iti) ? iti : ((iti && iti.days) || []);
+  days.forEach(function (d) {
+    (d.items || []).forEach(function (it) { fix(it, d.base); });
+  });
+  var stays = (docs.accommodation && docs.accommodation.stays) || [];
+  stays.forEach(function (st) { fix(st, st.city); });
+  var recs = docs.recommendations;
+  recs = Array.isArray(recs) ? recs : ((recs && (recs.recommendations || recs.items)) || []);
+  recs.forEach(function (r) { fix(r, r.location); });
+  return changed;
 }
 
 function getExpenseLinkInfo(it) {
@@ -7031,7 +7092,8 @@ function startAiTripGeneration() {
     "1. PACKING TITLES: Every packing item 'name' or 'item' MUST be strictly at most 40 characters (e.g. 'Warm mid-layer fleece'). Put all extra notes, quantities, or explanations in the 'notes' field.\n" +
     "2. Ensure every day has rich morning, afternoon, evening, and night activities with explicit 'type' and 'slot' fields. Include stays with 'status', budget breakdown, fork decisions, 6 packing categories (Clothings, Footwear, Electronics, Documents including ballpoint pen, Toiletries, Medicine), and top recommendations.\n" +
     "3. EXPENSE BASIS: 'budget_cap' is PER PERSON. Every expense item MUST set 'per': 'party' when the amount is the total for all " + travellers + " travellers (flights for the group, a private transfer, a hotel room for the party) or 'per': 'pax' when it is a per-person amount (a museum ticket, one cable-car ticket). Never leave 'per' out. Flight costs MUST be the total fare for all " + travellers + " travellers with 'per': 'party', and the name and notes must say so — e.g. name 'Singapore-Hanoi return, " + travellers + " pax', notes '" + curr + "1,240 total = " + curr + "620 each'. Sum the flights from the real per-person fare for those dates, not from a guess.\n" +
-    "4. BOOKING LINKS MUST RESOLVE TO THAT EXACT ACTIVITY. Only include a 'booking_url' you are confident opens the specific tour, ticket, hotel or route — never a platform homepage, a search page for another city, or a fabricated/made-up id. Prefer the official operator page; for Klook use the exact activity page (https://www.klook.com/activity/<id>-<slug>/) and only when you actually know that id — otherwise omit 'booking_url' entirely and put the platform plus the exact activity name to search for in 'notes'. A wrong link is worse than no link.\n" +
+    "4. BOOKING LINKS MUST RESOLVE TO THAT EXACT BOOKING. Only include a 'booking_url' that opens the specific tour, ticket, hotel or route — never a platform homepage, and never a fabricated id. Prefer the official operator or hotel page, Booking.com/Agoda for stays, 12Go for transport.\\n" +
+    "4a. KLOOK LINKS: NEVER write a Klook activity URL (https://www.klook.com/activity/<id>-<slug>/). Klook serves that page by the numeric id and ignores the slug, so an id you did not read off a real page lands on a different city's tour or a dead page — the slug looking right is exactly what makes it look trustworthy. Klook ids are not guessable and must never be invented. Use Klook's search URL instead, which always resolves and finds the activity: https://www.klook.com/search/result/?query=<url-encoded activity name + city>. For example the water puppet show in Hanoi is https://www.klook.com/search/result/?query=hanoi%20water%20puppet%20show. Keep 'booking_platform' as 'Klook'.\\n" +
     "5. 'booking_platform' must name the real platform for the item ('Klook', 'Booking.com', '12Go', 'Official site', 'Direct / on arrival').\n" +
     "6. Every stay needs a real 'booking_url' on Booking.com/Agoda/official site for that property in that city, or none at all.\\n" +
     "7. accommodation.route IS MANDATORY and must never be empty or missing: exactly one leg per night of the trip (a " + nights + "-night trip needs " + nights + " legs), ids leg-1..leg-" + nights + ", each with nights ('Night N (DD-DD MMM)'), city, hotelName, rate, status and a stayId that matches an id in accommodation.stays. The Stays tab builds its night filter, its route table and its per-night grouping from this array only — with no route it cannot place a single stay.\\n" +
@@ -7048,6 +7110,8 @@ function startAiTripGeneration() {
     $('#ai-gen-progress-title').textContent = 'Finalizing trip plan...';
     $('#ai-gen-progress-sub').textContent = 'Applying daily schedule and lodging';
     var parsed = extractJsonFromAiResponse(rawText);
+    var fixed = repairKlookLinks(parsed);
+    if (fixed > 0) console.warn('Replaced ' + fixed + ' guessed Klook activity link(s) with Klook search links.');
     applyMasterTripJson(parsed);
     closeAiGeneratorModal();
     showToast('✨ ' + dest + ' trip planned successfully with AI!');
